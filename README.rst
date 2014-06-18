@@ -1,7 +1,7 @@
-shub: the Scrapinghub command line client
-=========================================
+Scrapinghub command line client
+===============================
 
-shub is tool used to manage Scrapinghub services from the command line.
+``shub`` is a tool used to manage Scrapinghub services from the command line.
 
 Installation
 ------------
