@@ -9,7 +9,7 @@ def get_status(url):
     r = requests.get(url)
     doc = lxml.html.fromstring(r.text)
     try:
-        return doc.cssselect('div#lastChecked div#statusIcon')[0].get("class").upper()
+        return doc.xpath('.//div[@id="lastChecked"]//div[@id="statusIcon"]')[0].get("class").upper()
     except:
         return "UNKNOWN"
 
