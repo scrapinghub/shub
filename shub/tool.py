@@ -17,6 +17,10 @@ def cli():
 m = missing_modules('scrapy', 'setuptools')
 if m:
     cli.add_command(missingmod_cmd(m), 'deploy')
+    cli.add_command(missingmod_cmd(m), 'status')
 else:
     from shub import deploy
+    from shub import status
+
     cli.add_command(deploy.cli, 'deploy')
+    cli.add_command(status.cli, 'status')
