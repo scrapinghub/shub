@@ -14,9 +14,18 @@ def missingmod_cmd(modules):
 def cli():
     pass
 
+# deploy
 m = missing_modules('scrapy', 'setuptools')
 if m:
     cli.add_command(missingmod_cmd(m), 'deploy')
 else:
     from shub import deploy
     cli.add_command(deploy.cli, 'deploy')
+
+# log
+m = missing_modules('scrapinghub')
+if m:
+    cli.add_command(missingmod_cmd(m), 'log')
+else:
+    from shub import log
+    cli.add_command(log.cli, 'log')
