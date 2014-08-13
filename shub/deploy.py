@@ -130,7 +130,7 @@ def _get_version(target, version):
         b = p.communicate()[0].strip('\n')
         return '%s-%s' % (d, b)
     elif version:
-        return version
+        return str(version)
     else:
         return str(int(time.time()))
 
