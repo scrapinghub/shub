@@ -1,44 +1,37 @@
-import datetime, click, logging
-#import setuptools # not used in code but needed in runtime, don't remove!
-from scrapinghub import Connection, APIError
-from shub.utils import find_api_key
+import click, requests
+from shub.utils import find_api_key, get_config
 
 @click.command(help="get log records of a given job on Scrapy Cloud")
-@click.option("-j", "--jobid", help="the job ID to get the log from", required=True)
+@click.argument("jobid")
+@click.option("-t", "--output-format", help="the log format to be outputed", required=False, type=click.Choice(["jl", "json", "text", "csv"]), default="text")
 @click.option("-o", "--output-file", help="the file to dump the log into", required=False)
-def cli(jobid, output_file):
-    key = find_api_key()
-    if not key:
-        print "No API key found."
-        return
-    connection = Connection(key)
-    project_id = get_project_id(jobid)
-    project = connection[project_id]
+def cli(jobid, output_file, output_format):
+    config = get_config()
     try:
-        logitems = project.job(jobid).log()
-    except (APIError, AttributeError), error:
-        print "Error: %s" % error.message
-        return
+        key = config["auth"]["key"]
+    except (TypeError, KeyError):
+        key = find_api_key()
+        if not key:
+            print "No API key found. Quitting..."
+            return
+    url = "https://storage.scrapinghub.com/logs/%s" % jobid
+    headers = _create_headers(output_format=output_format)
+    log = requests.get(url, headers=headers, auth=(key, "")).text
     if output_file:
         with open(output_file, "a") as out:
-            for log_item in logitems:
-                line = get_line(log_item)
-                out.write(line + "\n")
+            out.write(log)
     else:
-        for log_item in logitems:
-            line = get_line(log_item)
-            print line
+        print log
 
-def get_line(log_item):
-    message = log_item["message"]
-    level = log_item["level"]
-    timestamp = log_item["time"]
-    date_time = datetime.datetime.fromtimestamp(timestamp/1000)
-    level_name = logging.getLevelName(level)
-    line = "%s [%s] %s" % (date_time, level_name, message)
-    return line
-
-def get_project_id(job_id):
-    if "/" in job_id:
-        return job_id.split("/")[0]
-
+def _create_headers(**kargs):
+    headers = dict()
+    output_format = kargs["output_format"]
+    map_formats = {
+        "jl": "application/x-jsonlines",
+        "json": "application/json",
+        "text": "text/plain",
+        "csv": "text/csv",
+    }
+    if output_format:
+        headers["Accept"] = map_formats[output_format]
+    return headers
