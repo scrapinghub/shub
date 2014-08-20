@@ -1,18 +1,26 @@
-setup_args = {
-    'name': 'shub',
-    'version': '1.0',
-    'packages': ['shub'],
-    'url': 'https://doc.scrapinghub.com/shub.html',
-    'description': 'Scrapinghub Command Line Client',
-    'long_description': open('README.rst').read(),
-    'author': 'Scrapinghub',
-    'author_email': 'info@scrapinghub.com',
-    'maintainer': 'Scrapinghub',
-    'maintainer_email': 'info@scrapinghub.com',
-    'license': 'BSD',
-    'scripts': ['bin/shub'],
-    'install_requires': ['click'],
-    'classifiers': [
+from setuptools import setup
+
+
+setup(
+    name='shub',
+    version='1.0.0',
+    packages=['shub'],
+    url='https://doc.scrapinghub.com/shub.html',
+    description='Scrapinghub Command Line Client',
+    long_description=open('README.rst').read(),
+    author='Scrapinghub',
+    author_email='info@scrapinghub.com',
+    maintainer='Scrapinghub',
+    maintainer_email='info@scrapinghub.com',
+    license='BSD',
+    entry_points={
+        'console_scripts': ['shub = shub.tool:cli']
+    },
+    scripts=['bin/shub'],
+    include_package_data=True,
+    zip_safe=False,
+    install_requires=['click'],
+    classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
         'Natural Language :: English',
@@ -23,8 +31,4 @@ setup_args = {
         'Environment :: Console',
         'Topic :: Internet :: WWW/HTTP',
     ],
-}
-
-
-from setuptools import setup
-setup(**setup_args)
+)
