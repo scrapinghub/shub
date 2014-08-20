@@ -1,17 +1,25 @@
-import sys, os, glob, tempfile, shutil, time, urllib2, netrc, json, click
+import os
+import sys
+import glob
+import time
+import netrc
+import shutil
+import tempfile
 from urlparse import urlparse, urljoin
 from subprocess import Popen, PIPE, check_call
 
-from w3lib.form import encode_multipart
-import setuptools # not used in code but needed in runtime, don't remove!
+import click
+import requests
+import setuptools  # not used in code but needed in runtime, don't remove!
+_ = setuptools
 
 from scrapy.utils.project import inside_project
-from scrapy.utils.http import basic_auth_header
 from scrapy.utils.python import retry_on_eintr
 from scrapy.utils.conf import get_config, closest_scrapy_cfg
 
-_SETUP_PY_TEMPLATE = \
-"""# Automatically created by: shub deploy
+
+_SETUP_PY_TEMPLATE = """\
+# Automatically created by: shub deploy
 
 from setuptools import setup, find_packages
 
@@ -22,6 +30,7 @@ setup(
     entry_points = {'scrapy': ['settings = %(settings)s']},
 )
 """
+
 
 @click.command(help="Deploy Scrapy project to Scrapy Cloud")
 @click.argument("target", required=False, default="default")
@@ -44,11 +53,11 @@ def cli(target, project, version, list_targets, debug, egg, build_egg):
 
     tmpdir = None
 
-    if build_egg: # build egg only
+    if build_egg:
         egg, tmpdir = _build_egg()
         _log("Writing egg to %s" % build_egg)
         shutil.copyfile(egg, build_egg)
-    else: # buld egg and deploy
+    else:
         target = _get_target(target)
         project = _get_project(target, project)
         version = _get_version(target, version)
@@ -71,12 +80,15 @@ def cli(target, project, version, list_targets, debug, egg, build_egg):
 
     sys.exit(exitcode)
 
+
 def _log(message):
     click.echo(message)
+
 
 def _fail(message, code=1):
     _log(message)
     sys.exit(code)
+
 
 def _get_project(target, project):
     project = project or target.get('project')
@@ -84,10 +96,12 @@ def _get_project(target, project):
         raise _fail("Error: Missing project id")
     return str(project)
 
+
 def _get_option(section, option, default=None):
     cfg = get_config()
     return cfg.get(section, option) if cfg.has_option(section, option) \
         else default
+
 
 def _get_targets():
     cfg = get_config()
@@ -102,14 +116,17 @@ def _get_targets():
             targets[x[7:]] = t
     return targets
 
+
 def _get_target(name):
     try:
         return _get_targets()[name]
     except KeyError:
         raise _fail("Unknown target: %s" % name)
 
+
 def _url(target, action):
     return urljoin(target['url'], action)
+
 
 def _get_version(target, version):
     version = version or target.get('version')
@@ -134,58 +151,42 @@ def _get_version(target, version):
     else:
         return str(int(time.time()))
 
+
 def _upload_egg(target, eggpath, project, version):
-    with open(eggpath, 'rb') as f:
-        eggdata = f.read()
-    data = {
-        'project': project,
-        'version': version,
-        'egg': ('project.egg', eggdata),
-    }
-    body, boundary = encode_multipart(data)
+    data = {'project': project, 'version': version}
+    files = {'egg': ('project.egg', open(eggpath, 'rb'))}
     url = _url(target, 'addversion.json')
-    headers = {
-        'Content-Type': 'multipart/form-data; boundary=%s' % boundary,
-        'Content-Length': str(len(body)),
-    }
-    req = urllib2.Request(url, body, headers)
-    _add_auth_header(req, target)
+    auth = _get_auth(target)
     _log('Deploying to Scrapy Cloud project "%s"' % project)
-    return _http_post(req)
 
-def _add_auth_header(request, target):
-    if 'username' in target:
-        u, p = target.get('username'), target.get('password', '')
-        request.add_header('Authorization', basic_auth_header(u, p))
-    else: # try netrc
-        try:
-            host = urlparse(target['url']).hostname
-            a = netrc.netrc().authenticators(host)
-            request.add_header('Authorization', basic_auth_header(a[0], a[2]))
-        except (netrc.NetrcParseError, IOError, TypeError):
-            pass
-
-def _http_post(request):
     try:
-        f = urllib2.urlopen(request)
-        _log("Server response (%s):" % f.code)
-        print f.read()
+        rsp = requests.post(url=url, auth=auth, data=data, files=files,
+                            stream=True, timeout=300)
+        rsp.raise_for_status()
+        for line in rsp.iter_lines():
+            _log(line)
         return True
-    except urllib2.HTTPError, e:
-        _log("Deploy failed (%s):" % e.code)
-        resp = e.read()
-        try:
-            d = json.loads(resp)
-        except ValueError:
-            print resp
-        else:
-            if "status" in d and "message" in d:
-                print "Status: %(status)s" % d
-                print "Message:\n%(message)s" % d
-            else:
-                print json.dumps(d, indent=3)
-    except urllib2.URLError, e:
-        _log("Deploy failed: %s" % e)
+    except requests.HTTPError as exc:
+        rsp = exc.response
+        _log("Deploy failed ({}):".format(rsp.status_code))
+        _log(rsp.text)
+        return False
+    except requests.RequestException as exc:
+        _log("Deploy failed: {}".format(exc))
+        return False
+
+
+def _get_auth(target):
+    if 'username' in target:
+        return (target.get('username'), target.get('password', ''))
+    # try netrc
+    try:
+        host = urlparse(target['url']).hostname
+        a = netrc.netrc().authenticators(host)
+        return (a[0], a[2])
+    except (netrc.NetrcParseError, IOError, TypeError):
+        pass
+
 
 def _build_egg():
     closest = closest_scrapy_cfg()
@@ -196,11 +197,14 @@ def _build_egg():
     d = tempfile.mkdtemp(prefix="shub-deploy-")
     o = open(os.path.join(d, "stdout"), "wb")
     e = open(os.path.join(d, "stderr"), "wb")
-    retry_on_eintr(check_call, [sys.executable, 'setup.py', 'clean', '-a', 'bdist_egg', '-d', d], stdout=o, stderr=e)
+    retry_on_eintr(check_call,
+                   [sys.executable, 'setup.py', 'clean', '-a', 'bdist_egg', '-d', d],
+                   stdout=o, stderr=e)
     o.close()
     e.close()
     egg = glob.glob(os.path.join(d, '*.egg'))[0]
     return egg, d
+
 
 def _create_default_setup_py(**kwargs):
     with open('setup.py', 'w') as f:
