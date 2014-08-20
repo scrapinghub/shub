@@ -16,7 +16,6 @@ setup(
     entry_points={
         'console_scripts': ['shub = shub.tool:cli']
     },
-    scripts=['bin/shub'],
     include_package_data=True,
     zip_safe=False,
     install_requires=['click'],
