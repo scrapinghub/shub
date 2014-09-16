@@ -1,4 +1,4 @@
-import click
+import click, importlib
 from shub.utils import missing_modules
 
 def missingmod_cmd(modules):
@@ -14,9 +14,17 @@ def missingmod_cmd(modules):
 def cli():
     pass
 
-m = missing_modules('scrapy', 'setuptools')
-if m:
-    cli.add_command(missingmod_cmd(m), 'deploy')
-else:
-    from shub import deploy
-    cli.add_command(deploy.cli, 'deploy')
+module_deps = {
+    "deploy": ["scrapy", "setuptools"],
+    "log": ["requests"],
+    "login": [],
+}
+
+for command, modules in module_deps.iteritems():
+    m = missing_modules(*modules)
+    if m:
+        cli.add_command(missingmod_cmd(m), command)
+    else:
+        module_path = "shub." + command
+        command_class = importlib.import_module(module_path)
+        cli.add_command(command_class.cli, command)
