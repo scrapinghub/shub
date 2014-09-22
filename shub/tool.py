@@ -14,9 +14,18 @@ def missingmod_cmd(modules):
 def cli():
     pass
 
+# --- deploy -----------------------------------------------------------
 m = missing_modules('scrapy', 'setuptools')
 if m:
     cli.add_command(missingmod_cmd(m), 'deploy')
 else:
     from shub import deploy
     cli.add_command(deploy.cli, 'deploy')
+
+# --- status -----------------------------------------------------------
+m = missing_modules('lxml', 'requests')
+if m:
+    cli.add_command(missingmod_cmd(m), 'status')
+else:
+    from shub import status
+    cli.add_command(status.cli, 'status')
