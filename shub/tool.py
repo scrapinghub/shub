@@ -25,5 +25,5 @@ for command, modules in module_deps.iteritems():
         cli.add_command(missingmod_cmd(m), command)
     else:
         module_path = "shub." + command
-        command_class = importlib.import_module(module_path)
-        cli.add_command(command_class.cli, command)
+        command_module = importlib.import_module(module_path)
+        cli.add_command(command_module.cli, command)
