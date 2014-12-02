@@ -15,7 +15,7 @@ def missing_modules(*modules):
 
 def find_api_key():
     """Finds and returns the Scrapy Cloud APIKEY"""
-    key = os.getenv("SH_APIKEY")
+    key = os.getenv("SHUB_APIKEY")
     if not key:
         key = get_key_netrc()
     return key
