@@ -14,4 +14,4 @@ def cli():
         fatal('Invalid key')
 
 def is_valid_key(key):
-    return bool(re.findall(r'^[A-Fa-f\d]{32}$', key))
+    return bool(re.match(r'[A-Fa-f\d]{32}$', key))
