@@ -32,10 +32,3 @@ def get_key_netrc():
         return
     if key:
         return key
-
-def fatal(message):
-    """Print a message to stderr and exit with error code 1"""
-    if not message.endswith('\n'):
-        message += '\n'
-    sys.stderr.write(message)
-    sys.exit(1)
