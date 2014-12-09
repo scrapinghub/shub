@@ -38,7 +38,7 @@ setup(
 @click.option("-v", "--version", help="the version to use for deploying")
 @click.option("-l", "--list-targets", help="list available targets", is_flag=True)
 @click.option("-d", "--debug", help="debug mode (do not remove build dir)", is_flag=True)
-@click.option("--egg", help="deploy the given egg, instead of building one", is_flag=True)
+@click.option("--egg", help="deploy the given egg, instead of building one")
 @click.option("--build-egg", help="only build the egg, don't deploy it", is_flag=True)
 def cli(target, project, version, list_targets, debug, egg, build_egg):
     exitcode = 0
