@@ -19,7 +19,8 @@ module_deps = {
     "login": [],
     "deploy_egg": [],
     "fetch_eggs": [],
-    "deploy_reqs": []
+    "deploy_reqs": [],
+    "logout": [],
 }
 
 for command, modules in module_deps.iteritems():
