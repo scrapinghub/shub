@@ -137,7 +137,7 @@ def _get_version(target, version):
         b = p.communicate()[0].strip('\n')
         return '%s-%s' % (d, b)
     elif version == 'GIT':
-        p = Popen(['git', 'describe'], stdout=PIPE)
+        p = Popen(['git', 'describe', '--always'], stdout=PIPE)
         d = p.communicate()[0].strip('\n')
         if p.wait() != 0:
             p = Popen(['git', 'rev-list', '--count', 'HEAD'], stdout=PIPE)
