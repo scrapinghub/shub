@@ -8,9 +8,11 @@ def cli(context):
         context.fail('Key already exists in netrc file')
     key = raw_input('Insert your Scrapinghub API key: ')
     if key and is_valid_key(key):
-        descriptor = os.open(NETRC_FILE, os.O_CREAT | os.O_RDWR, 0600)
+        descriptor = os.open(
+            NETRC_FILE,
+            os.O_CREAT | os.O_RDWR | os.O_APPEND, 0600)
         with os.fdopen(descriptor, 'a+') as out:
-            line = 'machine scrapinghub.com login {0} password ""'.format(key)
+            line = 'machine scrapinghub.com login {0} password ""\n'.format(key)
             out.write(line)
     else:
         context.fail('Invalid key')
