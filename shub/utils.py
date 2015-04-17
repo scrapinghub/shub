@@ -1,4 +1,4 @@
-import sys, imp, os, netrc
+import sys, imp, os, netrc, re
 
 SCRAPY_CFG_FILE = os.path.expanduser("~/.scrapy.cfg")
 NETRC_FILE = os.path.expanduser('~/.netrc')
@@ -32,3 +32,15 @@ def get_key_netrc():
         return
     if key:
         return key
+
+def is_valid_jobid(jobid):
+    """Checks if a given job id is valid"""
+    return bool(re.match(r'\d+/\d+/\d+$', jobid))
+
+def is_valid_projectid(jobid):
+    """Checks if a given project id is valid"""
+    return bool(re.match(r'\d+$', jobid))
+
+def is_valid_key(key):
+    """Checks if a SH key is valid"""
+    return bool(re.match(r'[A-Fa-f\d]{32}$', key))
