@@ -43,7 +43,7 @@ def _get_project_name():
 
 def _get_project_version(name):
     if isdir('.git'):
-        return run('gt rev-parse --short --verify HEAD')
+        return run('git rev-parse --short --verify HEAD')
     elif isdir('.hg'):
         return run('hg id -i')[:7]
     elif isdir('.bzr'):
