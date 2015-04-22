@@ -27,4 +27,5 @@ for command, modules in module_deps.iteritems():
     else:
         module_path = "shub." + command
         command_module = importlib.import_module(module_path)
+        command_name = command.replace('_', '-') # easier to type
         cli.add_command(command_module.cli, command)
