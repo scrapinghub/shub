@@ -20,11 +20,11 @@ def cli(project_id):
         fail(error)
 
     run('python setup.py bdist_egg')
-    _deploy_egg(find_api_key(), project_id)
+    _deploy_dependency_egg(find_api_key(), project_id)
 
-def _deploy_egg(shub_apikey, project_id):
-    name = _get_project_name()
-    version = _get_project_version(name)
+def _deploy_dependency_egg(shub_apikey, project_id):
+    name = _get_dependency_name()
+    version = _get_dependency_version(name)
     egg_name, egg_path = _get_egg_info(name)
 
     url = 'https://dash.scrapinghub.com/api/eggs/add.json'
@@ -32,17 +32,17 @@ def _deploy_egg(shub_apikey, project_id):
     files = {'egg': (egg_name, open(egg_path, 'rb'))}
     auth = (shub_apikey, '')
 
-    log('Deploying to Scrapy Cloud project "%s"' % project_id)
+    log('Deploying dependency to Scrapy Cloud project "%s"' % project_id)
     make_deploy_request(url, data, files, auth)
     success = "Deployed eggs list at: https://dash.scrapinghub.com/p/%s/eggs"
     log(success % project_id)
 
 
-def _get_project_name():
+def _get_dependency_name():
     return run('python setup.py --name')
 
 
-def _get_project_version(name):
+def _get_dependency_version(name):
     if isdir('.git'):
         return pwd_git_version()
     elif isdir('.hg'):
