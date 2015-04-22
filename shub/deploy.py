@@ -6,7 +6,7 @@ import netrc
 import shutil
 import tempfile
 from urlparse import urlparse, urljoin
-from subprocess import Popen, PIPE, check_call
+from subprocess import check_call
 
 import click
 import setuptools  # not used in code but needed in runtime, don't remove!
@@ -17,7 +17,7 @@ from scrapy.utils.python import retry_on_eintr
 from scrapy.utils.conf import get_config, closest_scrapy_cfg
 
 from shub.click_utils import log, fail
-from shub.utils import make_deploy_request
+from shub.utils import make_deploy_request, pwd_hg_version, pwd_git_version
 
 
 _SETUP_PY_TEMPLATE = """\
@@ -124,21 +124,9 @@ def _url(target, action):
 def _get_version(target, version):
     version = version or target.get('version')
     if version == 'HG':
-        p = Popen(['hg', 'tip', '--template', '{rev}'], stdout=PIPE)
-        d = 'r%s' % p.communicate()[0]
-        p = Popen(['hg', 'branch'], stdout=PIPE)
-        b = p.communicate()[0].strip('\n')
-        return '%s-%s' % (d, b)
+        return pwd_hg_version()
     elif version == 'GIT':
-        p = Popen(['git', 'describe', '--always'], stdout=PIPE)
-        d = p.communicate()[0].strip('\n')
-        if p.wait() != 0:
-            p = Popen(['git', 'rev-list', '--count', 'HEAD'], stdout=PIPE)
-            d = 'r%s' % p.communicate()[0].strip('\n')
-
-        p = Popen(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], stdout=PIPE)
-        b = p.communicate()[0].strip('\n')
-        return '%s-%s' % (d, b)
+        return pwd_git_version()
     elif version:
         return str(version)
     else:

@@ -1,5 +1,7 @@
 import sys, imp, os, netrc
 
+from subprocess import Popen, PIPE
+
 import requests
 
 from shub.click_utils import log
@@ -53,3 +55,26 @@ def make_deploy_request(url, data, files, auth):
     except requests.RequestException as exc:
         log("Deploy failed: {}".format(exc))
         return False
+
+def pwd_git_version():
+    p = Popen(['git', 'describe', '--always'], stdout=PIPE)
+    d = p.communicate()[0].strip('\n')
+    if p.wait() != 0:
+        p = Popen(['git', 'rev-list', '--count', 'HEAD'], stdout=PIPE)
+        d = 'r%s' % p.communicate()[0].strip('\n')
+
+    p = Popen(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], stdout=PIPE)
+    b = p.communicate()[0].strip('\n')
+    return '%s-%s' % (d, b)
+
+def pwd_hg_version():
+    p = Popen(['hg', 'tip', '--template', '{rev}'], stdout=PIPE)
+    d = 'r%s' % p.communicate()[0]
+    p = Popen(['hg', 'branch'], stdout=PIPE)
+    b = p.communicate()[0].strip('\n')
+    return '%s-%s' % (d, b)
+
+def pwd_bzr_version():
+    p = Popen(['bzr', 'revno'], stdout=PIPE)
+    d = '%s' % p.communicate()[0].strip()
+    return d
