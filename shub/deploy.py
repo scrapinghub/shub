@@ -9,7 +9,6 @@ from urlparse import urlparse, urljoin
 from subprocess import Popen, PIPE, check_call
 
 import click
-import requests
 import setuptools  # not used in code but needed in runtime, don't remove!
 _ = setuptools
 
@@ -18,6 +17,7 @@ from scrapy.utils.python import retry_on_eintr
 from scrapy.utils.conf import get_config, closest_scrapy_cfg
 
 from shub.click_utils import log, fail
+from shub.utils import make_deploy_request
 
 
 _SETUP_PY_TEMPLATE = """\
@@ -150,23 +150,9 @@ def _upload_egg(target, eggpath, project, version):
     files = {'egg': ('project.egg', open(eggpath, 'rb'))}
     url = _url(target, 'addversion.json')
     auth = _get_auth(target)
-    log('Deploying to Scrapy Cloud project "%s"' % project)
 
-    try:
-        rsp = requests.post(url=url, auth=auth, data=data, files=files,
-                            stream=True, timeout=300)
-        rsp.raise_for_status()
-        for line in rsp.iter_lines():
-            log(line)
-        return True
-    except requests.HTTPError as exc:
-        rsp = exc.response
-        log("Deploy failed ({}):".format(rsp.status_code))
-        log(rsp.text)
-        return False
-    except requests.RequestException as exc:
-        log("Deploy failed: {}".format(exc))
-        return False
+    log('Deploying to Scrapy Cloud project "%s"' % project)
+    make_deploy_request(url, data, files, auth)
 
 
 def _get_auth(target):
