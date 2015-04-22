@@ -2,23 +2,19 @@ from setuptools import setup
 
 
 setup(
-    name='shub',
+    name='test_project',
     version='1.2.0',
-    packages=['shub'],
-    url='https://doc.scrapinghub.com/shub.html',
-    description='Scrapinghub Command Line Client',
-    long_description=open('README.rst').read(),
+    packages=['test_project'],
+    url='https://doc.scrapinghub.com/test_project.html',
+    description='Test Project',
     author='Scrapinghub',
     author_email='info@scrapinghub.com',
     maintainer='Scrapinghub',
     maintainer_email='info@scrapinghub.com',
     license='BSD',
-    entry_points={
-        'console_scripts': ['shub = shub.tool:cli']
-    },
     include_package_data=True,
     zip_safe=False,
-    install_requires=['click', 'requests'],
+    install_requires=[],
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
@@ -30,6 +26,4 @@ setup(
         'Environment :: Console',
         'Topic :: Internet :: WWW/HTTP',
     ],
-    test_suite='tests',
-    tests_require=[]
 )

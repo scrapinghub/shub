@@ -15,6 +15,9 @@ from shub.utils import (make_deploy_request, pwd_hg_version, pwd_git_version,
 @click.command(help="Build and deploy egg from source")
 @click.argument("project_id", required=True)
 def cli(project_id):
+    main(project_id)
+
+def main(project_id):
     if not os.path.isfile('setup.py'):
         error = "No setup.py -- are you running from a valid Python project?"
         fail(error)
