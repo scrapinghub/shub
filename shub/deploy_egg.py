@@ -8,7 +8,8 @@ import click
 
 from shub.utils import find_api_key
 from shub.click_utils import log, fail
-from shub.utils import make_deploy_request
+from shub.utils import (make_deploy_request, pwd_hg_version, pwd_git_version,
+                        pwd_bzr_version)
 
 
 @click.command(help="Build and deploy egg from source")
@@ -43,11 +44,11 @@ def _get_project_name():
 
 def _get_project_version(name):
     if isdir('.git'):
-        return run('git rev-parse --short --verify HEAD')
+        return pwd_git_version()
     elif isdir('.hg'):
-        return run('hg id -i')[:7]
+        return pwd_hg_version()
     elif isdir('.bzr'):
-        return run('bzr revno')
+        return pwd_bzr_version()
 
     return "%s-%s" % (name, run('python setup.py --version'))
 
