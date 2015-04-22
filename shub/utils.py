@@ -7,7 +7,8 @@ import requests
 from shub.click_utils import log
 
 SCRAPY_CFG_FILE = os.path.expanduser("~/.scrapy.cfg")
-NETRC_FILE = os.path.expanduser('~/.netrc')
+OS_WIN = True if os.name == 'nt' else False
+NETRC_FILE = os.path.expanduser('~/_netrc') if OS_WIN else os.path.expanduser('~/.netrc')
 
 def missing_modules(*modules):
     """Receives a list of module names and returns those which are missing"""
@@ -29,7 +30,7 @@ def find_api_key():
 def get_key_netrc():
     """Gets the key from the netrc file"""
     try:
-        info = netrc.netrc()
+        info = netrc.netrc(NETRC_FILE)
     except IOError:
         return
     try:
