@@ -31,5 +31,5 @@ setup(
         'Topic :: Internet :: WWW/HTTP',
     ],
     test_suite='tests',
-    tests_require=[]
+    tests_require=['mock']
 )

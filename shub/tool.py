@@ -18,7 +18,8 @@ module_deps = {
     "deploy": ["scrapy", "setuptools"],
     "login": [],
     "deploy_egg": [],
-    "fetch_eggs": []
+    "fetch_eggs": [],
+    "deploy_reqs": []
 }
 
 for command, modules in module_deps.iteritems():
