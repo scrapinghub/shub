@@ -1,4 +1,4 @@
-import sys, imp, os, netrc
+import imp, os, netrc, subprocess
 
 from subprocess import Popen, PIPE
 
@@ -79,3 +79,7 @@ def pwd_bzr_version():
     p = Popen(['bzr', 'revno'], stdout=PIPE)
     d = '%s' % p.communicate()[0].strip()
     return d
+
+def run(cmd):
+    output = subprocess.check_output(cmd, shell=True)
+    return output.strip()
