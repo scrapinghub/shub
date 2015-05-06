@@ -1,6 +1,5 @@
 import os
 import glob
-import subprocess
 
 from os.path import isdir
 
@@ -9,7 +8,7 @@ import click
 from shub.utils import find_api_key
 from shub.click_utils import log, fail
 from shub.utils import (make_deploy_request, pwd_hg_version, pwd_git_version,
-                        pwd_bzr_version)
+                        pwd_bzr_version, run)
 
 
 @click.command(help="Build and deploy egg from source")
@@ -61,8 +60,3 @@ def _get_egg_info(name):
     egg_path_glob = os.path.join('dist', '%s*' % egg_filename)
     egg_path = glob.glob(egg_path_glob)[0]
     return (egg_filename, egg_path)
-
-
-def run(cmd):
-    output = subprocess.check_output(cmd, shell=True)
-    return output.strip()

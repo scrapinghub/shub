@@ -23,6 +23,8 @@ class FakeRequester:
 class TestDeployEgg(unittest.TestCase):
 
     def setUp(self):
+        self.curdir = os.getcwd()
+
         self.fake_requester = FakeRequester()
         deploy_egg.make_deploy_request = self.fake_requester.fake_request
 
@@ -32,6 +34,10 @@ class TestDeployEgg(unittest.TestCase):
         # defined on this folder's setup.py file
         shutil.copytree('tests/samples/deploy_egg_sample_project/', self.tmp_dir)
         os.chdir(self.tmp_dir)
+
+
+    def tearDown(self):
+        os.chdir(self.curdir)
 
 
     def test_parses_project_information_correctly(self):
