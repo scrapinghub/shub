@@ -17,7 +17,8 @@ def cli():
 module_deps = {
     "deploy": ["scrapy", "setuptools"],
     "login": [],
-    "deploy_egg": []
+    "deploy_egg": [],
+    "fetch_eggs": []
 }
 
 for command, modules in module_deps.iteritems():
