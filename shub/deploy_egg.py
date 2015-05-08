@@ -1,7 +1,9 @@
 import os
 import glob
+import tempfile
 
 from os.path import isdir
+from subprocess import Popen, PIPE
 
 import click
 
@@ -13,10 +15,15 @@ from shub.utils import (make_deploy_request, pwd_hg_version, pwd_git_version,
 
 @click.command(help="Build and deploy egg from source")
 @click.argument("project_id", required=True)
-def cli(project_id):
-    main(project_id)
+@click.option("--from-url", help="Git, bazaar or mercurial repository URL")
+@click.option("--git-branch", help="Git branch to checkout")
+def cli(project_id, from_url=None, git_branch=None):
+    main(project_id, from_url, git_branch)
 
-def main(project_id):
+def main(project_id, from_url=None, git_branch=None):
+    if from_url:
+        _checkout(from_url, git_branch)
+
     if not os.path.isfile('setup.py'):
         error = "No setup.py -- are you running from a valid Python project?"
         fail(error)
@@ -60,3 +67,28 @@ def _get_egg_info(name):
     egg_path_glob = os.path.join('dist', '%s*' % egg_filename)
     egg_path = glob.glob(egg_path_glob)[0]
     return (egg_filename, egg_path)
+
+
+def _checkout(repo, git_branch=None):
+    tmpdir = tempfile.mkdtemp(prefix='shub-deploy-egg-from-url')
+
+    log("Cloning the repository to a tmp folder...")
+    os.chdir(tmpdir)
+
+    if (_run('git clone %s egg-tmp-clone' % repo) != 0 and
+        _run('hg clone %s egg-tmp-clone' % repo) != 0 and
+        _run('bzr branch %s egg-tmp-clone' % repo) != 0):
+        error = "\nERROR: The provided repository URL is not valid: %s\n" % repo
+        fail(error)
+
+    os.chdir('egg-tmp-clone')
+
+    if git_branch:
+        if _run('git checkout %s' % git_branch) != 0:
+            fail("Branch %s is not valid" % git_branch)
+        log("%s branch was checked out" % git_branch)
+
+def _run(cmd):
+    p = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
+    p.communicate()
+    return p.returncode
