@@ -27,7 +27,7 @@ class TestDeployEgg(unittest.TestCase):
         self.curdir = os.getcwd()
 
         self.fake_requester = FakeRequester()
-        deploy_egg.make_deploy_request = self.fake_requester.fake_request
+        deploy_egg.utils.make_deploy_request = self.fake_requester.fake_request
 
         self.tmp_dir = tempfile.mkdtemp(prefix="shub-test-deploy-eggs")
         shutil.rmtree(self.tmp_dir)
