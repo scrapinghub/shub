@@ -14,10 +14,18 @@ from shub.utils import run, decompress_egg_files
 @click.argument("project_id", required=True)
 @click.option("--from-url", help="Git, bazaar or mercurial repository URL")
 @click.option("--git-branch", help="Git branch to checkout")
-def cli(project_id, from_url=None, git_branch=None):
-    main(project_id, from_url, git_branch)
+@click.option("--from-pypi", help="Name of package on pypi")
+def cli(project_id, from_url=None, git_branch=None, from_pypi=None):
+    main(project_id, from_url, git_branch, from_pypi)
 
-def main(project_id, from_url=None, git_branch=None):
+
+def main(project_id, from_url=None, git_branch=None, from_pypi=None):
+    if from_pypi:
+        _fetch_from_pypi(from_pypi)
+        decompress_egg_files()
+        utils.build_and_deploy_eggs(project_id)
+        return
+
     if from_url:
         _checkout(from_url, git_branch)
 
@@ -52,12 +60,10 @@ def _fetch_from_pypi(pkg):
     tmpdir = tempfile.mkdtemp(prefix='shub-deploy-egg-from-pypi')
 
     log('Fetching %s from pypi' % pkg)
-    os.chdir(tmpdir)
-    pkg_dir = 'pkg_dir'
-    pip_cmd = "pip install -d %s %s --no-deps --no-use-wheel" % (pkg_dir, pkg)
+    pip_cmd = "pip install -d %s %s --no-deps --no-use-wheel" % (tmpdir, pkg)
     log(run(pip_cmd))
-    os.chdir(pkg_dir)
     log('Package fetched successfully')
+    os.chdir(tmpdir)
 
 
 def _run(cmd):
