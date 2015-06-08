@@ -11,19 +11,18 @@ from mock import Mock
 from shub import deploy_reqs
 
 
-
 class TestDeployReqs(unittest.TestCase):
     def test_can_decompress_downloaded_packages_and_call_deploy_reqs(self):
         # GIVEN
         requirements_file = self._write_tmp_requirements_file()
 
         # WHEN
-        deploy_reqs.deploy_egg.main = Mock()
+        deploy_reqs.utils.build_and_deploy_egg = Mock()
         project_id = 0
         deploy_reqs.main(project_id, requirements_file)
 
         # THEN
-        self.assertEqual(2, deploy_reqs.deploy_egg.main.call_count)
+        self.assertEqual(2, deploy_reqs.utils.build_and_deploy_egg.call_count)
 
     def _write_tmp_requirements_file(self):
         basepath = 'tests/samples/deploy_reqs_sample_project/'
