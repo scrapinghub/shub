@@ -1,6 +1,7 @@
 import click
 import os
 import tempfile
+import shutil
 
 from shub.utils import run, decompress_egg_files
 from shub import utils
@@ -31,5 +32,13 @@ def _mk_and_cd_eggs_tmpdir():
 
 
 def _download_egg_files(eggs_dir, requirements_file):
-    pip_cmd = "pip install -d %s -r %s --no-deps --no-use-wheel"
-    print(run(pip_cmd % (eggs_dir, requirements_file)))
+    editable_src_dir = tempfile.mkdtemp(prefix='pipsrc')
+
+    try:
+        pip_cmd = ("pip install -d {eggs_dir} -r {requirements_file}"
+                   " --src {editable_src_dir} --no-deps --no-use-wheel")
+        print(run(pip_cmd.format(eggs_dir=eggs_dir,
+                                 editable_src_dir=editable_src_dir,
+                                 requirements_file=requirements_file)))
+    finally:
+        shutil.rmtree(editable_src_dir, ignore_errors=True)
