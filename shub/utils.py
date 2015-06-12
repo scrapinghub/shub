@@ -136,6 +136,7 @@ def build_and_deploy_egg(project_id):
         run('python setup.py bdist_egg')
     except CalledProcessError:
         # maybe a C extension or distutils package, forcing bdist_egg
+        log("Couldn't build an egg with vanilla setup.py, trying with setuptools...")
         run('python -c  "import setuptools; execfile(\'setup.py\')" bdist_egg')
 
     _deploy_dependency_egg(find_api_key(), project_id)
