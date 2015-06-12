@@ -5,7 +5,7 @@ import subprocess
 
 from glob import glob
 from os.path import isdir
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, CalledProcessError
 
 import requests
 
@@ -131,7 +131,14 @@ def _ext(file_path):
 
 def build_and_deploy_egg(project_id):
     """Builds and deploys the current dir's egg"""
-    run('python setup.py bdist_egg')
+    log("Building egg in: %s" % os.getcwd())
+    try:
+        run('python setup.py bdist_egg')
+    except CalledProcessError:
+        # maybe a C extension or distutils package, forcing bdist_egg
+        log("Couldn't build an egg with vanilla setup.py, trying with setuptools...")
+        run('python -c  "import setuptools; execfile(\'setup.py\')" bdist_egg')
+
     _deploy_dependency_egg(find_api_key(), project_id)
 
 
