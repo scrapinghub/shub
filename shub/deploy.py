@@ -140,7 +140,7 @@ def _upload_egg(target, eggpath, project, version):
     auth = _get_auth(target)
 
     log('Deploying to Scrapy Cloud project "%s"' % project)
-    make_deploy_request(url, data, files, auth)
+    return make_deploy_request(url, data, files, auth)
 
 
 def _get_auth(target):
