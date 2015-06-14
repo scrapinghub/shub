@@ -4,4 +4,4 @@ import shub
 
 @click.command(help="Show shub version")
 def cli():
-    print(shub.__version__)
+    click.echo(shub.__version__)
