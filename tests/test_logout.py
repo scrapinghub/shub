@@ -1,6 +1,8 @@
-import unittest, os
-from shub.logout import remove_sh_key
+import os
+import unittest
 from tempfile import NamedTemporaryFile
+from shub.logout import remove_sh_key
+
 
 class LogoutTestCase(unittest.TestCase):
     _netrc_file = None
@@ -18,7 +20,7 @@ class LogoutTestCase(unittest.TestCase):
     def _create_tmp_netrc(self):
         with NamedTemporaryFile(delete=False) as netrc:
             line = 'machine scrapinghub.com login ffffffffffffffffffffffffffffffff password ""'
-            netrc.write(line)
+            netrc.write(line.encode())
         return netrc.name
 
     def _delete_tmp_netrc(self, netrc_file):

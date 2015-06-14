@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 import imp
 import os
 import netrc
@@ -71,30 +72,29 @@ def make_deploy_request(url, data, files, auth):
         raise ClickException("Deploy failed: {}".format(exc))
 
 
-def pwd_git_version():
-    p = Popen(['git', 'describe', '--always'], stdout=PIPE)
-    d = p.communicate()[0].strip('\n')
-    if p.wait() != 0:
-        p = Popen(['git', 'rev-list', '--count', 'HEAD'], stdout=PIPE)
-        d = 'r%s' % p.communicate()[0].strip('\n')
+def get_cmd_output(cmd):
+    return Popen(cmd, stdout=PIPE).communicate()[0].decode()
 
-    p = Popen(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], stdout=PIPE)
-    b = p.communicate()[0].strip('\n')
-    return '%s-%s' % (d, b)
+
+def pwd_git_version():
+    process = Popen(['git', 'describe', '--always'], stdout=PIPE)
+    commit_id = process.communicate()[0].decode().strip('\n')
+    if process.wait() != 0:
+        commit_id = get_cmd_output(['git', 'rev-list', '--count', 'HEAD']).strip('\n')
+
+    branch = get_cmd_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD']).strip('\n')
+    return '%s-%s' % (commit_id, branch)
 
 
 def pwd_hg_version():
-    p = Popen(['hg', 'tip', '--template', '{rev}'], stdout=PIPE)
-    d = 'r%s' % p.communicate()[0]
-    p = Popen(['hg', 'branch'], stdout=PIPE)
-    b = p.communicate()[0].strip('\n')
-    return '%s-%s' % (d, b)
+    commit_id = 'r%s' % get_cmd_output(['hg', 'tip', '--template', '{rev}'])
+
+    branch = get_cmd_output(['hg', 'branch']).strip('\n')
+    return '%s-%s' % (commit_id, branch)
 
 
 def pwd_bzr_version():
-    p = Popen(['bzr', 'revno'], stdout=PIPE)
-    d = '%s' % p.communicate()[0].strip()
-    return d
+    return '%s' % get_cmd_output(['bzr', 'revno']).strip()
 
 
 def run(cmd):
@@ -163,7 +163,7 @@ def _deploy_dependency_egg(shub_apikey, project_id):
 
 
 def _get_dependency_name():
-    return run('python setup.py --name')
+    return run('python setup.py --name').decode()
 
 
 def _get_dependency_version(name):
@@ -174,7 +174,7 @@ def _get_dependency_version(name):
     elif isdir('.bzr'):
         return pwd_bzr_version()
 
-    return "%s-%s" % (name, run('python setup.py --version'))
+    return "%s-%s" % (name, run('python setup.py --version').decode())
 
 
 def _get_egg_info(name):
