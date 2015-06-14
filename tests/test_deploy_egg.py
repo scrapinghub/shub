@@ -7,6 +7,7 @@ import unittest
 import os
 import tempfile
 import shutil
+from zipfile import ZipFile
 
 from shub import deploy_egg
 
@@ -28,11 +29,12 @@ class TestDeployEgg(unittest.TestCase):
         self.fake_requester = FakeRequester()
         deploy_egg.utils.make_deploy_request = self.fake_requester.fake_request
 
-        self.tmp_dir = tempfile.mkdtemp(prefix="shub-test-deploy-eggs")
-        shutil.rmtree(self.tmp_dir)
+        self.tmp_dir = tempfile.mktemp(prefix="shub-test-deploy-eggs")
 
     def tearDown(self):
         os.chdir(self.curdir)
+        if os.path.exists(self.tmp_dir):
+            shutil.rmtree(self.tmp_dir)
 
     def test_parses_project_information_correctly(self):
         # this test's assertions are based on the values
@@ -44,9 +46,12 @@ class TestDeployEgg(unittest.TestCase):
         self.assertEqual('test_project-1.2.0', data['version'])
 
     def test_can_clone_a_git_repo_and_deploy_the_egg(self):
-        repo = os.path.abspath('tests/samples/deploy_egg_sample_repo.git')
+        self._unzip_git_repo_to(self.tmp_dir)
+        repo = os.path.join(self.tmp_dir, 'deploy_egg_sample_repo.git')
+
         self.call_main_and_check_request_data(from_url=repo)
         data = self.call_main_and_check_request_data()
+
         self.assertTrue('master' in data['version'])
 
     def test_can_deploy_an_egg_from_pypi(self):
@@ -55,10 +60,16 @@ class TestDeployEgg(unittest.TestCase):
         self.call_main_and_check_request_data(from_pypi=pkg)
 
     def test_can_clone_checkout_and_deploy_the_egg(self):
-        repo = os.path.abspath('tests/samples/deploy_egg_sample_repo.git')
+        self._unzip_git_repo_to(self.tmp_dir)
+        repo = os.path.join(self.tmp_dir, 'deploy_egg_sample_repo.git')
+
         branch = 'dev'
         data = self.call_main_and_check_request_data(from_url=repo, git_branch=branch)
         self.assertTrue('dev' in data['version'])
+
+    def _unzip_git_repo_to(self, path):
+        zipped_repo = os.path.abspath('tests/samples/deploy_egg_sample_repo.git.zip')
+        ZipFile(zipped_repo).extractall(self.tmp_dir)
 
     def call_main_and_check_request_data(self, project_id=0, from_url=None,
                                          git_branch=None, from_pypi=None):
