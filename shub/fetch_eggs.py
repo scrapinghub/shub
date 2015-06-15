@@ -9,7 +9,7 @@ from shub.click_utils import log
 @click.argument("project_id", required=True)
 def cli(project_id):
     auth = (find_api_key(), '')
-    url = "https://staging.scrapinghub.com/api/eggs/bundle.zip?project=%s" % project_id
+    url = "https://dash.scrapinghub.com/api/eggs/bundle.zip?project=%s" % project_id
     rsp = requests.get(url=url, auth=auth, stream=True, timeout=300)
 
     destfile = 'eggs-%s.zip' % project_id
