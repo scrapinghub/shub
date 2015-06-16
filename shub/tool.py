@@ -1,4 +1,5 @@
 import click, importlib
+import shub
 from shub.utils import missing_modules
 
 def missingmod_cmd(modules):
@@ -11,7 +12,8 @@ def missingmod_cmd(modules):
     return cmd
 
 @click.group(help="Scrapinghub command-line client")
-def cli():
+@click.version_option(shub.__version__)
+def cli(version):
     pass
 
 module_deps = {
