@@ -13,7 +13,7 @@ def missingmod_cmd(modules):
 
 @click.group(help="Scrapinghub command-line client")
 @click.version_option(shub.__version__)
-def cli(version):
+def cli():
     pass
 
 module_deps = {
