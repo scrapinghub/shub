@@ -4,8 +4,11 @@
 import unittest
 from click.testing import CliRunner
 from shub import tool
+import os
 
 
+@unittest.skipUnless(os.getenv('USING_TOX'),
+                     'End to end tests only run via TOX')
 class ShubEndToEndTests(unittest.TestCase):
     def setUp(self):
         self.runner = CliRunner()
