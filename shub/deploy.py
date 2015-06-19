@@ -43,7 +43,6 @@ setup(
 @click.option("--egg", help="deploy the given egg, instead of building one")
 @click.option("--build-egg", help="only build the given egg, don't deploy it")
 def cli(target, project, version, list_targets, debug, egg, build_egg):
-    exitcode = 0
     if not inside_project():
         log("Error: no Scrapy project found in this location")
         sys.exit(1)
@@ -69,18 +68,15 @@ def cli(target, project, version, list_targets, debug, egg, build_egg):
         else:
             log("Packing version %s" % version)
             egg, tmpdir = _build_egg()
-        if _upload_egg(target, egg, project, version):
-            click.echo("Run your spiders at: https://dash.scrapinghub.com/p/%s/" % project)
-        else:
-            exitcode = 1
+
+        _upload_egg(target, egg, project, version)
+        click.echo("Run your spiders at: https://dash.scrapinghub.com/p/%s/" % project)
 
     if tmpdir:
         if debug:
             log("Output dir not removed: %s" % tmpdir)
         else:
             shutil.rmtree(tmpdir)
-
-    sys.exit(exitcode)
 
 
 def _get_project(target, project):
