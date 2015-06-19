@@ -36,10 +36,20 @@ def missing_modules(*modules):
 
 
 def find_api_key():
-    """Finds and returns the Scrapy Cloud APIKEY"""
+    """Finds and returns the Scrapy Cloud APIKEY
+
+    Raises:
+        ClickException: if no API key is found
+    """
     key = os.getenv("SHUB_APIKEY")
     if not key:
         key = get_key_netrc()
+
+    if not key:
+        err = ("Your credentials haven't been defined.\n"
+               "Use 'shub login' or set the SHUB_APIKEY environment variable.")
+        raise ClickException(err)
+
     return key
 
 
