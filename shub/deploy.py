@@ -54,29 +54,30 @@ def cli(target, project, version, list_targets, debug, egg, build_egg):
 
     tmpdir = None
 
-    if build_egg:
-        egg, tmpdir = _build_egg()
-        log("Writing egg to %s" % build_egg)
-        shutil.copyfile(egg, build_egg)
-    else:
-        target = _get_target(target)
-        project = _get_project(target, project)
-        version = _get_version(target, version)
-        if egg:
-            log("Using egg: %s" % egg)
-            egg = egg
-        else:
-            log("Packing version %s" % version)
+    try:
+        if build_egg:
             egg, tmpdir = _build_egg()
-
-        _upload_egg(target, egg, project, version)
-        click.echo("Run your spiders at: https://dash.scrapinghub.com/p/%s/" % project)
-
-    if tmpdir:
-        if debug:
-            log("Output dir not removed: %s" % tmpdir)
+            log("Writing egg to %s" % build_egg)
+            shutil.copyfile(egg, build_egg)
         else:
-            shutil.rmtree(tmpdir)
+            target = _get_target(target)
+            project = _get_project(target, project)
+            version = _get_version(target, version)
+            if egg:
+                log("Using egg: %s" % egg)
+                egg = egg
+            else:
+                log("Packing version %s" % version)
+                egg, tmpdir = _build_egg()
+
+            _upload_egg(target, egg, project, version)
+            click.echo("Run your spiders at: https://dash.scrapinghub.com/p/%s/" % project)
+    finally:
+        if tmpdir:
+            if debug:
+                log("Output dir not removed: %s" % tmpdir)
+            else:
+                shutil.rmtree(tmpdir)
 
 
 def _get_project(target, project):
