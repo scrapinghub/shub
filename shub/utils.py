@@ -3,6 +3,7 @@ import imp
 import os
 import netrc
 import subprocess
+import sys
 
 from glob import glob
 from os.path import isdir
@@ -18,6 +19,9 @@ from shub.exceptions import AuthException
 SCRAPY_CFG_FILE = os.path.expanduser("~/.scrapy.cfg")
 OS_WIN = True if os.name == 'nt' else False
 NETRC_FILE = os.path.expanduser('~/_netrc') if OS_WIN else os.path.expanduser('~/.netrc')
+
+FALLBACK_ENCODING = 'utf-8'
+STDOUT_ENCODING = sys.stdout.encoding or FALLBACK_ENCODING
 
 
 def missing_modules(*modules):
@@ -73,12 +77,12 @@ def make_deploy_request(url, data, files, auth):
 
 
 def get_cmd_output(cmd):
-    return Popen(cmd, stdout=PIPE).communicate()[0].decode()
+    return Popen(cmd, stdout=PIPE).communicate()[0].decode(STDOUT_ENCODING)
 
 
 def pwd_git_version():
     process = Popen(['git', 'describe', '--always'], stdout=PIPE)
-    commit_id = process.communicate()[0].decode().strip('\n')
+    commit_id = process.communicate()[0].decode(STDOUT_ENCODING).strip('\n')
     if process.wait() != 0:
         commit_id = get_cmd_output(['git', 'rev-list', '--count', 'HEAD']).strip('\n')
 
@@ -99,7 +103,7 @@ def pwd_bzr_version():
 
 def run(cmd):
     output = subprocess.check_output(cmd, shell=True)
-    return output.strip()
+    return output.decode(STDOUT_ENCODING).strip()
 
 
 def decompress_egg_files():
@@ -163,7 +167,7 @@ def _deploy_dependency_egg(shub_apikey, project_id):
 
 
 def _get_dependency_name():
-    return run('python setup.py --name').decode()
+    return run('python setup.py --name')
 
 
 def _get_dependency_version(name):
@@ -174,7 +178,7 @@ def _get_dependency_version(name):
     elif isdir('.bzr'):
         return pwd_bzr_version()
 
-    return "%s-%s" % (name, run('python setup.py --version').decode())
+    return "%s-%s" % (name, run('python setup.py --version'))
 
 
 def _get_egg_info(name):
