@@ -20,7 +20,7 @@ class LogoutTestCase(unittest.TestCase):
     def _create_tmp_netrc(self):
         with NamedTemporaryFile(delete=False) as netrc:
             line = 'machine scrapinghub.com login ffffffffffffffffffffffffffffffff password ""'
-            netrc.write(line.encode())
+            netrc.write(line.encode('ascii'))
         return netrc.name
 
     def _delete_tmp_netrc(self, netrc_file):
