@@ -43,7 +43,6 @@ setup(
 @click.option("--egg", help="deploy the given egg, instead of building one")
 @click.option("--build-egg", help="only build the given egg, don't deploy it")
 def cli(target, project, version, list_targets, debug, egg, build_egg):
-    exitcode = 0
     if not inside_project():
         log("Error: no Scrapy project found in this location")
         sys.exit(1)
@@ -55,32 +54,30 @@ def cli(target, project, version, list_targets, debug, egg, build_egg):
 
     tmpdir = None
 
-    if build_egg:
-        egg, tmpdir = _build_egg()
-        log("Writing egg to %s" % build_egg)
-        shutil.copyfile(egg, build_egg)
-    else:
-        target = _get_target(target)
-        project = _get_project(target, project)
-        version = _get_version(target, version)
-        if egg:
-            log("Using egg: %s" % egg)
-            egg = egg
-        else:
-            log("Packing version %s" % version)
+    try:
+        if build_egg:
             egg, tmpdir = _build_egg()
-        if _upload_egg(target, egg, project, version):
+            log("Writing egg to %s" % build_egg)
+            shutil.copyfile(egg, build_egg)
+        else:
+            target = _get_target(target)
+            project = _get_project(target, project)
+            version = _get_version(target, version)
+            if egg:
+                log("Using egg: %s" % egg)
+                egg = egg
+            else:
+                log("Packing version %s" % version)
+                egg, tmpdir = _build_egg()
+
+            _upload_egg(target, egg, project, version)
             click.echo("Run your spiders at: https://dash.scrapinghub.com/p/%s/" % project)
-        else:
-            exitcode = 1
-
-    if tmpdir:
-        if debug:
-            log("Output dir not removed: %s" % tmpdir)
-        else:
-            shutil.rmtree(tmpdir)
-
-    sys.exit(exitcode)
+    finally:
+        if tmpdir:
+            if debug:
+                log("Output dir not removed: %s" % tmpdir)
+            else:
+                shutil.rmtree(tmpdir)
 
 
 def _get_project(target, project):

@@ -9,7 +9,10 @@ from subprocess import Popen, PIPE, CalledProcessError
 
 import requests
 
+from click import ClickException
+
 from shub.click_utils import log
+from shub.exceptions import AuthException
 
 SCRAPY_CFG_FILE = os.path.expanduser("~/.scrapy.cfg")
 OS_WIN = True if os.name == 'nt' else False
@@ -48,7 +51,6 @@ def get_key_netrc():
     if key:
         return key
 
-
 def make_deploy_request(url, data, files, auth):
     try:
         rsp = requests.post(url=url, auth=auth, data=data, files=files,
@@ -59,12 +61,14 @@ def make_deploy_request(url, data, files, auth):
         return True
     except requests.HTTPError as exc:
         rsp = exc.response
-        log("Deploy failed ({}):".format(rsp.status_code))
-        log(rsp.text)
-        return False
+
+        if rsp.status_code == 403:
+            raise AuthException()
+
+        msg = "Deploy failed ({}):\n{}".format(rsp.status_code, rsp.text)
+        raise ClickException(msg)
     except requests.RequestException as exc:
-        log("Deploy failed: {}".format(exc))
-        return False
+        raise ClickException("Deploy failed: {}".format(exc))
 
 
 def pwd_git_version():
