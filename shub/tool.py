@@ -26,7 +26,7 @@ module_deps = {
     "version": [],
 }
 
-for command, modules in module_deps.iteritems():
+for command, modules in module_deps.items():
     m = missing_modules(*modules)
     if m:
         cli.add_command(missingmod_cmd(m), command)

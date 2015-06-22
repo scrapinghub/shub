@@ -10,7 +10,7 @@ def cli(context):
     if key and is_valid_key(key):
         descriptor = os.open(
             NETRC_FILE,
-            os.O_CREAT | os.O_RDWR | os.O_APPEND, 0600)
+            os.O_CREAT | os.O_RDWR | os.O_APPEND, 0o600)
         with os.fdopen(descriptor, 'a+') as out:
             line = 'machine scrapinghub.com login {0} password ""\n'.format(key)
             out.write(line)

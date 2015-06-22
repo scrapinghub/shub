@@ -1,7 +1,9 @@
+from __future__ import unicode_literals
 import imp
 import os
 import netrc
 import subprocess
+import sys
 
 from glob import glob
 from os.path import isdir
@@ -17,6 +19,9 @@ from shub.exceptions import AuthException
 SCRAPY_CFG_FILE = os.path.expanduser("~/.scrapy.cfg")
 OS_WIN = True if os.name == 'nt' else False
 NETRC_FILE = os.path.expanduser('~/_netrc') if OS_WIN else os.path.expanduser('~/.netrc')
+
+FALLBACK_ENCODING = 'utf-8'
+STDOUT_ENCODING = sys.stdout.encoding or FALLBACK_ENCODING
 
 
 def missing_modules(*modules):
@@ -71,35 +76,34 @@ def make_deploy_request(url, data, files, auth):
         raise ClickException("Deploy failed: {}".format(exc))
 
 
-def pwd_git_version():
-    p = Popen(['git', 'describe', '--always'], stdout=PIPE)
-    d = p.communicate()[0].strip('\n')
-    if p.wait() != 0:
-        p = Popen(['git', 'rev-list', '--count', 'HEAD'], stdout=PIPE)
-        d = 'r%s' % p.communicate()[0].strip('\n')
+def get_cmd_output(cmd):
+    return Popen(cmd, stdout=PIPE).communicate()[0].decode(STDOUT_ENCODING)
 
-    p = Popen(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], stdout=PIPE)
-    b = p.communicate()[0].strip('\n')
-    return '%s-%s' % (d, b)
+
+def pwd_git_version():
+    process = Popen(['git', 'describe', '--always'], stdout=PIPE)
+    commit_id = process.communicate()[0].decode(STDOUT_ENCODING).strip('\n')
+    if process.wait() != 0:
+        commit_id = get_cmd_output(['git', 'rev-list', '--count', 'HEAD']).strip('\n')
+
+    branch = get_cmd_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD']).strip('\n')
+    return '%s-%s' % (commit_id, branch)
 
 
 def pwd_hg_version():
-    p = Popen(['hg', 'tip', '--template', '{rev}'], stdout=PIPE)
-    d = 'r%s' % p.communicate()[0]
-    p = Popen(['hg', 'branch'], stdout=PIPE)
-    b = p.communicate()[0].strip('\n')
-    return '%s-%s' % (d, b)
+    commit_id = 'r%s' % get_cmd_output(['hg', 'tip', '--template', '{rev}'])
+
+    branch = get_cmd_output(['hg', 'branch']).strip('\n')
+    return '%s-%s' % (commit_id, branch)
 
 
 def pwd_bzr_version():
-    p = Popen(['bzr', 'revno'], stdout=PIPE)
-    d = '%s' % p.communicate()[0].strip()
-    return d
+    return '%s' % get_cmd_output(['bzr', 'revno']).strip()
 
 
 def run(cmd):
     output = subprocess.check_output(cmd, shell=True)
-    return output.strip()
+    return output.decode(STDOUT_ENCODING).strip()
 
 
 def decompress_egg_files():
