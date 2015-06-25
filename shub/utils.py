@@ -1,7 +1,6 @@
 from __future__ import unicode_literals
 import imp
 import os
-import netrc
 import subprocess
 import sys
 
@@ -13,13 +12,11 @@ import requests
 
 from click import ClickException
 
+from shub.auth import find_api_key
 from shub.click_utils import log
 from shub.exceptions import AuthException
 
 SCRAPY_CFG_FILE = os.path.expanduser("~/.scrapy.cfg")
-OS_WIN = True if os.name == 'nt' else False
-NETRC_FILE = os.path.expanduser('~/_netrc') if OS_WIN else os.path.expanduser('~/.netrc')
-
 FALLBACK_ENCODING = 'utf-8'
 STDOUT_ENCODING = sys.stdout.encoding or FALLBACK_ENCODING
 
@@ -34,37 +31,6 @@ def missing_modules(*modules):
             missing.append(module_name)
     return missing
 
-
-def find_api_key():
-    """Finds and returns the Scrapy Cloud APIKEY
-
-    Raises:
-        ClickException: if no API key is found
-    """
-    key = os.getenv("SHUB_APIKEY")
-    if not key:
-        key = get_key_netrc()
-
-    if not key:
-        err = ("Your credentials haven't been defined.\n"
-               "Use 'shub login' or set the SHUB_APIKEY environment variable.")
-        raise ClickException(err)
-
-    return key
-
-
-def get_key_netrc():
-    """Gets the key from the netrc file"""
-    try:
-        info = netrc.netrc(NETRC_FILE)
-    except IOError:
-        return
-    try:
-        key, account, password = info.authenticators("scrapinghub.com")
-    except TypeError:
-        return
-    if key:
-        return key
 
 def make_deploy_request(url, data, files, auth):
     try:
