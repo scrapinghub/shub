@@ -4,7 +4,7 @@ import glob
 import time
 import shutil
 import tempfile
-from urlparse import urljoin
+from six.moves.urllib.parse import urljoin
 from subprocess import check_call
 
 import click
