@@ -16,8 +16,11 @@ from scrapy.utils.project import inside_project
 from scrapy.utils.python import retry_on_eintr
 from scrapy.utils.conf import get_config, closest_scrapy_cfg
 
+from shub import login
+
 from shub.click_utils import log, fail
-from shub.utils import make_deploy_request, pwd_hg_version, pwd_git_version
+from shub.utils import (make_deploy_request, pwd_hg_version, pwd_git_version,
+                        find_api_key)
 
 
 _SETUP_PY_TEMPLATE = """\
@@ -146,8 +149,13 @@ def _get_auth(target):
     # try netrc
     try:
         host = urlparse(target['url']).hostname
-        a = netrc.netrc().authenticators(host)
-        return (a[0], a[2])
+        auth = netrc.netrc().authenticators(host)
+        if auth:
+            return (auth[0], auth[2])
+
+        if host.endswith(login.SH_TOP_LEVEL_DOMAIN):
+            return (find_api_key(), '')
+
     except (netrc.NetrcParseError, IOError, TypeError):
         pass
 
