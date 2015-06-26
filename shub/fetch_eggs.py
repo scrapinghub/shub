@@ -2,7 +2,7 @@ import click
 import requests
 from click import ClickException
 
-from shub.utils import find_api_key
+from shub.auth import find_api_key
 from shub.click_utils import log
 from shub.exceptions import AuthException
 

@@ -2,10 +2,9 @@ import os
 import sys
 import glob
 import time
-import netrc
 import shutil
 import tempfile
-from urlparse import urlparse, urljoin
+from urlparse import urljoin
 from subprocess import check_call
 
 import click
@@ -18,6 +17,7 @@ from scrapy.utils.conf import get_config, closest_scrapy_cfg
 
 from shub.click_utils import log, fail
 from shub.utils import make_deploy_request, pwd_hg_version, pwd_git_version
+from shub.auth import find_api_key
 
 
 _SETUP_PY_TEMPLATE = """\
@@ -63,6 +63,8 @@ def cli(target, project, version, list_targets, debug, egg, build_egg):
             target = _get_target(target)
             project = _get_project(target, project)
             version = _get_version(target, version)
+            auth = (find_api_key(), '')
+
             if egg:
                 log("Using egg: %s" % egg)
                 egg = egg
@@ -70,7 +72,7 @@ def cli(target, project, version, list_targets, debug, egg, build_egg):
                 log("Packing version %s" % version)
                 egg, tmpdir = _build_egg()
 
-            _upload_egg(target, egg, project, version)
+            _upload_egg(target, egg, project, version, auth)
             click.echo("Run your spiders at: https://dash.scrapinghub.com/p/%s/" % project)
     finally:
         if tmpdir:
@@ -130,26 +132,12 @@ def _get_version(target, version):
         return str(int(time.time()))
 
 
-def _upload_egg(target, eggpath, project, version):
+def _upload_egg(target, eggpath, project, version, auth):
     data = {'project': project, 'version': version}
     files = {'egg': ('project.egg', open(eggpath, 'rb'))}
     url = _url(target, 'addversion.json')
-    auth = _get_auth(target)
-
     log('Deploying to Scrapy Cloud project "%s"' % project)
     return make_deploy_request(url, data, files, auth)
-
-
-def _get_auth(target):
-    if 'username' in target:
-        return (target.get('username'), target.get('password', ''))
-    # try netrc
-    try:
-        host = urlparse(target['url']).hostname
-        a = netrc.netrc().authenticators(host)
-        return (a[0], a[2])
-    except (netrc.NetrcParseError, IOError, TypeError):
-        pass
 
 
 def _build_egg():

@@ -1,5 +1,5 @@
 import re, click
-from shub.utils import get_key_netrc, NETRC_FILE
+from shub.auth import get_key_netrc, NETRC_FILE
 
 @click.command(help='remove Scrapinghug API key from the netrc file')
 @click.pass_context
