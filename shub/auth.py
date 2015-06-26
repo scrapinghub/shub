@@ -14,9 +14,10 @@ def find_api_key():
     Raises:
         ClickException: if no credentials are found
     """
-    key = os.getenv("SHUB_APIKEY")
+    key = get_key_netrc()
+
     if not key:
-        key = get_key_netrc()
+        key = os.getenv("SHUB_APIKEY")
 
     if not key:
         err = 'Not logged in. Please login first with: shub login'
