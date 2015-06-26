@@ -21,11 +21,6 @@ def cli(context):
         auth.write_key_netrc(key)
     else:
         context.fail('Invalid key. Tip: your key must have 32 characters.')
-
-    envkey = os.getenv("SHUB_APIKEY")
-    if envkey:
-        log('Warning: $SHUB_APIKEY is also defined, but has lower precedence.')
-
     log('Success.')
 
 
@@ -54,3 +49,7 @@ def _find_cfg_key():
 
         if key:
             return key
+
+    envkey = os.getenv("SHUB_APIKEY")
+    if envkey:
+        return envkey

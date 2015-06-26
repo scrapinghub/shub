@@ -43,6 +43,13 @@ username = KEY_SUGGESTION
             err = 'Unexpected output: %s' % result.output
             self.assertTrue('KEY_SUGGESTION' in result.output, err)
 
+    def test_login_suggests_shub_apikey_as_key(self):
+        result = self.runner.invoke(login.cli, input='123',
+                                    env={'SHUB_APIKEY': 'SHUB_APIKEY_VALUE'})
+
+        err = 'Unexpected output: %s' % result.output
+        self.assertTrue('SHUB_APIKEY_VALUE' in result.output, err)
+
     def test_login_can_handle_invalid_scrapy_cfg(self):
         # given
         invalid_scrapy_cfg = 'invalid content'
