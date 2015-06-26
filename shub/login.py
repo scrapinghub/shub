@@ -4,6 +4,7 @@ import os
 from shub import auth
 from scrapy.utils.conf import get_config
 from shub.click_utils import log
+from six.moves import input
 
 
 @click.command(help='add Scrapinghug API key into the netrc file')
@@ -34,7 +35,7 @@ def _prompt_for_key(suggestion):
         suggestion_txt = '(%s) ' % suggestion
 
     prompt = 'Insert your Scrapinghub API key %s: ' % suggestion_txt
-    return raw_input(prompt)
+    return input(prompt)
 
 
 def _find_cfg_key():
