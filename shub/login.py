@@ -2,7 +2,6 @@ import re
 import click
 import os
 from shub import auth
-from scrapy.utils.conf import get_config
 from shub.click_utils import log
 from six.moves import input
 
@@ -39,18 +38,24 @@ def _prompt_for_key(suggestion):
 
 
 def _find_cfg_key():
-    try:
-        cfg = get_config()
-    except:
-        return
-
-    if cfg.has_section('deploy'):
-        deploy = dict(cfg.items('deploy'))
-        key = deploy.get('username')
-
-        if key:
-            return key
+    cfg_key = _read_scrapy_cfg_key()
+    if cfg_key:
+        return cfg_key
 
     envkey = os.getenv("SHUB_APIKEY")
     if envkey:
         return envkey
+
+def _read_scrapy_cfg_key():
+    try:
+        from scrapy.utils.conf import get_config
+        cfg = get_config()
+
+        if cfg.has_section('deploy'):
+            deploy = dict(cfg.items('deploy'))
+            key = deploy.get('username')
+
+            if key:
+                return key
+    except:
+        return
