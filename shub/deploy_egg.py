@@ -8,6 +8,7 @@ import click
 from shub.click_utils import log, fail
 from shub import utils
 from shub.utils import run, decompress_egg_files
+from shub.auth import find_api_key
 
 
 @click.command(help="Build and deploy egg from source")
@@ -20,10 +21,12 @@ def cli(project_id, from_url=None, git_branch=None, from_pypi=None):
 
 
 def main(project_id, from_url=None, git_branch=None, from_pypi=None):
+    apikey = find_api_key()
+
     if from_pypi:
         _fetch_from_pypi(from_pypi)
         decompress_egg_files()
-        utils.build_and_deploy_eggs(project_id)
+        utils.build_and_deploy_eggs(project_id, apikey)
         return
 
     if from_url:
@@ -33,7 +36,7 @@ def main(project_id, from_url=None, git_branch=None, from_pypi=None):
         error = "No setup.py -- are you running from a valid Python project?"
         fail(error)
 
-    utils.build_and_deploy_egg(project_id)
+    utils.build_and_deploy_egg(project_id, apikey)
 
 
 def _checkout(repo, git_branch=None):
