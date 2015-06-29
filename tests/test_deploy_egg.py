@@ -25,12 +25,11 @@ class TestDeployEgg(unittest.TestCase):
 
     def setUp(self):
         self.curdir = os.getcwd()
-
         self.fake_requester = FakeRequester()
         deploy_egg.utils.make_deploy_request = self.fake_requester.fake_request
         deploy_egg.utils.find_api_key = lambda: ''
-
         self.tmp_dir = tempfile.mktemp(prefix="shub-test-deploy-eggs")
+        os.environ['SHUB_APIKEY'] = '1234'
 
     def tearDown(self):
         os.chdir(self.curdir)

@@ -97,12 +97,12 @@ def decompress_egg_files():
         run("%s %s" % (decompressor_by_ext[_ext(egg)], egg))
 
 
-def build_and_deploy_eggs(project_id):
+def build_and_deploy_eggs(project_id, apikey):
     egg_dirs = (f for f in glob('*') if isdir(f))
 
     for egg_dir in egg_dirs:
         os.chdir(egg_dir)
-        build_and_deploy_egg(project_id)
+        build_and_deploy_egg(project_id, apikey)
         os.chdir('..')
 
 
@@ -119,7 +119,7 @@ def _ext(file_path):
     return os.path.splitext(file_path)[1].strip('.')
 
 
-def build_and_deploy_egg(project_id):
+def build_and_deploy_egg(project_id, apikey):
     """Builds and deploys the current dir's egg"""
     log("Building egg in: %s" % os.getcwd())
     try:
@@ -129,10 +129,10 @@ def build_and_deploy_egg(project_id):
         log("Couldn't build an egg with vanilla setup.py, trying with setuptools...")
         run('python -c  "import setuptools; execfile(\'setup.py\')" bdist_egg')
 
-    _deploy_dependency_egg(find_api_key(), project_id)
+    _deploy_dependency_egg(apikey, project_id)
 
 
-def _deploy_dependency_egg(shub_apikey, project_id):
+def _deploy_dependency_egg(apikey, project_id):
     name = _get_dependency_name()
     version = _get_dependency_version(name)
     egg_name, egg_path = _get_egg_info(name)
@@ -140,7 +140,7 @@ def _deploy_dependency_egg(shub_apikey, project_id):
     url = 'https://dash.scrapinghub.com/api/eggs/add.json'
     data = {'project': project_id, 'name': name, 'version': version}
     files = {'egg': (egg_name, open(egg_path, 'rb'))}
-    auth = (shub_apikey, '')
+    auth = (apikey, '')
 
     log('Deploying dependency to Scrapy Cloud project "%s"' % project_id)
     make_deploy_request(url, data, files, auth)
