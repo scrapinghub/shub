@@ -84,7 +84,13 @@ def run(cmd):
 
 def decompress_egg_files():
     decompressor_by_ext = _build_decompressor_by_ext_map()
-    eggs = (f for ext in decompressor_by_ext for f in glob('*.%s' % ext))
+    eggs = [f for ext in decompressor_by_ext for f in glob('*.%s' % ext)]
+
+    if not eggs:
+        files = glob('*')
+        err = ('No egg files with a supported file extension were found. '
+               'Files: %s' % ', '.join(files))
+        raise ClickException(err)
 
     for egg in eggs:
         log("Uncompressing: %s" % egg)
@@ -102,11 +108,11 @@ def build_and_deploy_eggs(project_id):
 
 def _build_decompressor_by_ext_map():
     unzip = 'unzip -q'
-    targz = 'tar zxf'
 
     return {'zip': unzip,
             'whl': unzip,
-            'gz': targz}
+            'bz2': 'tar jxf',
+            'gz': 'tar zxf'}
 
 
 def _ext(file_path):
