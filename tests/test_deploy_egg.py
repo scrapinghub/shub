@@ -69,7 +69,7 @@ class TestDeployEgg(unittest.TestCase):
 
     def _unzip_git_repo_to(self, path):
         zipped_repo = os.path.abspath('tests/samples/deploy_egg_sample_repo.git.zip')
-        ZipFile(zipped_repo).extractall(self.tmp_dir)
+        ZipFile(zipped_repo).extractall(path)
 
     def call_main_and_check_request_data(self, project_id=0, from_url=None,
                                          git_branch=None, from_pypi=None):
