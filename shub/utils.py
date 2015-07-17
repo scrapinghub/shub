@@ -149,7 +149,8 @@ def _deploy_dependency_egg(apikey, project_id):
 
 
 def _get_dependency_name():
-    return run('python setup.py --name')
+    # In some cases, python setup.py --name returns more than one line, so we use the last one to get the name
+    return run('python setup.py --name').split("\n")[-1]
 
 
 def _get_dependency_version(name):
