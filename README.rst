@@ -3,6 +3,11 @@ Scrapinghub command line client
 
 ``shub`` is a tool used to manage Scrapinghub services from the command line.
 
+Requirements
+------------
+
+* Python 2.7
+
 Installation
 ------------
 
