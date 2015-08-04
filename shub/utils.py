@@ -1,5 +1,5 @@
 from __future__ import unicode_literals
-import imp
+import importlib
 import os
 import subprocess
 import sys
@@ -26,7 +26,7 @@ def missing_modules(*modules):
     missing = []
     for module_name in modules:
         try:
-            imp.find_module(module_name)
+            importlib.import_module(module_name)
         except ImportError:
             missing.append(module_name)
     return missing
