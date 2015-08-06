@@ -40,8 +40,8 @@ default = project.settings
             result = self.runner.invoke(deploy.cli)
 
             # then
-            self.assertTrue('Deploying to Scrapy Cloud' in result.output)
-            self.assertEqual(0, result.exit_code)
+            err = 'Output: %s\nException: %s' % (result.output, result.exception)
+            self.assertEqual(0, result.exit_code, err)
 
 
 if __name__ == '__main__':
