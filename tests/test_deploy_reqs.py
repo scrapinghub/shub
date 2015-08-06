@@ -6,7 +6,7 @@ from __future__ import print_function
 import unittest
 import os
 import tempfile
-from mock import Mock, patch
+from mock import patch
 from click.testing import CliRunner
 
 from shub import deploy_reqs
@@ -28,7 +28,8 @@ class TestDeployReqs(unittest.TestCase):
 
         with self.runner.isolated_filesystem():
             # WHEN
-            result = self.cli_run(deploy_reqs.cli, ["-p -1", requirements_file])
+            args = ["-p 123", '--requirements-file=%s' % requirements_file]
+            result = self.cli_run(deploy_reqs.cli, args)
 
             # THEN
             self.assertEqual(2, deploy_egg_mock.call_count, self.error_for(result))
@@ -40,7 +41,7 @@ class TestDeployReqs(unittest.TestCase):
             self.write_valid_scrapy_cfg()
 
             # WHEN I don't provide the project id
-            self.cli_run(deploy_reqs.cli, [requirements_file])
+            self.cli_run(deploy_reqs.cli, ['--requirements-file=%s' % requirements_file])
 
             # THEN It uses the project id in the scrapy.cfg file
             deploy_egg_mock.assert_called_with('-1', self.VALID_APIKEY)
