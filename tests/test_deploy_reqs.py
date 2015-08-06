@@ -6,23 +6,29 @@ from __future__ import print_function
 import unittest
 import os
 import tempfile
-from mock import Mock
+from mock import Mock, patch
+from click.testing import CliRunner
 
 from shub import deploy_reqs
 
 
 class TestDeployReqs(unittest.TestCase):
+    def setUp(self):
+        self.runner = CliRunner()
+        os.environ['SHUB_APIKEY'] = '1234'
+
     def test_can_decompress_downloaded_packages_and_call_deploy_reqs(self):
         # GIVEN
         requirements_file = self._write_tmp_requirements_file()
+        with self.runner.isolated_filesystem():
+            # WHEN
+            deploy_reqs.utils.build_and_deploy_egg = Mock()
+            result = self.runner.invoke(deploy_reqs.cli, ["-p -1", requirements_file])
 
-        # WHEN
-        deploy_reqs.utils.build_and_deploy_egg = Mock()
-        project_id = 0
-        deploy_reqs.main(project_id, requirements_file)
+            # THEN
+            err = 'Output: %s. Exception: %s' % (result.output, result.exception)
+            self.assertEqual(2, deploy_reqs.utils.build_and_deploy_egg.call_count, err)
 
-        # THEN
-        self.assertEqual(2, deploy_reqs.utils.build_and_deploy_egg.call_count)
 
     def _write_tmp_requirements_file(self):
         basepath = 'tests/samples/deploy_reqs_sample_project/'
