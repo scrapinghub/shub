@@ -2,6 +2,7 @@
 # coding=utf-8
 
 
+import os
 import unittest
 from shub import deploy
 from click.testing import CliRunner
@@ -11,6 +12,7 @@ from mock import patch
 class DeployTest(unittest.TestCase):
     def setUp(self):
         self.runner = CliRunner()
+        os.environ['SHUB_APIKEY'] = '1234'
 
     def test_fails_when_deploy_is_invoked_outside_of_a_scrapy_project(self):
         # given there's no scrapy.cfg file in the current folder
