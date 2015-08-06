@@ -5,7 +5,7 @@
 import unittest
 from shub import deploy
 from click.testing import CliRunner
-from mock import Mock
+from mock import patch
 
 
 class DeployTest(unittest.TestCase):
@@ -21,7 +21,8 @@ class DeployTest(unittest.TestCase):
             # then
             self.assertEqual(1, result.exit_code)
 
-    def test_parses_project_cfg_and_uploads_egg(self):
+    @patch('shub.deploy.make_deploy_request')
+    def test_parses_project_cfg_and_uploads_egg(self, deploy_req_mock):
         # given
         valid_scrapy_cfg = """
 [deploy]
@@ -34,8 +35,6 @@ default = project.settings
         with self.runner.isolated_filesystem():
             with open('scrapy.cfg', 'w') as f:
                 f.write(valid_scrapy_cfg)
-
-            deploy.make_deploy_request = Mock()
 
             # when
             result = self.runner.invoke(deploy.cli)
