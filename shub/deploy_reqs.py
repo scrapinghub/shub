@@ -24,6 +24,8 @@ def main(project_id, requirements_file):
     target = scrapycfg.get_target('default')
     project_id = scrapycfg.get_project(target, project_id)
     apikey = find_api_key()
+    log('Deploying requirements to project "%s"' % project_id)
+
     requirements_full_path = os.path.abspath(requirements_file)
     eggs_tmp_dir = _mk_and_cd_eggs_tmpdir()
     _download_egg_files(eggs_tmp_dir, requirements_full_path)
