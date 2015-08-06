@@ -1,7 +1,6 @@
 import os
 import sys
 import glob
-import time
 import shutil
 import tempfile
 from six.moves.urllib.parse import urljoin
@@ -15,9 +14,10 @@ from scrapy.utils.project import inside_project
 from scrapy.utils.python import retry_on_eintr
 from scrapy.utils.conf import get_config, closest_scrapy_cfg
 
-from shub.click_utils import log, fail
-from shub.utils import make_deploy_request, pwd_hg_version, pwd_git_version
+from shub.click_utils import log
+from shub.utils import make_deploy_request
 from shub.auth import find_api_key
+from shub import scrapycfg
 
 
 _SETUP_PY_TEMPLATE = """\
@@ -48,7 +48,7 @@ def cli(target, project, version, list_targets, debug, egg, build_egg):
         sys.exit(1)
 
     if list_targets:
-        for name, target in _get_targets().items():
+        for name, target in scrapycfg.get_targets().items():
             click.echo(name)
         return
 
@@ -60,9 +60,9 @@ def cli(target, project, version, list_targets, debug, egg, build_egg):
             log("Writing egg to %s" % build_egg)
             shutil.copyfile(egg, build_egg)
         else:
-            target = _get_target(target)
-            project = _get_project(target, project)
-            version = _get_version(target, version)
+            target = scrapycfg.get_target(target)
+            project = scrapycfg.get_project(target, project)
+            version = scrapycfg.get_version(target, version)
             auth = (find_api_key(), '')
 
             if egg:
@@ -82,48 +82,8 @@ def cli(target, project, version, list_targets, debug, egg, build_egg):
                 shutil.rmtree(tmpdir)
 
 
-def _get_project(target, project):
-    project = project or target.get('project')
-    if not project:
-        raise fail("Error: Missing project id")
-    return str(project)
-
-
-def _get_targets():
-    cfg = get_config()
-    baset = dict(cfg.items('deploy')) if cfg.has_section('deploy') else {}
-    baset.setdefault('url', 'http://dash.scrapinghub.com/api/scrapyd/')
-    targets = {}
-    targets['default'] = baset
-    for x in cfg.sections():
-        if x.startswith('deploy:'):
-            t = baset.copy()
-            t.update(cfg.items(x))
-            targets[x[7:]] = t
-    return targets
-
-
-def _get_target(name):
-    try:
-        return _get_targets()[name]
-    except KeyError:
-        raise fail("Unknown target: %s" % name)
-
-
 def _url(target, action):
     return urljoin(target['url'], action)
-
-
-def _get_version(target, version):
-    version = version or target.get('version')
-    if version == 'HG':
-        return pwd_hg_version()
-    elif version == 'GIT':
-        return pwd_git_version()
-    elif version:
-        return str(version)
-    else:
-        return str(int(time.time()))
 
 
 def _upload_egg(target, eggpath, project, version, auth):
