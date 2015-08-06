@@ -89,12 +89,6 @@ def _get_project(target, project):
     return str(project)
 
 
-def _get_option(section, option, default=None):
-    cfg = get_config()
-    return cfg.get(section, option) if cfg.has_option(section, option) \
-        else default
-
-
 def _get_targets():
     cfg = get_config()
     baset = dict(cfg.items('deploy')) if cfg.has_section('deploy') else {}
