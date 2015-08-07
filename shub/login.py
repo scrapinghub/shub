@@ -10,7 +10,8 @@ from six.moves import input
 @click.pass_context
 def cli(context):
     if auth.get_key_netrc():
-        context.fail('Already logged in. To logout use: shub logout')
+        log("You're already logged in. To change credentials, use 'shub logout' first.")
+        return 0
 
     cfg_key = _find_cfg_key()
     key = _prompt_for_key(suggestion=cfg_key)

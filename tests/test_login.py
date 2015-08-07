@@ -65,3 +65,17 @@ username = KEY_SUGGESTION
 
             # then
             self.assertEqual(0, result.exit_code, result.exception)
+
+    def test_login_attempt_after_login_doesnt_lead_to_an_error(self):
+        with self.runner.isolated_filesystem() as fs:
+            login.auth.NETRC_FILE = os.path.join(fs, '.netrc')
+
+            # given
+            self.runner.invoke(login.cli, input=self.VALID_KEY)
+
+            # when
+            result = self.runner.invoke(login.cli, input=self.VALID_KEY)
+
+            # then
+            self.assertEqual(0, result.exit_code)
+            self.assertTrue('already logged in' in result.output)
