@@ -18,7 +18,9 @@ class TestDeployReqs(unittest.TestCase):
 
     def setUp(self):
         self.runner = CliRunner()
-        os.environ['SHUB_APIKEY'] = self.VALID_APIKEY
+
+    def cli_run(self, cli, args):
+        return self.runner.invoke(cli, args, env={'SHUB_APIKEY': self.VALID_APIKEY})
 
     def test_can_decompress_downloaded_packages_and_call_deploy_reqs(self, deploy_egg_mock):
         # GIVEN
@@ -26,7 +28,7 @@ class TestDeployReqs(unittest.TestCase):
 
         with self.runner.isolated_filesystem():
             # WHEN
-            result = self.runner.invoke(deploy_reqs.cli, ["-p -1", requirements_file])
+            result = self.cli_run(deploy_reqs.cli, ["-p -1", requirements_file])
 
             # THEN
             self.assertEqual(2, deploy_egg_mock.call_count, self.error_for(result))
@@ -38,7 +40,7 @@ class TestDeployReqs(unittest.TestCase):
             self.write_valid_scrapy_cfg()
 
             # WHEN I don't provide the project id
-            self.runner.invoke(deploy_reqs.cli, [requirements_file])
+            self.cli_run(deploy_reqs.cli, [requirements_file])
 
             # THEN It uses the project id in the scrapy.cfg file
             deploy_egg_mock.assert_called_with('-1', self.VALID_APIKEY)
