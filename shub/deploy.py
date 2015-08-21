@@ -79,7 +79,7 @@ def cli(target, project, version, list_targets, debug, egg, build_egg):
             if debug:
                 log("Output dir not removed: %s" % tmpdir)
             else:
-                shutil.rmtree(tmpdir)
+                shutil.rmtree(tmpdir, ignore_errors=True)
 
 
 def _url(target, action):
