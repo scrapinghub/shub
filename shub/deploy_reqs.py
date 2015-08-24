@@ -14,7 +14,8 @@ from shub.auth import find_api_key
 @click.command(help="Build and deploy eggs from requirements.txt")
 @click.option("-p", "--project", help="the project ID to deploy to",
               type=click.INT)
-@click.argument("requirements_file", required=True)
+@click.option("-r", "--requirements-file", default='requirements.txt',
+              type=click.STRING)
 def cli(project, requirements_file):
     """Just a wrapper around the deploy_egg module"""
     main(project, requirements_file)

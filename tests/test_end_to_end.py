@@ -29,7 +29,7 @@ class ShubEndToEndTests(unittest.TestCase):
     def test_deploy_reqs_isnt_broken(self):
         output = self.run_subcmd('deploy-reqs')
         error = 'Unexpected output: %s' % output
-        self.assertTrue('Missing argument' in output, error)
+        self.assertTrue('Missing project id' in output, error)
 
     def test_deploy_isnt_broken(self):
         output = self.run_subcmd('deploy')
