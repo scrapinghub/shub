@@ -147,10 +147,13 @@ def _deploy_dependency_egg(apikey, project_id):
     success = "Deployed eggs list at: https://dash.scrapinghub.com/p/%s/eggs"
     log(success % project_id)
 
+def _last_line_of(s):
+    return s.split('\n')[-1]
+
 
 def _get_dependency_name():
     # In some cases, python setup.py --name returns more than one line, so we use the last one to get the name
-    return run('python setup.py --name').split("\n")[-1]
+    return _last_line_of(run('python setup.py --name'))
 
 
 def _get_dependency_version(name):
@@ -161,7 +164,8 @@ def _get_dependency_version(name):
     elif isdir('.bzr'):
         return pwd_bzr_version()
 
-    return "%s-%s" % (name, run('python setup.py --version'))
+    version = _last_line_of(run('python setup.py --version'))
+    return "%s-%s" % (name, version)
 
 
 def _get_egg_info(name):
