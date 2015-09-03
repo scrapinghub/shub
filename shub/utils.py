@@ -164,7 +164,8 @@ def _get_dependency_version(name):
     elif isdir('.bzr'):
         return pwd_bzr_version()
 
-    return "%s-%s" % (name, _last_line_of(run('python setup.py --version')))
+    version = _last_line_of(run('python setup.py --version'))
+    return "%s-%s" % (name, version)
 
 
 def _get_egg_info(name):
