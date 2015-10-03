@@ -10,13 +10,18 @@ from shub.exceptions import AuthException
 @click.command(help="Download a project's eggs from the Scrapy Cloud")
 @click.argument("project_id", required=True)
 def cli(project_id):
-    auth = (find_api_key(), '')
+    api_key = find_api_key()
+    destfile = 'eggs-%s.zip' % project_id
+    fetch_eggs(project_id, api_key, destfile)
+
+
+def fetch_eggs(project_id, api_key, destfile):
+    auth = (api_key, '')
     url = "https://dash.scrapinghub.com/api/eggs/bundle.zip?project=%s" % project_id
     rsp = requests.get(url=url, auth=auth, stream=True, timeout=300)
 
-    assert_response_is_valid(rsp)
+    _assert_response_is_valid(rsp)
 
-    destfile = 'eggs-%s.zip' % project_id
     log("Downloading eggs to %s" % destfile)
 
     with open(destfile, 'wb') as f:
@@ -26,7 +31,7 @@ def cli(project_id):
                 f.flush()
 
 
-def assert_response_is_valid(rsp):
+def _assert_response_is_valid(rsp):
     if rsp.status_code == 403:
         raise AuthException()
     elif rsp.status_code != 200:
