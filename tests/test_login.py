@@ -41,11 +41,12 @@ username = KEY_SUGGESTION
 
     def test_login_suggests_shub_apikey_as_key(self):
         with self.runner.isolated_filesystem():
-            result = self.runner.invoke(login.cli, input='123',
-                                        env={'SHUB_APIKEY': 'SHUB_APIKEY_VALUE'})
+            with patch.object(login, '_read_scrapy_cfg_key', return_value=None):
+                result = self.runner.invoke(login.cli, input='123',
+                                            env={'SHUB_APIKEY': 'SHUB_APIKEY_VALUE'})
 
-            err = 'Unexpected output: %s' % result.output
-            self.assertTrue('SHUB_APIKEY_VALUE' in result.output, err)
+                err = 'Unexpected output: %s' % result.output
+                self.assertTrue('SHUB_APIKEY_VALUE' in result.output, err)
 
     def test_login_can_handle_invalid_scrapy_cfg(self):
         # given
@@ -57,12 +58,12 @@ username = KEY_SUGGESTION
             with open('scrapy.cfg', 'w') as f:
                 f.write(invalid_scrapy_cfg)
 
-            # when
             with patch.object(login, '_is_valid_apikey', return_value=True):
+                # when
                 result = self.runner.invoke(login.cli, input=self.VALID_KEY)
 
-            # then
-            self.assertEqual(0, result.exit_code, result.exception)
+                # then
+                self.assertEqual(0, result.exit_code, result.exception)
 
     def test_login_attempt_after_login_doesnt_lead_to_an_error(self):
         with self.runner.isolated_filesystem() as fs:
