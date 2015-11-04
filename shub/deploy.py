@@ -42,7 +42,8 @@ setup(
 @click.option("-d", "--debug", help="debug mode (do not remove build dir)", is_flag=True)
 @click.option("--egg", help="deploy the given egg, instead of building one")
 @click.option("--build-egg", help="only build the given egg, don't deploy it")
-def cli(target, project, version, list_targets, debug, egg, build_egg):
+@click.option("--setup-file", help="setup.py file path", required=False, default="setup.py")
+def cli(target, project, version, list_targets, debug, egg, build_egg, setup_file):
     if not inside_project():
         log("Error: no Scrapy project found in this location")
         sys.exit(1)
@@ -56,7 +57,7 @@ def cli(target, project, version, list_targets, debug, egg, build_egg):
 
     try:
         if build_egg:
-            egg, tmpdir = _build_egg()
+            egg, tmpdir = _build_egg(setup_file)
             log("Writing egg to %s" % build_egg)
             shutil.copyfile(egg, build_egg)
         else:
@@ -70,7 +71,7 @@ def cli(target, project, version, list_targets, debug, egg, build_egg):
                 egg = egg
             else:
                 log("Packing version %s" % version)
-                egg, tmpdir = _build_egg()
+                egg, tmpdir = _build_egg(setup_file)
 
             _upload_egg(target, egg, project, version, auth)
             click.echo("Run your spiders at: https://dash.scrapinghub.com/p/%s/" % project)
@@ -94,17 +95,17 @@ def _upload_egg(target, eggpath, project, version, auth):
     return make_deploy_request(url, data, files, auth)
 
 
-def _build_egg():
+def _build_egg(setup_file):
     closest = closest_scrapy_cfg()
     os.chdir(os.path.dirname(closest))
-    if not os.path.exists('setup.py'):
+    if not os.path.exists(setup_file):
         settings = get_config().get('settings', 'default')
-        _create_default_setup_py(settings=settings)
+        _create_default_setup_py(setup_file, settings=settings)
     d = tempfile.mkdtemp(prefix="shub-deploy-")
     o = open(os.path.join(d, "stdout"), "wb")
     e = open(os.path.join(d, "stderr"), "wb")
     retry_on_eintr(check_call,
-                   [sys.executable, 'setup.py', 'clean', '-a', 'bdist_egg', '-d', d],
+                   [sys.executable, setup_file, 'clean', '-a', 'bdist_egg', '-d', d],
                    stdout=o, stderr=e)
     o.close()
     e.close()
@@ -112,6 +113,6 @@ def _build_egg():
     return egg, d
 
 
-def _create_default_setup_py(**kwargs):
-    with open('setup.py', 'w') as f:
+def _create_default_setup_py(setup_file, **kwargs):
+    with open(setup_file, 'w') as f:
         f.write(_SETUP_PY_TEMPLATE % kwargs)
