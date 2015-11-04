@@ -1,10 +1,12 @@
-import re
 import click
 import os
+import sys
+import requests
 from shub import auth
 from shub.click_utils import log
 from six.moves import input
 
+VALIDATE_API_KEY_ENDPOINT = "https://dash.scrapinghub.com/api/v2/users/me"
 
 @click.command(help='add Scrapinghug API key into the netrc file')
 @click.pass_context
@@ -14,28 +16,25 @@ def cli(context):
         return 0
 
     cfg_key = _find_cfg_key()
-    key = _prompt_for_key(suggestion=cfg_key)
-
-    if not key and is_valid_key(cfg_key):
-        auth.write_key_netrc(cfg_key)
-    elif key and is_valid_key(key):
-        auth.write_key_netrc(key)
-    else:
-        context.fail('Invalid key. Tip: your key must have 32 characters.')
-    log('Success.')
+    key = _ask_apikey(suggestion=cfg_key)
+    auth.write_key_netrc(key)
+    log('You are logged in now.')
 
 
-def is_valid_key(key):
-    return bool(re.match(r'[A-Fa-f\d]{32}$', key))
-
-
-def _prompt_for_key(suggestion):
-    suggestion_txt = ''
-    if suggestion:
-        suggestion_txt = '(%s) ' % suggestion
-
-    prompt = 'Insert your Scrapinghub API key %s: ' % suggestion_txt
-    return input(prompt)
+def _ask_apikey(suggestion=''):
+    suggestion_txt = ' (%s)' % suggestion if suggestion else ''
+    print 'Enter your Scrapinghub API key from https://dash.scrapinghub.com/account/apikey'
+    key = ''
+    while True:
+        key = input('API key%s: ' % suggestion_txt)
+        print "Validating API key...",
+        sys.stdout.flush()
+        r = requests.get("%s?apikey=%s" % (VALIDATE_API_KEY_ENDPOINT, key))
+        if r.status_code == 200:
+            print "OK"
+            return key
+        else:
+            print "Failed!"
 
 
 def _find_cfg_key():

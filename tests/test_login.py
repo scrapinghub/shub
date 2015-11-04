@@ -13,11 +13,6 @@ class LoginTest(unittest.TestCase):
         login.auth.NETRC_FILE = ''
         self.runner = CliRunner()
 
-    def test_login_validates_api_key(self):
-        result = self.runner.invoke(login.cli, input='invalid key')
-        self.assertEqual(2, result.exit_code)
-        self.assertTrue('Invalid key' in result.output)
-
     def test_login_writes_input_key_to_netrc_file(self):
         # given
         fake_netrc_writer = Mock()
