@@ -1,6 +1,6 @@
 import unittest
 import os
-from mock import Mock
+from mock import Mock, patch
 
 from click.testing import CliRunner
 from shub import login
@@ -19,7 +19,8 @@ class LoginTest(unittest.TestCase):
         login.auth.write_key_netrc = fake_netrc_writer
 
         # when
-        self.runner.invoke(login.cli, input=self.VALID_KEY)
+        with patch.object(login, '_is_valid_apikey', return_value=True):
+            self.runner.invoke(login.cli, input=self.VALID_KEY)
 
         # then
         fake_netrc_writer.assert_called_with(self.VALID_KEY)
@@ -57,7 +58,8 @@ username = KEY_SUGGESTION
                 f.write(invalid_scrapy_cfg)
 
             # when
-            result = self.runner.invoke(login.cli, input=self.VALID_KEY)
+            with patch.object(login, '_is_valid_apikey', return_value=True):
+                result = self.runner.invoke(login.cli, input=self.VALID_KEY)
 
             # then
             self.assertEqual(0, result.exit_code, result.exception)
@@ -66,12 +68,13 @@ username = KEY_SUGGESTION
         with self.runner.isolated_filesystem() as fs:
             login.auth.NETRC_FILE = os.path.join(fs, '.netrc')
 
-            # given
-            self.runner.invoke(login.cli, input=self.VALID_KEY)
+            with patch.object(login, '_is_valid_apikey', return_value=True):
+                # given
+                self.runner.invoke(login.cli, input=self.VALID_KEY)
 
-            # when
-            result = self.runner.invoke(login.cli, input=self.VALID_KEY)
+                # when
+                result = self.runner.invoke(login.cli, input=self.VALID_KEY)
 
             # then
             self.assertEqual(0, result.exit_code)
-            self.assertTrue('already logged in' in result.output)
+            self.assertTrue('already logged in' in result.output, result.output)
