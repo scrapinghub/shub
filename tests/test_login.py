@@ -54,7 +54,7 @@ username = KEY_SUGGESTION
         """Invokes the login cli on an isolated filesystem"""
 
         def write_local_test_files():
-            for path, content in (files or {}).iteritems():
+            for path, content in (files or {}).items():
                 with open(path, 'w') as f:
                     f.write(content)
 
