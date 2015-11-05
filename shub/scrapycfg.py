@@ -15,7 +15,7 @@ def get_project(target, project):
 def get_targets():
     cfg = get_config()
     baset = dict(cfg.items('deploy')) if cfg.has_section('deploy') else {}
-    baset.setdefault('url', 'http://dash.scrapinghub.com/api/scrapyd/')
+    baset.setdefault('url', 'https://dash.scrapinghub.com/api/scrapyd/')
     targets = {}
     targets['default'] = baset
     for x in cfg.sections():
