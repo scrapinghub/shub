@@ -8,7 +8,7 @@ from subprocess import check_call
 
 import click
 import setuptools  # not used in code but needed in runtime, don't remove!
-_ = setuptools
+_ = setuptools  # NOQA
 
 from scrapy.utils.project import inside_project
 from scrapy.utils.python import retry_on_eintr
@@ -63,7 +63,8 @@ def cli(target, project, version, list_targets, debug, egg, build_egg):
             target = scrapycfg.get_target(target)
             project = scrapycfg.get_project(target, project)
             version = scrapycfg.get_version(target, version)
-            auth = (find_api_key(), '')
+            apikey = target.get('username') or find_api_key()
+            auth = (apikey, '')
 
             if egg:
                 log("Using egg: %s" % egg)
