@@ -1,7 +1,6 @@
 import click
 from click import ClickException
 from scrapinghub import Connection, APIError
-from shub import scrapycfg
 from shub.utils import find_api_key
 
 
@@ -31,9 +30,16 @@ def schedule_spider(apikey, project_id, spider, arguments=()):
 
 
 def get_project_id_from_config():
+    missing_pid_err = "Project ID couldn't be found. Please, specify it using the -p flag"
+    try:
+        from shub import scrapycfg
+    except ImportError:
+        raise ClickException(missing_pid_err)
+
     from six.moves.configparser import NoSectionError, NoOptionError
+
     try:
         conf = scrapycfg.get_config()
         return conf.get('deploy', 'project')
     except (NoSectionError, NoOptionError):
-        raise ClickException('missing project id')
+        raise ClickException(missing_pid_err)
