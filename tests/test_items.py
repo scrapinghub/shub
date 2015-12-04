@@ -1,10 +1,33 @@
 import mock
 import unittest
 from click import ClickException
+from click.testing import CliRunner
 from shub import items
 
 
 class ItemsTest(unittest.TestCase):
+
+    def setUp(self):
+        self.runner = CliRunner()
+
+    def test_cli_raises_invalid_jobid(self):
+        output = self.runner.invoke(items.cli, ['123']).output
+        err = 'Unexpected output: %s' % output
+        self.assertTrue('Invalid job ID' in output, err)
+
+    @mock.patch('shub.items.find_api_key', autospec=True)
+    def test_apikey_is_validated(self, mock_find_apikey):
+        mock_find_apikey.return_value = None
+        output = self.runner.invoke(items.cli, ['1/1/1']).output
+        err = 'Unexpected output: %s' % output
+        self.assertTrue('key not found' in output, err)
+
+    @mock.patch('shub.items.find_api_key', autospec=True)
+    @mock.patch('shub.items.fetch_items_for_job', autospec=True)
+    def test_fetches_items_if_input_is_ok(self, mock_find_apikey, mock_fetch_items_for_job):
+        mock_find_apikey.return_value = 1
+        self.runner.invoke(items.cli, ['1/1/1'])
+        self.assertTrue(mock_fetch_items_for_job.called)
 
     @mock.patch('shub.items.HubstorageClient', spec=True)
     def test_fetch_items_for_job_with_invalid_job(self, mock_hs):

@@ -5,3 +5,4 @@ six
 # see https://github.com/travis-ci/travis-ci/issues/4756
 cryptography==1.0
 hubstorage
+scrapinghub

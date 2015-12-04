@@ -9,7 +9,7 @@ from shub.utils import find_api_key, is_valid_jobid
 @click.argument('job_id')
 def cli(context, job_id):
     if not is_valid_jobid(job_id):
-        raise ClickException('Invalid Job ID. Job ID must be: projectid/spiderid/jobid')
+        raise ClickException('Invalid job ID. Job ID must be: projectid/spiderid/jobid')
     apikey = find_api_key()
     if not apikey:
         raise ClickException('Scrapinghub API key not found: please, run \'scrapy login\' first')
