@@ -24,8 +24,8 @@ module_deps = {
     "deploy_reqs": [],
     "logout": [],
     "version": [],
-    "items": ["hubstorage"],
-    "schedule": ["hubstorage"],
+    "items": [],
+    "schedule": [],
 }
 
 for command, modules in module_deps.items():
