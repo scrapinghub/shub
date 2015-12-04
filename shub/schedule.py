@@ -1,16 +1,15 @@
-from ConfigParser import NoSectionError, NoOptionError
 import click
 from click import ClickException
-from scrapinghub import Connection
+from scrapinghub import Connection, APIError
 from shub import scrapycfg
 from shub.utils import find_api_key
 
 
 @click.command(help='Schedule a spider to run on Scrapy Cloud')
 @click.pass_context
-@click.argument("spider", type=click.STRING)
-@click.option("-p", "--project-id", help="the project ID", type=click.INT)
-@click.option("-a", "--argument", help="argument for the spider (-a name=value)", multiple=True)
+@click.argument('spider', type=click.STRING)
+@click.option('-p', '--project-id', help='the project ID', type=click.INT)
+@click.option('-a', '--argument', help='argument for the spider (-a name=value)', multiple=True)
 def cli(context, project_id, spider, argument):
     apikey = find_api_key()
     if not apikey:
@@ -25,15 +24,14 @@ def cli(context, project_id, spider, argument):
 
 def schedule_spider(apikey, project_id, spider, arguments=()):
     conn = Connection(apikey)
-    if project_id not in conn.project_ids():
-        raise ClickException("project {} doesn\'t exist".format(project_id))
-    project = conn[project_id]
-    if spider not in [sp['id'] for sp in project.spiders()]:
-        raise ClickException("spider {} doesn\'t exist in project {}".format(spider, project.id))
-    return project.schedule(spider, **dict(x.split('=') for x in arguments))
+    try:
+        return conn[project_id].schedule(spider, **dict(x.split('=') for x in arguments))
+    except APIError as e:
+        raise ClickException(e.message)
 
 
 def get_project_id_from_config():
+    from six.moves.configparser import NoSectionError, NoOptionError
     try:
         conf = scrapycfg.get_config()
         return conf.get('deploy', 'project')

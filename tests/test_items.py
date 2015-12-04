@@ -1,8 +1,13 @@
+from collections import namedtuple
 import mock
 import unittest
 from click import ClickException
 from click.testing import CliRunner
 from shub import items
+
+
+Job = namedtuple('Job', ['items', 'metadata'])
+Item = namedtuple('Item', ['iter_values'])
 
 
 class ItemsTest(unittest.TestCase):
@@ -31,7 +36,8 @@ class ItemsTest(unittest.TestCase):
 
     @mock.patch('shub.items.HubstorageClient', spec=True)
     def test_fetch_items_for_job_with_invalid_job(self, mock_hs):
-        mock_hs.return_value.get_job.return_value.metadata = None
+        job = Job(Item(lambda: []), None)
+        mock_hs.return_value.get_job.return_value = job
         self.assertRaisesRegexp(
             ClickException, 'The job -1/-1/-1 doesn\'t exist',
             items.fetch_items_for_job, 'FAKE_API_KEY', '-1/-1/-1'
@@ -39,10 +45,9 @@ class ItemsTest(unittest.TestCase):
 
     @mock.patch('shub.items.HubstorageClient', spec=True)
     def test_fetch_items_for_job_with_valid_job(self, mock_hs):
-        mock_hs.return_value.get_job.return_value.metadata = 1
-        items.fetch_items_for_job('FAKE_API_KEY', '1/1/1')
-        fake_job = mock_hs.return_value.get_job.return_value
-        self.assertTrue(fake_job.items.iter_values.called)
+        mock_hs.return_value.get_job.return_value = Job(Item(lambda: []), 1)
+        result = items.fetch_items_for_job('FAKE_API_KEY', '1/1/1')
+        self.assertListEqual([], result)
 
 
 if __name__ == '__main__':
