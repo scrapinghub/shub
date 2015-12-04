@@ -3,6 +3,7 @@ import importlib
 import os
 import subprocess
 import sys
+import re
 
 from glob import glob
 from os.path import isdir
@@ -147,6 +148,7 @@ def _deploy_dependency_egg(apikey, project_id):
     success = "Deployed eggs list at: https://dash.scrapinghub.com/p/%s/eggs"
     log(success % project_id)
 
+
 def _last_line_of(s):
     return s.split('\n')[-1]
 
@@ -173,3 +175,7 @@ def _get_egg_info(name):
     egg_path_glob = os.path.join('dist', '%s*' % egg_filename)
     egg_path = glob(egg_path_glob)[0]
     return (egg_filename, egg_path)
+
+
+def is_valid_jobid(jobid):
+    return bool(re.match(r'\d+/\d+/\d+$', jobid))

@@ -24,6 +24,8 @@ module_deps = {
     "deploy_reqs": [],
     "logout": [],
     "version": [],
+    "items": [],
+    "schedule": [],
 }
 
 for command, modules in module_deps.items():
