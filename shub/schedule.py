@@ -17,8 +17,8 @@ def cli(context, project_id, spider, argument):
     project_id = project_id or get_project_id_from_config()
     job_key = schedule_spider(apikey, project_id, spider, argument)
     click.echo(
-        'Spider {} scheduled: {}\nCheck the spider execution at: '
-        'https://dash.scrapinghub.com/p/{}/job/{}/{}'.format(spider, job_key, *job_key.split('/'))
+        'Spider {} scheduled, watch it running here:\n'
+        'https://dash.scrapinghub.com/p/{}/job/{}/{}'.format(spider, *job_key.split('/'))
     )
 
 
