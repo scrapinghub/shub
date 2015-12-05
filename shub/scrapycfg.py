@@ -1,6 +1,5 @@
 import time
 
-from scrapy.utils.conf import get_config
 from shub.click_utils import fail
 from shub.utils import pwd_hg_version, pwd_git_version
 
@@ -43,3 +42,21 @@ def get_version(target, version):
         return str(version)
     else:
         return str(int(time.time()))
+
+def get_config(use_closest=True):
+    """Get Scrapy config file as a SafeConfigParser"""
+    sources = get_sources(use_closest)
+    cfg = SafeConfigParser()
+    cfg.read(sources)
+    return cfg
+
+
+def get_sources(use_closest=True):
+    xdg_config_home = os.environ.get('XDG_CONFIG_HOME') or \
+        os.path.expanduser('~/.config')
+    sources = ['/etc/scrapy.cfg', r'c:\scrapy\scrapy.cfg',
+               xdg_config_home + '/scrapy.cfg',
+               os.path.expanduser('~/.scrapy.cfg')]
+    if use_closest:
+        sources.append(closest_scrapy_cfg())
+    return sources

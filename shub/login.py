@@ -3,6 +3,7 @@ import os
 import requests
 from shub import auth
 from six.moves import input
+from shub.scrapycfg import get_config
 
 
 @click.command(help='add Scrapinghug API key into the netrc file')
@@ -49,7 +50,6 @@ def _find_cfg_key():
 
 def _read_scrapy_cfg_key():
     try:
-        from scrapy.utils.conf import get_config
         cfg = get_config()
 
         if cfg.has_section('deploy'):
