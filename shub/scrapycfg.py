@@ -1,4 +1,7 @@
+import os
 import time
+
+from ConfigParser import SafeConfigParser
 
 from shub.click_utils import fail
 from shub.utils import pwd_hg_version, pwd_git_version
@@ -43,6 +46,7 @@ def get_version(target, version):
     else:
         return str(int(time.time()))
 
+
 def get_config(use_closest=True):
     """Get Scrapy config file as a SafeConfigParser"""
     sources = get_sources(use_closest)
@@ -60,3 +64,16 @@ def get_sources(use_closest=True):
     if use_closest:
         sources.append(closest_scrapy_cfg())
     return sources
+
+
+def closest_scrapy_cfg(path='.', prevpath=None):
+    """Return the path to the closest scrapy.cfg file by traversing the current
+    directory and its parents
+    """
+    if path == prevpath:
+        return ''
+    path = os.path.abspath(path)
+    cfgfile = os.path.join(path, 'scrapy.cfg')
+    if os.path.exists(cfgfile):
+        return cfgfile
+    return closest_scrapy_cfg(os.path.dirname(path), path)
