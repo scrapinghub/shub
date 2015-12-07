@@ -5,7 +5,7 @@ setup(
     name='shub',
     version='1.4.0',
     packages=['shub'],
-    url='https://doc.scrapinghub.com/shub.html',
+    url='http://doc.scrapinghub.com/shub.html',
     description='Scrapinghub Command Line Client',
     long_description=open('README.rst').read(),
     author='Scrapinghub',
