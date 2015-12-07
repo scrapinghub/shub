@@ -1,4 +1,4 @@
-from __future__ import unicode_literals
+from __future__ import unicode_literals, absolute_import
 import importlib
 import os
 import subprocess
@@ -177,5 +177,7 @@ def _get_egg_info(name):
     return (egg_filename, egg_path)
 
 
-def is_valid_jobid(jobid):
-    return bool(re.match(r'\d+/\d+/\d+$', jobid))
+def validate_jobid(jobid):
+    if not bool(re.match(r'\d+/\d+/\d+$', jobid)):
+        err = 'Invalid Job ID. Job ID must be: projectid/spiderid/jobid'
+        raise ClickException(err)
