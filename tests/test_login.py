@@ -36,6 +36,13 @@ username = KEY_SUGGESTION
         err = 'Unexpected output: %s' % result.output
         self.assertTrue('SHUB_APIKEY_VALUE' in result.output, err)
 
+    def test_login_uses_suggestion_to_log_in(self):
+        apikey_suggestion = 'SHUB_APIKEY_VALUE'
+        fake_netrc_writer = Mock()
+        login.auth.write_key_netrc = fake_netrc_writer
+        self._run(env={'SHUB_APIKEY': apikey_suggestion}, user_input='\n')
+        fake_netrc_writer.assert_called_with(apikey_suggestion)
+
     def test_login_can_handle_invalid_scrapy_cfg(self):
         result = self._run(files={'scrapy.cfg': 'invalid content'})
         self.assertEqual(0, result.exit_code, result.exception)

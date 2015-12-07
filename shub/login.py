@@ -23,7 +23,7 @@ def _get_apikey(suggestion=''):
     click.echo('Enter your API key from https://dash.scrapinghub.com/account/apikey')
     key = ''
     while True:
-        key = input('API key%s: ' % suggestion_txt)
+        key = input('API key%s: ' % suggestion_txt) or suggestion
         click.echo("Validating API key...")
         if _is_valid_apikey(key):
             click.echo("API key is OK, you are logged in now.")
