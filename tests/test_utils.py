@@ -6,6 +6,7 @@ import unittest
 from mock import patch
 from shub import utils
 from click.testing import CliRunner
+from click import ClickException
 
 
 class UtilsTest(unittest.TestCase):
@@ -30,6 +31,15 @@ class UtilsTest(unittest.TestCase):
                 version = utils._get_dependency_version('lxml')
                 # then
                 self.assertEquals('lxml-3.4.4', version)
+
+    def test_raises_click_exception_with_invalid_job_id(self):
+        invalid_job_ids = ['1/1', '123', '1/2/a', '1//']
+        for job_id in invalid_job_ids:
+            self.assertRaisesRegexp(
+                ClickException,
+                r'{} is invalid'.format(job_id),
+                utils.validate_jobid, job_id,
+            )
 
 
 if __name__ == '__main__':
