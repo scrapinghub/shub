@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 import click
 import requests
 from click import ClickException

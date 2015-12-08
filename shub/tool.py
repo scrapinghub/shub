@@ -26,6 +26,8 @@ module_deps = {
     "version": [],
     "items": [],
     "schedule": [],
+    "log": [],
+    "requests": [],
 }
 
 for command, modules in module_deps.items():
