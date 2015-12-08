@@ -15,11 +15,6 @@ class ItemsTest(unittest.TestCase):
     def setUp(self):
         self.runner = CliRunner()
 
-    def test_cli_raises_invalid_jobid(self):
-        output = self.runner.invoke(items.cli, ['123']).output
-        err = 'Unexpected output: %s' % output
-        self.assertTrue('Invalid job ID' in output, err)
-
     @mock.patch('shub.items.find_api_key', autospec=True)
     def test_apikey_is_validated(self, mock_find_apikey):
         mock_find_apikey.return_value = None

@@ -179,5 +179,6 @@ def _get_egg_info(name):
 
 def validate_jobid(jobid):
     if not bool(re.match(r'\d+/\d+/\d+$', jobid)):
-        err = 'Invalid Job ID. Job ID must be: projectid/spiderid/jobid'
+        err = 'Job ID {} is invalid. Format should be\
+               projectid/spiderid/jobid'.format(jobid)
         raise ClickException(err)
