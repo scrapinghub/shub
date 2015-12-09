@@ -12,6 +12,7 @@ from subprocess import Popen, PIPE, CalledProcessError
 import requests
 
 from click import ClickException
+from hubstorage import HubstorageClient
 
 from shub.auth import find_api_key
 from shub.click_utils import log
@@ -182,3 +183,13 @@ def validate_jobid(jobid):
         err = 'Job ID {} is invalid. Format should be\
                projectid/spiderid/jobid'.format(jobid)
         raise ClickException(err)
+
+
+def get_job(jobid):
+    validate_jobid(jobid)
+    apikey = find_api_key()
+    hsc = HubstorageClient(auth=apikey)
+    job = hsc.get_job(jobid)
+    if not job.metadata:
+        raise ClickException('Job {} does not exist'.format(jobid))
+    return job
