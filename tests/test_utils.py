@@ -3,13 +3,16 @@
 
 
 import unittest
+
 from mock import patch
-from shub import utils
 from click.testing import CliRunner
 from click import ClickException
 
+from shub import utils
+
 
 class UtilsTest(unittest.TestCase):
+
     def setUp(self):
         self.runner = CliRunner()
 
@@ -32,7 +35,7 @@ class UtilsTest(unittest.TestCase):
                 # then
                 self.assertEquals('lxml-3.4.4', version)
 
-    def test_raises_click_exception_with_invalid_job_id(self):
+    def test_validate_jobid(self):
         invalid_job_ids = ['1/1', '123', '1/2/a', '1//']
         for job_id in invalid_job_ids:
             self.assertRaisesRegexp(
@@ -40,6 +43,25 @@ class UtilsTest(unittest.TestCase):
                 r'{} is invalid'.format(job_id),
                 utils.validate_jobid, job_id,
             )
+
+    @patch('shub.utils.find_api_key', return_value='my_api_key', autospec=True)
+    @patch('shub.utils.HubstorageClient', autospec=True)
+    def test_get_job(self, mock_HSC, mock_fak):
+        class MockJob(object):
+            metadata = {'some': 'val'}
+        mockjob = MockJob()
+        mock_HSC.return_value.get_job.return_value = mockjob
+
+        self.assertIs(utils.get_job('1/1/1'), mockjob)
+        mock_HSC.assert_called_once_with('my_api_key')
+
+        with self.assertRaises(ClickException):
+            utils.get_job('1/1/')
+
+        # Non-existent job
+        mockjob.metadata = None
+        with self.assertRaises(ClickException):
+            utils.get_job('1/1/1')
 
 
 if __name__ == '__main__':
