@@ -98,9 +98,20 @@ def decompress_egg_files():
         log("Uncompressing: %s" % egg)
         run("%s %s" % (decompressor_by_ext[_ext(egg)], egg))
 
+def _is_egg_dir(f):
+    if not isdir(f):
+        return False
 
+    files = os.listdir(f)
+
+    # these folders are usually created by PIP when the egg is
+    # checked out from a VCS.
+    # check ssues #21 and #44 for more details
+    pip_tmp_dir = 'pip-delete-this-directory.txt' in files
+
+    return 'setup.py' in files and not pip_tmp_dir
 def build_and_deploy_eggs(project_id, apikey):
-    egg_dirs = (f for f in glob('*') if isdir(f))
+    egg_dirs = (f for f in glob('*') if _is_egg_dir(f))
 
     for egg_dir in egg_dirs:
         os.chdir(egg_dir)
