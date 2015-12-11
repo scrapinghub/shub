@@ -16,8 +16,8 @@ def get_project(target, project):
     return str(project)
 
 
-def get_targets():
-    cfg = get_config()
+def get_targets(cfg=None):
+    cfg = cfg or get_config()
     baset = dict(cfg.items('deploy')) if cfg.has_section('deploy') else {}
     baset.setdefault('url', 'https://dash.scrapinghub.com/api/scrapyd/')
     targets = {}
