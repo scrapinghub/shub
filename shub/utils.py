@@ -1,5 +1,4 @@
 from __future__ import unicode_literals, absolute_import
-import importlib
 import os
 import subprocess
 import sys
@@ -21,17 +20,6 @@ from shub.exceptions import AuthException
 SCRAPY_CFG_FILE = os.path.expanduser("~/.scrapy.cfg")
 FALLBACK_ENCODING = 'utf-8'
 STDOUT_ENCODING = sys.stdout.encoding or FALLBACK_ENCODING
-
-
-def missing_modules(*modules):
-    """Receives a list of module names and returns those which are missing"""
-    missing = []
-    for module_name in modules:
-        try:
-            importlib.import_module(module_name)
-        except ImportError:
-            missing.append(module_name)
-    return missing
 
 
 def make_deploy_request(url, data, files, auth):
