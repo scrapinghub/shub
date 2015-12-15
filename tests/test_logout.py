@@ -1,31 +1,35 @@
 import os
+import textwrap
 import unittest
-from tempfile import NamedTemporaryFile
-from shub.logout import remove_sh_key
+
+from click.testing import CliRunner
+import mock
+
+from shub import config, logout
 
 
+@mock.patch('shub.config.GLOBAL_SCRAPINGHUB_YML_PATH', new='.scrapinghub.yml')
 class LogoutTestCase(unittest.TestCase):
-    _netrc_file = None
 
     def setUp(self):
-        self._netrc_file = self._create_tmp_netrc()
+        self.runner = CliRunner()
 
-    def tearDown(self):
-        self._delete_tmp_netrc(self._netrc_file)
+    def test_remove_key(self):
+        GLOBAL_SH_YML = textwrap.dedent("""
+            apikeys:
+                default: LOGGED_IN_KEY
+        """)
+        with self.runner.isolated_filesystem():
+            with open('.scrapinghub.yml', 'w') as f:
+                f.write(GLOBAL_SH_YML)
+            conf = config.load_shub_config()
+            self.assertIn('default', conf.apikeys)
+            self.runner.invoke(logout.cli)
+            conf = config.load_shub_config()
+            self.assertNotIn('default', conf.apikeys)
 
-    def test_was_key_removed_from_netrc(self):
-        error_msg = remove_sh_key(self._netrc_file)
-        self.assertEqual(error_msg, '')
-
-    def _create_tmp_netrc(self):
-        with NamedTemporaryFile(delete=False) as netrc:
-            line = 'machine scrapinghub.com login ffffffffffffffffffffffffffffffff password ""'
-            netrc.write(line.encode('ascii'))
-        return netrc.name
-
-    def _delete_tmp_netrc(self, netrc_file):
-        if netrc_file:
-            os.remove(netrc_file)
-
-if __name__ == '__main__':
-    unittest.main()
+    @mock.patch('shub.logout.update_config')
+    def test_fail_on_not_logged_in(self, mock_uc):
+        with self.runner.isolated_filesystem():
+            self.runner.invoke(logout.cli)
+            self.assertFalse(mock_uc.called)

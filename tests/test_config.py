@@ -23,8 +23,6 @@ VALID_YAML_CFG = """
         external: ext_endpoint
     apikeys:
         default: key
-    versions:
-        shproj: 2.0
 """
 
 
@@ -41,6 +39,7 @@ class ShubConfigTest(unittest.TestCase):
     def test_init_sets_default(self):
         conf = ShubConfig()
         self.assertIn('default', conf.endpoints)
+        self.assertEqual(conf.version, 'AUTO')
 
     def test_load(self):
         projects = {
@@ -154,16 +153,22 @@ class ShubConfigTest(unittest.TestCase):
             None,
         )
 
-    def test_get_version(self):
-        self.assertEqual(self.conf.get_version('shproj'), '2.0')
-        with mock.patch('shub.config.time.time', return_value=101):
-            self.assertEqual(self.conf.get_version('externalproj'), '101')
-            self.assertEqual(self.conf.get_version('undef'), '101')
-            self.assertEqual(self.conf.get_version('undef', '2.0'), '2.0')
-        with mock.patch('shub.config.pwd_hg_version', return_value='ver_HG'):
-            self.assertEqual(self.conf.get_version('undef', 'HG'), 'ver_HG')
-        with mock.patch('shub.config.pwd_git_version', return_value='ver_GIT'):
-            self.assertEqual(self.conf.get_version('undef', 'GIT'), 'ver_GIT')
+    @mock.patch('shub.config.pwd_git_version', return_value='ver_GIT')
+    @mock.patch('shub.config.pwd_hg_version', return_value='ver_HG')
+    @mock.patch('shub.config.time.time', return_value=101)
+    def test_get_version(self, mock_time, mock_hg, mock_git):
+        def _assert_version(version, expected):
+            self.conf.version = version
+            self.assertEqual(self.conf.get_version(), expected)
+        _assert_version('GIT', 'ver_GIT')
+        _assert_version('HG', 'ver_HG')
+        _assert_version('somestring', 'somestring')
+        _assert_version('', '101')
+        _assert_version('AUTO', 'ver_GIT')
+        mock_git.return_value = None
+        _assert_version('AUTO', 'ver_HG')
+        mock_hg.return_value = None
+        _assert_version('AUTO', '101')
 
 
 LOCAL_SCRAPINGHUB_YML = """
@@ -189,10 +194,10 @@ class LoadShubConfigTest(unittest.TestCase):
         self._old_dir = os.getcwd()
         os.chdir(self.tmpdir)
 
-        self.patcher_gsy = mock.patch('shub.config._global_scrapinghub_yml')
-        self.addCleanup(self.patcher_gsy.stop)
-        self.mock_gsy = self.patcher_gsy.start()
-        self.mock_gsy.return_value = self.globalpath
+        patcher_gsyp = mock.patch('shub.config.GLOBAL_SCRAPINGHUB_YML_PATH',
+                                  new=self.globalpath)
+        self.addCleanup(patcher_gsyp.stop)
+        patcher_gsyp.start()
 
     def tearDown(self):
         os.chdir(self._old_dir)
@@ -223,7 +228,6 @@ class LoadShubConfigTest(unittest.TestCase):
 
     def test_no_global_scrapinghub_yml(self):
         os.remove(self.globalpath)
-        self.mock_gsy.return_value = None
         conf = load_shub_config()
         with self.assertRaises(ClickException):
             conf.get_apikey('shproj')
@@ -264,7 +268,7 @@ class LoadShubConfigTest(unittest.TestCase):
             conf.get_target('ext2'),
             (333, 'ext2_endpoint', 'ext2_key'),
         )
-        self.assertEqual(conf.get_version('ext2'), 'ext2_ver')
+        self.assertEqual(conf.get_version(), 'ext2_ver')
 
 
 class UpdateConfigTest(unittest.TestCase):

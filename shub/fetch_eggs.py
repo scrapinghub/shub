@@ -3,15 +3,16 @@ import click
 import requests
 from click import ClickException
 
-from shub.auth import find_api_key
 from shub.click_utils import log
+from shub.config import load_shub_config
 from shub.exceptions import AuthException
 
 
 @click.command(help="Download a project's eggs from the Scrapy Cloud")
 @click.argument("project_id", required=True)
 def cli(project_id):
-    api_key = find_api_key()
+    conf = load_shub_config()
+    api_key = conf.get_apikey(project_id)
     destfile = 'eggs-%s.zip' % project_id
     fetch_eggs(project_id, api_key, destfile)
 

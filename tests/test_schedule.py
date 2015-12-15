@@ -9,19 +9,10 @@ from scrapinghub import APIError
 class ScheduleTest(unittest.TestCase):
 
     def setUp(self):
-        self.runner = CliRunner()
+        self.runner = CliRunner(env={'SHUB_APIKEY': '1234'})
 
-    @mock.patch('shub.schedule.find_api_key', autospec=True)
-    def test_apikey_is_validated(self, mock_find_apikey):
-        mock_find_apikey.return_value = None
-        output = self.runner.invoke(schedule.cli, ['fake_spider', '-p', 1]).output
-        err = 'Unexpected output: %s' % output
-        self.assertTrue('key not found' in output, err)
-
-    @mock.patch('shub.schedule.find_api_key', autospec=True)
     @mock.patch('shub.schedule.schedule_spider', autospec=True)
-    def test_schedules_job_if_input_is_ok(self, mock_find_apikey, mock_schedule_spider):
-        mock_find_apikey.return_value = 1
+    def test_schedules_job_if_input_is_ok(self, mock_schedule_spider):
         self.runner.invoke(schedule.cli, ['fake_spider', '-p', 1])
         self.assertTrue(mock_schedule_spider.called)
 

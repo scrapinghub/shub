@@ -6,8 +6,8 @@ import shutil
 
 from shub.utils import run, decompress_egg_files
 from shub.click_utils import log
+from shub.config import load_shub_config
 from shub import utils
-from shub.auth import find_api_key
 
 
 @click.command(help="Build and deploy eggs from requirements.txt")
@@ -19,7 +19,8 @@ def cli(project_id, requirements_file):
 
 
 def main(project_id, requirements_file):
-    apikey = find_api_key()
+    conf = load_shub_config()
+    apikey = conf.get_apikey(project_id)
     requirements_full_path = os.path.abspath(requirements_file)
     eggs_tmp_dir = _mk_and_cd_eggs_tmpdir()
     _download_egg_files(eggs_tmp_dir, requirements_full_path)

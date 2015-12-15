@@ -12,6 +12,10 @@ from shub import deploy_reqs
 
 
 class TestDeployReqs(unittest.TestCase):
+
+    def setUp(self):
+        os.environ['SHUB_APIKEY'] = '1234'
+
     def test_can_decompress_downloaded_packages_and_call_deploy_reqs(self):
         # GIVEN
         requirements_file = self._write_tmp_requirements_file()

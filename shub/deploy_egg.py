@@ -6,9 +6,9 @@ from subprocess import Popen, PIPE
 import click
 
 from shub.click_utils import log, fail
+from shub.config import load_shub_config
 from shub import utils
 from shub.utils import run, decompress_egg_files
-from shub.auth import find_api_key
 
 
 @click.command(help="Build and deploy egg from source")
@@ -21,7 +21,8 @@ def cli(project_id, from_url=None, git_branch=None, from_pypi=None):
 
 
 def main(project_id, from_url=None, git_branch=None, from_pypi=None):
-    apikey = find_api_key()
+    conf = load_shub_config()
+    apikey = conf.get_apikey(project_id)
 
     if from_pypi:
         _fetch_from_pypi(from_pypi)

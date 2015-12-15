@@ -2,6 +2,7 @@
 # coding=utf-8
 
 
+import os
 import unittest
 
 from mock import patch
@@ -15,6 +16,7 @@ class UtilsTest(unittest.TestCase):
 
     def setUp(self):
         self.runner = CliRunner()
+        os.environ['SHUB_APIKEY'] = 'my_api_key'
 
     def test_dependency_version_from_setup_is_parsed_properly(self):
         def check(cmd):
@@ -44,9 +46,8 @@ class UtilsTest(unittest.TestCase):
                 utils.validate_jobid, job_id,
             )
 
-    @patch('shub.utils.find_api_key', return_value='my_api_key', autospec=True)
     @patch('shub.utils.HubstorageClient', autospec=True)
-    def test_get_job(self, mock_HSC, mock_fak):
+    def test_get_job(self, mock_HSC):
         class MockJob(object):
             metadata = {'some': 'val'}
         mockjob = MockJob()

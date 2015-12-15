@@ -63,7 +63,7 @@ class DeployTest(unittest.TestCase):
             self.assertEquals((TEST_APIKEY, ''), auth, err)
 
             err = 'The project specified in the scrapy.cfg file should have been used'
-            self.assertEquals('-1', data['project'], err)
+            self.assertEquals(-1, data['project'], err)
 
 
 if __name__ == '__main__':
