@@ -1,7 +1,9 @@
 import os
 import time
+import warnings
 
 from ConfigParser import SafeConfigParser
+from importlib import import_module
 
 from shub.click_utils import fail
 from shub.utils import pwd_hg_version, pwd_git_version
@@ -77,3 +79,15 @@ def closest_scrapy_cfg(path='.', prevpath=None):
     if os.path.exists(cfgfile):
         return cfgfile
     return closest_scrapy_cfg(os.path.dirname(path), path)
+
+
+def inside_project():
+    scrapy_module = os.environ.get('SCRAPY_SETTINGS_MODULE')
+    if scrapy_module is not None:
+        try:
+            import_module(scrapy_module)
+        except ImportError as exc:
+            warnings.warn("Cannot import scrapy settings module %s: %s" % (scrapy_module, exc))
+        else:
+            return True
+    return bool(closest_scrapy_cfg())

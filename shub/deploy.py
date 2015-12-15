@@ -10,10 +10,8 @@ import click
 import setuptools  # not used in code but needed in runtime, don't remove!
 _ = setuptools  # NOQA
 
-from scrapy.utils.project import inside_project
-from scrapy.utils.python import retry_on_eintr
-from scrapy.utils.conf import get_config, closest_scrapy_cfg
-
+from shub.utils import retry_on_eintr
+from shub.scrapycfg import get_config, closest_scrapy_cfg, inside_project
 from shub.click_utils import log
 from shub.utils import make_deploy_request
 from shub.auth import find_api_key
