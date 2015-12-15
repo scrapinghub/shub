@@ -17,7 +17,7 @@ def cli():
     pass
 
 module_deps = {
-    "deploy": ["scrapy", "setuptools"],
+    "deploy": ["setuptools"],
     "login": [],
     "deploy_egg": [],
     "fetch_eggs": [],
