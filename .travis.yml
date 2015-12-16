@@ -3,6 +3,7 @@ python: 2.7
 sudo: false
 env:
 - TOXENV=py27
+- TOXENV=freeze
 install:
 - "./.travis-workarounds.sh"
 - pip install -U tox twine wheel
