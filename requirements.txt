@@ -1,8 +1,5 @@
 click
 requests
 six
-# cryptography must be 1.0 because travis is still using pypy2.5
-# see https://github.com/travis-ci/travis-ci/issues/4756
-cryptography==1.0
 hubstorage
 scrapinghub
