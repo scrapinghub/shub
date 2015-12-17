@@ -5,11 +5,13 @@
 import os
 import unittest
 
+from six.moves.urllib.parse import urljoin
+
 from mock import patch
 from click.testing import CliRunner
 from click import ClickException
 
-from shub import utils
+from shub import config, utils
 
 
 class UtilsTest(unittest.TestCase):
@@ -54,7 +56,10 @@ class UtilsTest(unittest.TestCase):
         mock_HSC.return_value.get_job.return_value = mockjob
 
         self.assertIs(utils.get_job('1/1/1'), mockjob)
-        mock_HSC.assert_called_once_with('my_api_key')
+        mock_HSC.assert_called_once_with(
+            auth='my_api_key',
+            endpoint=urljoin(config.ShubConfig.DEFAULT_ENDPOINT, '..'),
+        )
 
         with self.assertRaises(ClickException):
             utils.get_job('1/1/')

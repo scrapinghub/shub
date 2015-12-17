@@ -1,69 +1,79 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-
 import unittest
-from shub import deploy
+
 from click.testing import CliRunner
 from mock import patch
+
+from shub import deploy
+from shub.config import ShubConfig
+
 
 TEST_APIKEY = '1' * 32
 
 VALID_SCRAPY_CFG = """
-[deploy]
-username = %s
-project = -1
-
 [settings]
 default = project.settings
-""" % TEST_APIKEY
+"""
+
+conf = ShubConfig()
+conf.projects.update({'default': 1, 'external': 'ext/2'})
+conf.endpoints.update({'ext': 'ext_endpoint/'})
+conf.apikeys.update({'default': TEST_APIKEY, 'ext': 'extkey'})
+conf.version = 'MyVersion'
 
 
 class DeployTest(unittest.TestCase):
 
     def setUp(self):
-        self.runner = CliRunner(env={'SHUB_APIKEY': '123'})
+        self.runner = CliRunner()
 
-    def test_fails_when_deploy_is_invoked_outside_of_a_scrapy_project(self):
-        # given there's no scrapy.cfg file in the current folder
+    def _make_project(self):
+        with open('scrapy.cfg', 'w') as f:
+            f.write(VALID_SCRAPY_CFG)
+
+    @patch('shub.deploy.load_shub_config', return_value=conf)
+    @patch('shub.deploy.make_deploy_request')
+    def test_detect_scrapy_project(self, mock_deploy_req, mock_conf):
         with self.runner.isolated_filesystem():
-            # when
             result = self.runner.invoke(deploy.cli)
-
-            # then
             self.assertEqual(1, result.exit_code)
-
-    @patch('shub.deploy.make_deploy_request')
-    def test_parses_project_cfg_and_uploads_egg(self, deploy_req_mock):
-        # given
-        with self.runner.isolated_filesystem():
-            with open('scrapy.cfg', 'w') as f:
-                f.write(VALID_SCRAPY_CFG)
-
-            # when
+            self._make_project()
             result = self.runner.invoke(deploy.cli)
+            self.assertEqual(0, result.exit_code)
 
-            # then
-            err = 'Output: %s\nException: %s' % (result.output, result.exception)
-            self.assertEqual(0, result.exit_code, err)
-
+    @patch('shub.deploy.load_shub_config', return_value=conf)
     @patch('shub.deploy.make_deploy_request')
-    def test_makes_a_deploy_request_using_the_values_in_scrapycfg(self, deploy_req_mock):
-        # given
+    def _invoke_with_project(self, args, mock_deploy_req, mock_conf):
         with self.runner.isolated_filesystem():
-            with open('scrapy.cfg', 'w') as f:
-                f.write(VALID_SCRAPY_CFG)
+            self._make_project()
+            self.runner.invoke(deploy.cli, args)
+        return mock_deploy_req.call_args[0]
 
-            # when
-            self.runner.invoke(deploy.cli)
+    def test_fallback_to_default(self):
+        url, data, files, auth = self._invoke_with_project(None)
+        self.assertIn(conf.endpoints['default'], url)
+        self.assertEqual(data, {'project': 1, 'version': 'MyVersion'})
+        self.assertEqual(auth, (TEST_APIKEY, ''))
 
-            # then
-            url, data, files, auth = deploy_req_mock.call_args[0]
-            err = 'The scrapy.cfg username should have been used as the apikey'
-            self.assertEquals((TEST_APIKEY, ''), auth, err)
+    def test_with_target(self):
+        url, data, files, auth = self._invoke_with_project(('external', ))
+        self.assertIn(conf.endpoints['ext'], url)
+        self.assertEqual(data, {'project': 2, 'version': 'MyVersion'})
+        self.assertEqual(auth, ('extkey', ''))
 
-            err = 'The project specified in the scrapy.cfg file should have been used'
-            self.assertEquals(-1, data['project'], err)
+    def test_with_id(self):
+        url, data, files, auth = self._invoke_with_project(('123', ))
+        self.assertIn(conf.endpoints['default'], url)
+        self.assertEqual(data, {'project': 123, 'version': 'MyVersion'})
+        self.assertEqual(auth, (TEST_APIKEY, ''))
+
+    def test_with_external_id(self):
+        url, data, files, auth = self._invoke_with_project(('ext/456', ))
+        self.assertIn(conf.endpoints['ext'], url)
+        self.assertEqual(data, {'project': 456, 'version': 'MyVersion'})
+        self.assertEqual(auth, ('extkey', ''))
 
 
 if __name__ == '__main__':

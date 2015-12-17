@@ -16,10 +16,12 @@ GLOBAL_SCRAPINGHUB_YML_PATH = os.path.expanduser("~/.scrapinghub.yml")
 
 class ShubConfig(object):
 
+    DEFAULT_ENDPOINT = 'https://dash.scrapinghub.com/api/scrapyd/'
+
     def __init__(self):
         self.projects = {}
         self.endpoints = {
-            'default': 'https://dash.scrapinghub.com/api/scrapyd/',
+            'default': self.DEFAULT_ENDPOINT,
         }
         self.apikeys = {}
         self.version = 'AUTO'
@@ -54,9 +56,11 @@ class ShubConfig(object):
         try:
             project_id = int(project_id)
         except ValueError:
-            raise ClickException(
-                "\"%s\" is not a valid Scrapinghub project ID." % project_id
-            )
+            msg = "\"%s\" is not a valid Scrapinghub project ID." % project_id
+            if target == 'default':
+                msg = ("Please specify target or configure a default target "
+                       "in 'scrapinghub.yml'.")
+            raise ClickException(msg)
         return project_id, endpoint
 
     def get_project_id(self, target):
@@ -190,3 +194,15 @@ def update_config(conf_path=None):
     yield conf
     with open(conf_path, 'w') as f:
         yaml.dump(conf, f, Dumper=yaml.RoundTripDumper)
+
+
+def get_target(target, auth_required=True):
+    """Load shub configuration and return target."""
+    conf = load_shub_config()
+    return conf.get_target(target, auth_required=auth_required)
+
+
+def get_version():
+    """Load shub configuratoin and return version."""
+    conf = load_shub_config()
+    return conf.get_version()

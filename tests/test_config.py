@@ -10,7 +10,8 @@ import mock
 from click import ClickException
 from click.testing import CliRunner
 
-from shub.config import load_shub_config, ShubConfig, update_config
+from shub.config import (get_target, get_version, load_shub_config, ShubConfig,
+                         update_config)
 
 
 VALID_YAML_CFG = """
@@ -271,7 +272,7 @@ class LoadShubConfigTest(unittest.TestCase):
         self.assertEqual(conf.get_version(), 'ext2_ver')
 
 
-class UpdateConfigTest(unittest.TestCase):
+class ConfigHelpersTest(unittest.TestCase):
 
     def test_update_config(self):
         YAML_BEFORE = textwrap.dedent("""\
@@ -300,3 +301,11 @@ class UpdateConfigTest(unittest.TestCase):
                 conf['a_second']['key3'] = 'val3'
             with open('conf.yml', 'r') as f:
                 self.assertEqual(f.read(), YAML_EXPECTED)
+
+    @mock.patch('shub.config.load_shub_config')
+    def test_get_target_version(self, mock_lsh):
+        get_target('mytarget', auth_required=False)
+        get_version()
+        mock_lsh.return_value.get_target.assert_called_once_with(
+            'mytarget', auth_required=False)
+        mock_lsh.return_value.get_version.assert_called_once_with()

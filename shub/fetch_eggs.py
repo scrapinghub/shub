@@ -1,25 +1,28 @@
 from __future__ import absolute_import
+
+from six.moves.urllib.parse import urljoin
+
 import click
 import requests
+
 from click import ClickException
 
 from shub.click_utils import log
-from shub.config import load_shub_config
+from shub.config import get_target
 from shub.exceptions import AuthException
 
 
 @click.command(help="Download a project's eggs from the Scrapy Cloud")
-@click.argument("project_id", required=True)
-def cli(project_id):
-    conf = load_shub_config()
-    api_key = conf.get_apikey(project_id)
-    destfile = 'eggs-%s.zip' % project_id
-    fetch_eggs(project_id, api_key, destfile)
+@click.argument("target", required=False, default='default')
+def cli(target):
+    project, endpoint, apikey = get_target(target)
+    destfile = 'eggs-%s.zip' % project
+    fetch_eggs(project, endpoint, apikey, destfile)
 
 
-def fetch_eggs(project_id, api_key, destfile):
-    auth = (api_key, '')
-    url = "https://dash.scrapinghub.com/api/eggs/bundle.zip?project=%s" % project_id
+def fetch_eggs(project, endpoint, apikey, destfile):
+    auth = (apikey, '')
+    url = urljoin(endpoint, "../eggs/bundle.zip?project=%s" % project)
     rsp = requests.get(url=url, auth=auth, stream=True, timeout=300)
 
     _assert_response_is_valid(rsp)

@@ -6,28 +6,27 @@ from subprocess import Popen, PIPE
 import click
 
 from shub.click_utils import log, fail
-from shub.config import load_shub_config
+from shub.config import get_target
 from shub import utils
 from shub.utils import run, decompress_egg_files
 
 
 @click.command(help="Build and deploy egg from source")
-@click.argument("project_id", required=True)
+@click.argument("target", required=False, default='default')
 @click.option("--from-url", help="Git, bazaar or mercurial repository URL")
 @click.option("--git-branch", help="Git branch to checkout")
 @click.option("--from-pypi", help="Name of package on pypi")
-def cli(project_id, from_url=None, git_branch=None, from_pypi=None):
-    main(project_id, from_url, git_branch, from_pypi)
+def cli(target, from_url=None, git_branch=None, from_pypi=None):
+    main(target, from_url, git_branch, from_pypi)
 
 
-def main(project_id, from_url=None, git_branch=None, from_pypi=None):
-    conf = load_shub_config()
-    apikey = conf.get_apikey(project_id)
+def main(target, from_url=None, git_branch=None, from_pypi=None):
+    project, endpoint, apikey = get_target(target)
 
     if from_pypi:
         _fetch_from_pypi(from_pypi)
         decompress_egg_files()
-        utils.build_and_deploy_eggs(project_id, apikey)
+        utils.build_and_deploy_eggs(project, endpoint, apikey)
         return
 
     if from_url:
@@ -37,7 +36,7 @@ def main(project_id, from_url=None, git_branch=None, from_pypi=None):
         error = "No setup.py -- are you running from a valid Python project?"
         fail(error)
 
-    utils.build_and_deploy_egg(project_id, apikey)
+    utils.build_and_deploy_egg(project, endpoint, apikey)
 
 
 def _checkout(repo, git_branch=None):

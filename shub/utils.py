@@ -11,6 +11,7 @@ from glob import glob
 from importlib import import_module
 from os import devnull
 from os.path import isdir
+from six.moves.urllib.parse import urljoin
 from subprocess import Popen, PIPE, CalledProcessError
 
 import requests
@@ -102,12 +103,12 @@ def decompress_egg_files():
         run("%s %s" % (decompressor_by_ext[_ext(egg)], egg))
 
 
-def build_and_deploy_eggs(project_id, apikey):
+def build_and_deploy_eggs(project, endpoint, apikey):
     egg_dirs = (f for f in glob('*') if isdir(f))
 
     for egg_dir in egg_dirs:
         os.chdir(egg_dir)
-        build_and_deploy_egg(project_id, apikey)
+        build_and_deploy_egg(project, endpoint, apikey)
         os.chdir('..')
 
 
@@ -124,7 +125,7 @@ def _ext(file_path):
     return os.path.splitext(file_path)[1].strip('.')
 
 
-def build_and_deploy_egg(project_id, apikey):
+def build_and_deploy_egg(project, endpoint, apikey):
     """Builds and deploys the current dir's egg"""
     log("Building egg in: %s" % os.getcwd())
     try:
@@ -134,23 +135,24 @@ def build_and_deploy_egg(project_id, apikey):
         log("Couldn't build an egg with vanilla setup.py, trying with setuptools...")
         run('python -c  "import setuptools; __file__=\'setup.py\'; execfile(\'setup.py\')" bdist_egg')
 
-    _deploy_dependency_egg(apikey, project_id)
+    _deploy_dependency_egg(project, endpoint, apikey)
 
 
-def _deploy_dependency_egg(apikey, project_id):
+def _deploy_dependency_egg(project, endpoint, apikey):
     name = _get_dependency_name()
     version = _get_dependency_version(name)
     egg_name, egg_path = _get_egg_info(name)
 
-    url = 'https://dash.scrapinghub.com/api/eggs/add.json'
-    data = {'project': project_id, 'name': name, 'version': version}
+    # XXX: Should endpoint point to /api/ instead of /api/scrapyd/ by default?
+    url = urljoin(endpoint, '../eggs/add.json')
+    data = {'project': project, 'name': name, 'version': version}
     files = {'egg': (egg_name, open(egg_path, 'rb'))}
     auth = (apikey, '')
 
-    log('Deploying dependency to Scrapy Cloud project "%s"' % project_id)
+    log('Deploying dependency to Scrapy Cloud project "%s"' % project)
     make_deploy_request(url, data, files, auth)
     success = "Deployed eggs list at: https://dash.scrapinghub.com/p/%s/eggs"
-    log(success % project_id)
+    log(success % project)
 
 
 def _last_line_of(s):
@@ -190,12 +192,10 @@ def validate_jobid(jobid):
 
 def get_job(jobid):
     # XXX: Lazy import to avoid circular dependency. Needs refactoring
-    from shub.config import load_shub_config
+    from shub.config import get_target
     validate_jobid(jobid)
-    conf = load_shub_config()
-    # TODO: This bypasses our target -> endpoint/project mapping
-    apikey = conf.get_apikey(jobid.split('/')[0])
-    hsc = HubstorageClient(auth=apikey)
+    project, endpoint, apikey = get_target(jobid.split('/')[0])
+    hsc = HubstorageClient(auth=apikey, endpoint=urljoin(endpoint, '..'))
     job = hsc.get_job(jobid)
     if not job.metadata:
         raise ClickException('Job {} does not exist'.format(jobid))

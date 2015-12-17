@@ -32,13 +32,12 @@ setup(
 
 @click.command(help="Deploy Scrapy project to Scrapy Cloud")
 @click.argument("target", required=False, default="default")
-@click.option("-p", "--project", help="the project ID to deploy to", type=click.INT)
 @click.option("-v", "--version", help="the version to use for deploying")
 @click.option("-l", "--list-targets", help="list available targets", is_flag=True)
 @click.option("-d", "--debug", help="debug mode (do not remove build dir)", is_flag=True)
 @click.option("--egg", help="deploy the given egg, instead of building one")
 @click.option("--build-egg", help="only build the given egg, don't deploy it")
-def cli(target, project, version, list_targets, debug, egg, build_egg):
+def cli(target, version, list_targets, debug, egg, build_egg):
     if not inside_project():
         log("Error: no Scrapy project found in this location")
         sys.exit(1)
