@@ -195,7 +195,7 @@ def get_job(jobid):
     from shub.config import get_target
     validate_jobid(jobid)
     project, endpoint, apikey = get_target(jobid.split('/')[0])
-    hsc = HubstorageClient(auth=apikey, endpoint=urljoin(endpoint, '..'))
+    hsc = HubstorageClient(auth=apikey)
     job = hsc.get_job(jobid)
     if not job.metadata:
         raise ClickException('Job {} does not exist'.format(jobid))

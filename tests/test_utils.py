@@ -2,23 +2,21 @@
 # coding=utf-8
 
 
-import os
 import unittest
-
-from six.moves.urllib.parse import urljoin
 
 from mock import patch
 from click.testing import CliRunner
 from click import ClickException
 
-from shub import config, utils
+from shub import utils
+
+from .utils import mock_conf
 
 
 class UtilsTest(unittest.TestCase):
 
     def setUp(self):
         self.runner = CliRunner()
-        os.environ['SHUB_APIKEY'] = 'my_api_key'
 
     def test_dependency_version_from_setup_is_parsed_properly(self):
         def check(cmd):
@@ -54,12 +52,10 @@ class UtilsTest(unittest.TestCase):
             metadata = {'some': 'val'}
         mockjob = MockJob()
         mock_HSC.return_value.get_job.return_value = mockjob
+        conf = mock_conf(self)
 
         self.assertIs(utils.get_job('1/1/1'), mockjob)
-        mock_HSC.assert_called_once_with(
-            auth='my_api_key',
-            endpoint=urljoin(config.ShubConfig.DEFAULT_ENDPOINT, '..'),
-        )
+        mock_HSC.assert_called_once_with(auth=conf.apikeys['default'])
 
         with self.assertRaises(ClickException):
             utils.get_job('1/1/')

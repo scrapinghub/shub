@@ -10,27 +10,28 @@ from click.testing import CliRunner
 
 from shub import deploy_reqs
 
+from .utils import mock_conf
+
 
 class TestDeployReqs(unittest.TestCase):
 
     def setUp(self):
         self.runner = CliRunner()
+        self.conf = mock_conf(self)
 
     def test_can_decompress_downloaded_packages_and_call_deploy_reqs(self):
         requirements_file = self._write_tmp_requirements_file()
-        proj_spec = (123, 'https://endpoint/scrapyd/', '1234')
-        with mock.patch('shub.deploy_reqs.utils.build_and_deploy_egg') as m, \
-             mock.patch('shub.deploy_reqs.get_target', return_value=proj_spec):
+        with mock.patch('shub.deploy_reqs.utils.build_and_deploy_egg') as m:
             self.runner.invoke(
                 deploy_reqs.cli,
-                ('0', '-r', requirements_file),
+                ('-r', requirements_file),
             )
             self.assertEqual(m.call_count, 2)
             for args, kwargs in m.call_args_list:
                 project, endpoint, apikey = args
-                self.assertEqual(project, 123)
-                self.assertIn('https://endpoint/', endpoint)
-                self.assertEqual(apikey, '1234')
+                self.assertEqual(project, 1)
+                self.assertIn('https://dash.scrapinghub.com', endpoint)
+                self.assertEqual(apikey, self.conf.apikeys['default'])
 
     def _write_tmp_requirements_file(self):
         basepath = 'tests/samples/deploy_reqs_sample_project/'
