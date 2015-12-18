@@ -1,11 +1,17 @@
 from __future__ import unicode_literals, absolute_import
+import errno
 import os
 import subprocess
 import sys
 import re
+import warnings
 
+from ConfigParser import SafeConfigParser
 from glob import glob
+from importlib import import_module
+from os import devnull
 from os.path import isdir
+from six.moves.urllib.parse import urljoin
 from subprocess import Popen, PIPE, CalledProcessError
 
 import requests
@@ -13,7 +19,6 @@ import requests
 from click import ClickException
 from hubstorage import HubstorageClient
 
-from shub.auth import find_api_key
 from shub.click_utils import log
 from shub.exceptions import AuthException
 
@@ -42,25 +47,36 @@ def make_deploy_request(url, data, files, auth):
         raise ClickException("Deploy failed: {}".format(exc))
 
 
+# XXX: The next six should be refactored
+
+def get_cmd(cmd):
+    with open(devnull, 'wb') as null:
+        return Popen(cmd, stdout=PIPE, stderr=null)
+
+
 def get_cmd_output(cmd):
-    return Popen(cmd, stdout=PIPE).communicate()[0].decode(STDOUT_ENCODING)
+    process = get_cmd(cmd)
+    return process.communicate()[0].decode(STDOUT_ENCODING)
 
 
 def pwd_git_version():
-    process = Popen(['git', 'describe', '--always'], stdout=PIPE)
+    process = get_cmd(['git', 'describe', '--always'])
     commit_id = process.communicate()[0].decode(STDOUT_ENCODING).strip('\n')
     if process.wait() != 0:
         commit_id = get_cmd_output(['git', 'rev-list', '--count', 'HEAD']).strip('\n')
 
+    if not commit_id:
+        return None
     branch = get_cmd_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD']).strip('\n')
     return '%s-%s' % (commit_id, branch)
 
 
 def pwd_hg_version():
-    commit_id = 'r%s' % get_cmd_output(['hg', 'tip', '--template', '{rev}'])
-
+    commit_id = get_cmd_output(['hg', 'tip', '--template', '{rev}'])
+    if not commit_id:
+        return None
     branch = get_cmd_output(['hg', 'branch']).strip('\n')
-    return '%s-%s' % (commit_id, branch)
+    return 'r%s-%s' % (commit_id, branch)
 
 
 def pwd_bzr_version():
@@ -87,12 +103,12 @@ def decompress_egg_files():
         run("%s %s" % (decompressor_by_ext[_ext(egg)], egg))
 
 
-def build_and_deploy_eggs(project_id, apikey):
+def build_and_deploy_eggs(project, endpoint, apikey):
     egg_dirs = (f for f in glob('*') if isdir(f))
 
     for egg_dir in egg_dirs:
         os.chdir(egg_dir)
-        build_and_deploy_egg(project_id, apikey)
+        build_and_deploy_egg(project, endpoint, apikey)
         os.chdir('..')
 
 
@@ -109,7 +125,7 @@ def _ext(file_path):
     return os.path.splitext(file_path)[1].strip('.')
 
 
-def build_and_deploy_egg(project_id, apikey):
+def build_and_deploy_egg(project, endpoint, apikey):
     """Builds and deploys the current dir's egg"""
     log("Building egg in: %s" % os.getcwd())
     try:
@@ -119,23 +135,24 @@ def build_and_deploy_egg(project_id, apikey):
         log("Couldn't build an egg with vanilla setup.py, trying with setuptools...")
         run('python -c  "import setuptools; __file__=\'setup.py\'; execfile(\'setup.py\')" bdist_egg')
 
-    _deploy_dependency_egg(apikey, project_id)
+    _deploy_dependency_egg(project, endpoint, apikey)
 
 
-def _deploy_dependency_egg(apikey, project_id):
+def _deploy_dependency_egg(project, endpoint, apikey):
     name = _get_dependency_name()
     version = _get_dependency_version(name)
     egg_name, egg_path = _get_egg_info(name)
 
-    url = 'https://dash.scrapinghub.com/api/eggs/add.json'
-    data = {'project': project_id, 'name': name, 'version': version}
+    # XXX: Should endpoint point to /api/ instead of /api/scrapyd/ by default?
+    url = urljoin(endpoint, '../eggs/add.json')
+    data = {'project': project, 'name': name, 'version': version}
     files = {'egg': (egg_name, open(egg_path, 'rb'))}
     auth = (apikey, '')
 
-    log('Deploying dependency to Scrapy Cloud project "%s"' % project_id)
+    log('Deploying dependency to Scrapy Cloud project "%s"' % project)
     make_deploy_request(url, data, files, auth)
     success = "Deployed eggs list at: https://dash.scrapinghub.com/p/%s/eggs"
-    log(success % project_id)
+    log(success % project)
 
 
 def _last_line_of(s):
@@ -174,13 +191,16 @@ def validate_jobid(jobid):
 
 
 def get_job(jobid):
+    # XXX: Lazy import to avoid circular dependency. Needs refactoring
+    from shub.config import get_target
     validate_jobid(jobid)
-    apikey = find_api_key()
+    project, endpoint, apikey = get_target(jobid.split('/')[0])
     hsc = HubstorageClient(auth=apikey)
     job = hsc.get_job(jobid)
     if not job.metadata:
         raise ClickException('Job {} does not exist'.format(jobid))
     return job
+
 
 def retry_on_eintr(function, *args, **kw):
     """Run a function and retry it while getting EINTR errors"""
@@ -190,3 +210,49 @@ def retry_on_eintr(function, *args, **kw):
         except IOError as e:
             if e.errno != errno.EINTR:
                 raise
+
+
+def closest_file(filename, path='.', prevpath=None):
+    """
+    Return the path to the closest file with the given filename by traversing
+    the current directory and its parents
+    """
+    if path == prevpath:
+        return None
+    path = os.path.abspath(path)
+    thisfile = os.path.join(path, filename)
+    if os.path.exists(thisfile):
+        return thisfile
+    return closest_file(filename, os.path.dirname(path), path)
+
+
+def inside_project():
+    scrapy_module = os.environ.get('SCRAPY_SETTINGS_MODULE')
+    if scrapy_module is not None:
+        try:
+            import_module(scrapy_module)
+        except ImportError as exc:
+            warnings.warn("Cannot import scrapy settings module %s: %s"
+                          "" % (scrapy_module, exc))
+        else:
+            return True
+    return bool(closest_file('scrapy.cfg'))
+
+
+def get_config(use_closest=True):
+    """Get Scrapy config file as a SafeConfigParser"""
+    sources = get_sources(use_closest)
+    cfg = SafeConfigParser()
+    cfg.read(sources)
+    return cfg
+
+
+def get_sources(use_closest=True):
+    xdg_config_home = os.environ.get('XDG_CONFIG_HOME') or \
+        os.path.expanduser('~/.config')
+    sources = ['/etc/scrapy.cfg', r'c:\scrapy\scrapy.cfg',
+               xdg_config_home + '/scrapy.cfg',
+               os.path.expanduser('~/.scrapy.cfg')]
+    if use_closest:
+        sources.append(closest_file('scrapy.cfg'))
+    return sources

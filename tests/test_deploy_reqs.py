@@ -1,28 +1,37 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-from __future__ import print_function
-
 import unittest
+import mock
 import os
 import tempfile
-from mock import Mock
+
+from click.testing import CliRunner
 
 from shub import deploy_reqs
 
+from .utils import mock_conf
+
 
 class TestDeployReqs(unittest.TestCase):
+
+    def setUp(self):
+        self.runner = CliRunner()
+        self.conf = mock_conf(self)
+
     def test_can_decompress_downloaded_packages_and_call_deploy_reqs(self):
-        # GIVEN
         requirements_file = self._write_tmp_requirements_file()
-
-        # WHEN
-        deploy_reqs.utils.build_and_deploy_egg = Mock()
-        project_id = 0
-        deploy_reqs.main(project_id, requirements_file)
-
-        # THEN
-        self.assertEqual(2, deploy_reqs.utils.build_and_deploy_egg.call_count)
+        with mock.patch('shub.deploy_reqs.utils.build_and_deploy_egg') as m:
+            self.runner.invoke(
+                deploy_reqs.cli,
+                ('-r', requirements_file),
+            )
+            self.assertEqual(m.call_count, 2)
+            for args, kwargs in m.call_args_list:
+                project, endpoint, apikey = args
+                self.assertEqual(project, 1)
+                self.assertIn('https://dash.scrapinghub.com', endpoint)
+                self.assertEqual(apikey, self.conf.apikeys['default'])
 
     def _write_tmp_requirements_file(self):
         basepath = 'tests/samples/deploy_reqs_sample_project/'

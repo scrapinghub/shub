@@ -24,12 +24,12 @@ class ShubEndToEndTests(unittest.TestCase):
     def test_deploy_egg_isnt_broken(self):
         output = self.run_subcmd('deploy-egg')
         error = 'Unexpected output: %s' % output
-        self.assertTrue('Missing argument' in output, error)
+        self.assertTrue('specify target' in output, error)
 
     def test_deploy_reqs_isnt_broken(self):
         output = self.run_subcmd('deploy-reqs')
         error = 'Unexpected output: %s' % output
-        self.assertTrue('Missing argument' in output, error)
+        self.assertTrue('specify target' in output, error)
 
     def test_deploy_isnt_broken(self):
         output = self.run_subcmd('deploy')
@@ -39,4 +39,4 @@ class ShubEndToEndTests(unittest.TestCase):
     def test_fetch_eggs_isnt_broken(self):
         output = self.run_subcmd('fetch-eggs')
         error = 'Unexpected output: %s' % output
-        self.assertTrue('Missing argument' in output, error)
+        self.assertTrue('specify target' in output, error)

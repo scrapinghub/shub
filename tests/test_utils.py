@@ -10,6 +10,8 @@ from click import ClickException
 
 from shub import utils
 
+from .utils import mock_conf
+
 
 class UtilsTest(unittest.TestCase):
 
@@ -44,16 +46,16 @@ class UtilsTest(unittest.TestCase):
                 utils.validate_jobid, job_id,
             )
 
-    @patch('shub.utils.find_api_key', return_value='my_api_key', autospec=True)
     @patch('shub.utils.HubstorageClient', autospec=True)
-    def test_get_job(self, mock_HSC, mock_fak):
+    def test_get_job(self, mock_HSC):
         class MockJob(object):
             metadata = {'some': 'val'}
         mockjob = MockJob()
         mock_HSC.return_value.get_job.return_value = mockjob
+        conf = mock_conf(self)
 
         self.assertIs(utils.get_job('1/1/1'), mockjob)
-        mock_HSC.assert_called_once_with('my_api_key')
+        mock_HSC.assert_called_once_with(auth=conf.apikeys['default'])
 
         with self.assertRaises(ClickException):
             utils.get_job('1/1/')

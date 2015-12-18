@@ -1,39 +1,36 @@
+from six.moves.urllib.parse import urljoin
+
 import click
+
 from click import ClickException
 from scrapinghub import Connection, APIError
-from shub import scrapycfg
-from shub.utils import find_api_key
+
+from shub.config import get_target
 
 
 @click.command(help='Schedule a spider to run on Scrapy Cloud')
-@click.pass_context
 @click.argument('spider', type=click.STRING)
-@click.option('-p', '--project-id', help='the project ID', type=click.INT)
 @click.option('-a', '--argument', help='argument for the spider (-a name=value)', multiple=True)
-def cli(context, project_id, spider, argument):
-    apikey = find_api_key()
-    if not apikey:
-        raise ClickException('Scrapinghub API key not found: please, run \'scrapy login\' first')
-    project_id = project_id or get_project_id_from_config()
-    job_key = schedule_spider(apikey, project_id, spider, argument)
+def cli(spider, argument):
+    try:
+        target, spider = spider.rsplit('/', 1)
+    except ValueError:
+        target = 'default'
+    project, endpoint, apikey = get_target(target)
+    job_key = schedule_spider(project, endpoint, apikey, spider, argument)
+    watch_url = urljoin(
+        endpoint,
+        '../../p/{}/job/{}/{}'.format(*job_key.split('/')),
+    )
     click.echo(
-        'Spider {} scheduled, watch it running here:\n'
-        'https://dash.scrapinghub.com/p/{}/job/{}/{}'.format(spider, *job_key.split('/'))
+        'Spider {} scheduled, watch it running here:\n{}'
+        ''.format(spider, watch_url)
     )
 
 
-def schedule_spider(apikey, project_id, spider, arguments=()):
-    conn = Connection(apikey)
+def schedule_spider(project, endpoint, apikey, spider, arguments=()):
+    conn = Connection(apikey, url=urljoin(endpoint, '..'))
     try:
-        return conn[project_id].schedule(spider, **dict(x.split('=') for x in arguments))
+        return conn[project].schedule(spider, **dict(x.split('=') for x in arguments))
     except APIError as e:
         raise ClickException(e.message)
-
-
-def get_project_id_from_config():
-    from six.moves.configparser import NoSectionError, NoOptionError
-    try:
-        conf = scrapycfg.get_config()
-        return conf.get('deploy', 'project')
-    except (NoSectionError, NoOptionError):
-        raise ClickException('missing project id')

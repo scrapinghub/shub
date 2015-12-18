@@ -10,12 +10,10 @@ import click
 import setuptools  # not used in code but needed in runtime, don't remove!
 _ = setuptools  # NOQA
 
-from shub.utils import retry_on_eintr
-from shub.scrapycfg import get_config, closest_scrapy_cfg, inside_project
+from shub.utils import closest_file, get_config, inside_project, retry_on_eintr
 from shub.click_utils import log
+from shub.config import load_shub_config
 from shub.utils import make_deploy_request
-from shub.auth import find_api_key
-from shub import scrapycfg
 
 
 _SETUP_PY_TEMPLATE = """\
@@ -34,19 +32,20 @@ setup(
 
 @click.command(help="Deploy Scrapy project to Scrapy Cloud")
 @click.argument("target", required=False, default="default")
-@click.option("-p", "--project", help="the project ID to deploy to", type=click.INT)
 @click.option("-v", "--version", help="the version to use for deploying")
 @click.option("-l", "--list-targets", help="list available targets", is_flag=True)
 @click.option("-d", "--debug", help="debug mode (do not remove build dir)", is_flag=True)
 @click.option("--egg", help="deploy the given egg, instead of building one")
 @click.option("--build-egg", help="only build the given egg, don't deploy it")
-def cli(target, project, version, list_targets, debug, egg, build_egg):
+def cli(target, version, list_targets, debug, egg, build_egg):
     if not inside_project():
         log("Error: no Scrapy project found in this location")
         sys.exit(1)
 
+    conf = load_shub_config()
+
     if list_targets:
-        for name, target in scrapycfg.get_targets().items():
+        for name in conf.projects:
             click.echo(name)
         return
 
@@ -58,10 +57,8 @@ def cli(target, project, version, list_targets, debug, egg, build_egg):
             log("Writing egg to %s" % build_egg)
             shutil.copyfile(egg, build_egg)
         else:
-            target = scrapycfg.get_target(target)
-            project = scrapycfg.get_project(target, project)
-            version = scrapycfg.get_version(target, version)
-            apikey = target.get('username') or find_api_key()
+            project, endpoint, apikey = conf.get_target(target)
+            version = version or conf.get_version()
             auth = (apikey, '')
 
             if egg:
@@ -71,7 +68,7 @@ def cli(target, project, version, list_targets, debug, egg, build_egg):
                 log("Packing version %s" % version)
                 egg, tmpdir = _build_egg()
 
-            _upload_egg(target, egg, project, version, auth)
+            _upload_egg(endpoint, egg, project, version, auth)
             click.echo("Run your spiders at: https://dash.scrapinghub.com/p/%s/" % project)
     finally:
         if tmpdir:
@@ -81,20 +78,20 @@ def cli(target, project, version, list_targets, debug, egg, build_egg):
                 shutil.rmtree(tmpdir, ignore_errors=True)
 
 
-def _url(target, action):
-    return urljoin(target['url'], action)
+def _url(endpoint, action):
+    return urljoin(endpoint, action)
 
 
-def _upload_egg(target, eggpath, project, version, auth):
+def _upload_egg(endpoint, eggpath, project, version, auth):
     data = {'project': project, 'version': version}
     files = {'egg': ('project.egg', open(eggpath, 'rb'))}
-    url = _url(target, 'addversion.json')
+    url = _url(endpoint, 'addversion.json')
     log('Deploying to Scrapy Cloud project "%s"' % project)
     return make_deploy_request(url, data, files, auth)
 
 
 def _build_egg():
-    closest = closest_scrapy_cfg()
+    closest = closest_file('scrapy.cfg')
     os.chdir(os.path.dirname(closest))
     if not os.path.exists('setup.py'):
         settings = get_config().get('settings', 'default')
