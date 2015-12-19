@@ -7,5 +7,5 @@ from shub.utils import get_job
 @click.argument('job_id')
 def cli(job_id):
     job = get_job(job_id)
-    for item in job.items.iter_values():
+    for item in job.items.iter_json():
         click.echo(item)

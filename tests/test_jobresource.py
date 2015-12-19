@@ -15,9 +15,9 @@ class JobResourceTest(unittest.TestCase):
         objects = ['Object 1', 'Object 2']
         jobid = '1/2/3'
         with mock.patch.object(cmd_mod, 'get_job', autospec=True) as mock_gj:
-            # Patch job.items.iter_values() to return our objects
+            # Patch job.items.iter_json() to return our objects
             mock_resource = getattr(mock_gj.return_value, resource_name)
-            mock_resource.iter_values.return_value = objects
+            mock_resource.iter_json.return_value = objects
             result = self.runner.invoke(cmd_mod.cli, (jobid,))
             mock_gj.assert_called_once_with(jobid)
             self.assertIn("\n".join(objects), result.output)
@@ -26,7 +26,17 @@ class JobResourceTest(unittest.TestCase):
         self._test_prints_objects(items, 'items')
 
     def test_log(self):
-        self._test_prints_objects(log, 'logs')
+        objects = [
+            {'time': 0, 'level': 20, 'message': 'message 1'},
+            {'time': 1450874471000, 'level': 50, 'message': 'message 2'},
+        ]
+        jobid = '1/2/3'
+        with mock.patch.object(log, 'get_job', autospec=True) as mock_gj:
+            mock_gj.return_value.logs.iter_values.return_value = objects
+            result = self.runner.invoke(log.cli, (jobid,))
+            mock_gj.assert_called_once_with(jobid)
+            self.assertIn('1970-01-01 00:00:00 INFO message 1', result.output)
+            self.assertIn('2015-12-23 12:41:11 CRITICAL message 2', result.output)
 
     def test_requests(self):
         self._test_prints_objects(requests, 'requests')
