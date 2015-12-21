@@ -82,7 +82,7 @@ class ShubConfig(object):
         """Return API key for endpoint associated with given target"""
         endpoint = self._parse_project(target)[1]
         try:
-            return self.apikeys[endpoint]
+            return str(self.apikeys[endpoint])
         except KeyError:
             if not required:
                 return None

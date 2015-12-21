@@ -153,6 +153,9 @@ class ShubConfigTest(unittest.TestCase):
             self.conf.get_apikey('externalproj', required=False),
             None,
         )
+        # API keys should always be strings, even if they contain only digits
+        self.conf.apikeys['default'] = 123
+        self.assertEqual(self.conf.get_apikey('shproj'), '123')
 
     @mock.patch('shub.config.pwd_git_version', return_value='ver_GIT')
     @mock.patch('shub.config.pwd_hg_version', return_value='ver_HG')
