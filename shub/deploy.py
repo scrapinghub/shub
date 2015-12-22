@@ -13,6 +13,7 @@ _ = setuptools  # NOQA
 from shub.utils import closest_file, get_config, inside_project, retry_on_eintr
 from shub.click_utils import log
 from shub.config import load_shub_config
+from shub.exceptions import NotFoundException
 from shub.utils import make_deploy_request
 
 
@@ -39,8 +40,7 @@ setup(
 @click.option("--build-egg", help="only build the given egg, don't deploy it")
 def cli(target, version, list_targets, debug, egg, build_egg):
     if not inside_project():
-        log("Error: no Scrapy project found in this location")
-        sys.exit(1)
+        raise NotFoundException("No Scrapy project found in this location.")
 
     conf = load_shub_config()
 

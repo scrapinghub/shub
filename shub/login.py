@@ -5,15 +5,14 @@ from six.moves import input
 from six.moves.urllib.parse import urljoin
 
 from shub.config import load_shub_config, update_config
+from shub.exceptions import AlreadyLoggedInException
 
 
 @click.command(help='Add Scrapinghug API key to your .scrapinghub.yml')
 def cli():
     global_conf = load_shub_config(load_local=False, load_env=False)
     if 'default' in global_conf.apikeys:
-        click.echo("You are already logged in. To change credentials, use "
-                   "'shub logout' first.")
-        return 0
+        raise AlreadyLoggedInException
 
     conf = load_shub_config()
     key = _get_apikey(
