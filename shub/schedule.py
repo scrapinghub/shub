@@ -1,23 +1,27 @@
-from six.moves.urllib.parse import urljoin
+import json
 
 import click
 
 from click import ClickException
 from scrapinghub import Connection, APIError
+from six.moves.urllib.parse import urljoin
 
 from shub.config import get_target
 
 
 @click.command(help='Schedule a spider to run on Scrapy Cloud')
 @click.argument('spider', type=click.STRING)
-@click.option('-a', '--argument', help='argument for the spider (-a name=value)', multiple=True)
-def cli(spider, argument):
+@click.option('-a', '--argument',
+              help='spider argument (-a name=value)', multiple=True)
+@click.option('-s', '--set',
+              help='job-specific setting (-s name=value)', multiple=True)
+def cli(spider, argument, set):
     try:
         target, spider = spider.rsplit('/', 1)
     except ValueError:
         target = 'default'
     project, endpoint, apikey = get_target(target)
-    job_key = schedule_spider(project, endpoint, apikey, spider, argument)
+    job_key = schedule_spider(project, endpoint, apikey, spider, argument, set)
     watch_url = urljoin(
         endpoint,
         '../../p/{}/job/{}/{}'.format(*job_key.split('/')),
@@ -28,9 +32,14 @@ def cli(spider, argument):
     )
 
 
-def schedule_spider(project, endpoint, apikey, spider, arguments=()):
+def schedule_spider(project, endpoint, apikey, spider, arguments=(),
+                    settings=()):
     conn = Connection(apikey, url=urljoin(endpoint, '..'))
     try:
-        return conn[project].schedule(spider, **dict(x.split('=') for x in arguments))
+        return conn[project].schedule(
+            spider,
+            job_settings=json.dumps(dict(x.split('=') for x in settings)),
+            **dict(x.split('=') for x in arguments)
+        )
     except APIError as e:
         raise ClickException(e.message)
