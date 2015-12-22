@@ -7,7 +7,6 @@ import requests
 
 from click import ClickException
 
-from shub.click_utils import log
 from shub.config import get_target
 from shub.exceptions import InvalidAuthException
 
@@ -27,7 +26,7 @@ def fetch_eggs(project, endpoint, apikey, destfile):
 
     _assert_response_is_valid(rsp)
 
-    log("Downloading eggs to %s" % destfile)
+    click.echo("Downloading eggs to %s" % destfile)
 
     with open(destfile, 'wb') as f:
         for chunk in rsp.iter_content(chunk_size=1024):

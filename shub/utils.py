@@ -14,12 +14,12 @@ from os.path import isdir
 from six.moves.urllib.parse import urljoin
 from subprocess import Popen, PIPE, CalledProcessError
 
+import click
 import requests
 
 from click import ClickException
 from hubstorage import HubstorageClient
 
-from shub.click_utils import log
 from shub.exceptions import (BadParameterException, InvalidAuthException,
                              NotFoundException)
 
@@ -34,7 +34,7 @@ def make_deploy_request(url, data, files, auth):
                             stream=True, timeout=300)
         rsp.raise_for_status()
         for line in rsp.iter_lines():
-            log(line)
+            click.echo(line)
         return True
     except requests.HTTPError as exc:
         rsp = exc.response
@@ -100,7 +100,7 @@ def decompress_egg_files():
         raise ClickException(err)
 
     for egg in eggs:
-        log("Uncompressing: %s" % egg)
+        click.echo("Uncompressing: %s" % egg)
         run("%s %s" % (decompressor_by_ext[_ext(egg)], egg))
 
 
@@ -128,12 +128,12 @@ def _ext(file_path):
 
 def build_and_deploy_egg(project, endpoint, apikey):
     """Builds and deploys the current dir's egg"""
-    log("Building egg in: %s" % os.getcwd())
+    click.echo("Building egg in: %s" % os.getcwd())
     try:
         run('python setup.py bdist_egg')
     except CalledProcessError:
         # maybe a C extension or distutils package, forcing bdist_egg
-        log("Couldn't build an egg with vanilla setup.py, trying with setuptools...")
+        click.echo("Couldn't build an egg with vanilla setup.py, trying with setuptools...")
         run('python -c  "import setuptools; __file__=\'setup.py\'; execfile(\'setup.py\')" bdist_egg')
 
     _deploy_dependency_egg(project, endpoint, apikey)
@@ -150,10 +150,10 @@ def _deploy_dependency_egg(project, endpoint, apikey):
     files = {'egg': (egg_name, open(egg_path, 'rb'))}
     auth = (apikey, '')
 
-    log('Deploying dependency to Scrapy Cloud project "%s"' % project)
+    click.echo('Deploying dependency to Scrapy Cloud project "%s"' % project)
     make_deploy_request(url, data, files, auth)
     success = "Deployed eggs list at: https://dash.scrapinghub.com/p/%s/eggs"
-    log(success % project)
+    click.echo(success % project)
 
 
 def _last_line_of(s):
