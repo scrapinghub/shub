@@ -37,13 +37,26 @@ class UtilsTest(unittest.TestCase):
                 # then
                 self.assertEquals('lxml-3.4.4', version)
 
-    def test_validate_jobid(self):
-        invalid_job_ids = ['1/1', '123', '1/2/a', '1//']
+    def test_get_job_specs(self):
+        conf = mock_conf(self)
+        def _test_specs(job, expected_job_id, expected_endpoint):
+            self.assertEqual(
+                utils.get_job_specs(job),
+                (expected_job_id, conf.get_apikey(expected_endpoint)),
+            )
+        _test_specs('10/20/30', '10/20/30', 'default')
+        _test_specs('2/3', '1/2/3', 'default')
+        _test_specs('default/2/3', '1/2/3', 'default')
+        _test_specs('prod/2/3', '2/2/3', 'default')
+        _test_specs('vagrant/2/3', '3/2/3', 'vagrant')
+
+    def test_get_job_specs_validates_jobid(self):
+        invalid_job_ids = ['/1/1', '123', '1/2/a', '1//']
         for job_id in invalid_job_ids:
             self.assertRaisesRegexp(
                 ClickException,
                 r'{} is invalid'.format(job_id),
-                utils.validate_jobid, job_id,
+                utils.get_job_specs, job_id,
             )
 
     @patch('shub.utils.HubstorageClient', autospec=True)

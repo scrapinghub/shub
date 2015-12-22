@@ -183,18 +183,31 @@ def _get_egg_info(name):
     return (egg_filename, egg_path)
 
 
-def validate_jobid(jobid):
-    if not bool(re.match(r'\d+/\d+/\d+$', jobid)):
-        err = 'Job ID {} is invalid. Format should be\
-               projectid/spiderid/jobid'.format(jobid)
-        raise ClickException(err)
+def get_job_specs(job):
+    """
+    Parse job identifier into valid job id and corresponding API key.
 
-
-def get_job(jobid):
-    # XXX: Lazy import to avoid circular dependency. Needs refactoring
+    With projects default=10 and external=20 defined in config:
+    * 1/1 -> 10/1/1
+    * 2/2/2 -> 2/2/2
+    * external/2/2 -> 20/2/2
+    """
+    match = re.match(r'^((\w+)/)?(\d+/\d+)$', job)
+    if not match:
+        raise ClickException(
+            "Job ID {} is invalid. Format should be spiderid/jobid (inside a "
+            "project) or target/spiderid/jobid, where projectid can be either "
+            "a project ID or an identifier defined in scrapinghub.yml."
+            "".format(job)
+        )
+    # XXX: Lazy import due to circular dependency
     from shub.config import get_target
-    validate_jobid(jobid)
-    project, endpoint, apikey = get_target(jobid.split('/')[0])
+    project_id, endpoint, apikey = get_target(match.group(2) or 'default')
+    return "{}/{}".format(project_id, match.group(3)), apikey
+
+
+def get_job(job):
+    jobid, apikey = get_job_specs(job)
     hsc = HubstorageClient(auth=apikey)
     job = hsc.get_job(jobid)
     if not job.metadata:
