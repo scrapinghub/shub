@@ -1,4 +1,5 @@
 from __future__ import unicode_literals, absolute_import
+import ast
 import errno
 import os
 import subprocess
@@ -6,6 +7,7 @@ import sys
 import re
 import warnings
 
+from collections import deque
 from ConfigParser import SafeConfigParser
 from glob import glob
 from importlib import import_module
@@ -25,15 +27,18 @@ from shub.exceptions import AuthException
 SCRAPY_CFG_FILE = os.path.expanduser("~/.scrapy.cfg")
 FALLBACK_ENCODING = 'utf-8'
 STDOUT_ENCODING = sys.stdout.encoding or FALLBACK_ENCODING
+LAST_N_LOGS = 30
 
 
 def make_deploy_request(url, data, files, auth):
+    logs_deque = deque(maxlen=LAST_N_LOGS)
     try:
         rsp = requests.post(url=url, auth=auth, data=data, files=files,
                             stream=True, timeout=300)
         rsp.raise_for_status()
         for line in rsp.iter_lines():
-            log(line)
+            logs_deque.append(line)
+        _maybe_print_build_logs(logs_deque)
         return True
     except requests.HTTPError as exc:
         rsp = exc.response
@@ -42,9 +47,27 @@ def make_deploy_request(url, data, files, auth):
             raise AuthException()
 
         msg = "Deploy failed ({}):\n{}".format(rsp.status_code, rsp.text)
+        _maybe_print_build_logs(logs_deque)
         raise ClickException(msg)
     except requests.RequestException as exc:
+        _maybe_print_build_logs(logs_deque)
         raise ClickException("Deploy failed: {}".format(exc))
+
+
+def _maybe_print_build_logs(logs):
+    if not logs:
+        return
+    last_line = logs[-1]
+    try:
+        data = ast.literal_eval(last_line)
+        if 'status' in data and data['status'] == 'error':
+            raise ValueError
+    except ValueError:
+        log("Last builder output lines:\n")
+        for line in logs:
+            log(line)
+    else:
+        log(logs[-1])
 
 
 # XXX: The next six should be refactored
