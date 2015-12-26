@@ -38,3 +38,8 @@ class NotFoundException(ShubException):
 class BadParameterException(BadParameter):
     # Proxy for clearer imports
     pass
+
+
+class RemoteErrorException(ShubException):
+    # Should be initialised with more specific message
+    default_msg = "Remote error."

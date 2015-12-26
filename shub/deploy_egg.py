@@ -5,10 +5,9 @@ from subprocess import Popen, PIPE
 
 import click
 
-from click import ClickException
-
-from shub.config import get_target
 from shub import utils
+from shub.config import get_target
+from shub.exceptions import BadParameterException, NotFoundException
 from shub.utils import run, decompress_egg_files
 
 
@@ -35,7 +34,7 @@ def main(target, from_url=None, git_branch=None, from_pypi=None):
 
     if not os.path.isfile('setup.py'):
         error = "No setup.py -- are you running from a valid Python project?"
-        raise ClickException(error)
+        raise NotFoundException(error)
 
     utils.build_and_deploy_egg(project, endpoint, apikey)
 
@@ -50,13 +49,13 @@ def _checkout(repo, git_branch=None):
             _run('hg clone %s egg-tmp-clone' % repo) != 0 and
             _run('bzr branch %s egg-tmp-clone' % repo) != 0):
         error = "\nERROR: The provided repository URL is not valid: %s\n"
-        raise ClickException(error % repo)
+        raise BadParameterException(error % repo)
 
     os.chdir('egg-tmp-clone')
 
     if git_branch:
         if _run('git checkout %s' % git_branch) != 0:
-            raise ClickException("Branch %s is not valid" % git_branch)
+            raise BadParameterException("Branch %s is not valid" % git_branch)
         click.echo("%s branch was checked out" % git_branch)
 
 

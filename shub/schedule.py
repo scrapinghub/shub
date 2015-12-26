@@ -2,10 +2,10 @@ import json
 
 import click
 
-from click import ClickException
 from scrapinghub import Connection, APIError
 from six.moves.urllib.parse import urljoin
 
+from shub.exceptions import RemoteErrorException
 from shub.config import get_target
 
 
@@ -42,4 +42,4 @@ def schedule_spider(project, endpoint, apikey, spider, arguments=(),
             **dict(x.split('=') for x in arguments)
         )
     except APIError as e:
-        raise ClickException(e.message)
+        raise RemoteErrorException(e.message)

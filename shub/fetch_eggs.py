@@ -5,10 +5,8 @@ from six.moves.urllib.parse import urljoin
 import click
 import requests
 
-from click import ClickException
-
 from shub.config import get_target
-from shub.exceptions import InvalidAuthException
+from shub.exceptions import InvalidAuthException, RemoteErrorException
 
 
 @click.command(help="Download a project's eggs from the Scrapy Cloud")
@@ -40,4 +38,4 @@ def _assert_response_is_valid(rsp):
         raise InvalidAuthException
     elif rsp.status_code != 200:
         msg = 'Eggs could not be fetched. Status: %d' % rsp.status_code
-        raise ClickException(msg)
+        raise RemoteErrorException(msg)

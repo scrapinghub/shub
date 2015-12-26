@@ -17,11 +17,10 @@ from subprocess import Popen, PIPE, CalledProcessError
 import click
 import requests
 
-from click import ClickException
 from hubstorage import HubstorageClient
 
 from shub.exceptions import (BadParameterException, InvalidAuthException,
-                             NotFoundException)
+                             NotFoundException, RemoteErrorException)
 
 SCRAPY_CFG_FILE = os.path.expanduser("~/.scrapy.cfg")
 FALLBACK_ENCODING = 'utf-8'
@@ -43,9 +42,9 @@ def make_deploy_request(url, data, files, auth):
             raise InvalidAuthException
 
         msg = "Deploy failed ({}):\n{}".format(rsp.status_code, rsp.text)
-        raise ClickException(msg)
+        raise RemoteErrorException(msg)
     except requests.RequestException as exc:
-        raise ClickException("Deploy failed: {}".format(exc))
+        raise RemoteErrorException("Deploy failed: {}".format(exc))
 
 
 # XXX: The next six should be refactored
@@ -97,7 +96,7 @@ def decompress_egg_files():
         files = glob('*')
         err = ('No egg files with a supported file extension were found. '
                'Files: %s' % ', '.join(files))
-        raise ClickException(err)
+        raise NotFoundException(err)
 
     for egg in eggs:
         click.echo("Uncompressing: %s" % egg)
