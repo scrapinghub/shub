@@ -7,8 +7,9 @@ import click
 import six
 import ruamel.yaml as yaml
 
-from shub.exceptions import (BadParameterException, ConfigParseException,
-                             MissingAuthException, NotFoundException)
+from shub.exceptions import (BadParameterException, BadConfigException,
+                             ConfigParseException, MissingAuthException,
+                             NotFoundException)
 from shub.utils import closest_file, pwd_hg_version, pwd_git_version
 
 
@@ -59,11 +60,23 @@ class ShubConfig(object):
         try:
             project_id = int(project_id)
         except ValueError:
-            msg = "\"%s\" is not a valid Scrapinghub project ID." % project_id
             if target == 'default':
-                msg = ("Please specify target or configure a default target "
-                       "in 'scrapinghub.yml'.")
-            raise BadParameterException(msg, param_hint='target')
+                raise BadParameterException(
+                    "Please specify target or configure a default target in "
+                    "scrapinghub.yml.",
+                    param_hint='target',
+                )
+            elif target in self.projects:
+                raise BadConfigException(
+                    "\"%s\" is not a valid Scrapinghub project ID. Please "
+                    "check your scrapinghub.yml" % project_id,
+                )
+            raise BadParameterException(
+                "Could not find target \"%s\". Please define it in your "
+                "scrapinghub.yml or supply a numerical project ID."
+                "" % project_id,
+                param_hint='target',
+            )
         return project_id, endpoint
 
     def get_project_id(self, target):
