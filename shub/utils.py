@@ -8,12 +8,13 @@ import sys
 import re
 import warnings
 
+from collections import deque
 from ConfigParser import SafeConfigParser
 from glob import glob
 from importlib import import_module
 from os import devnull
 from os.path import isdir
-from tempfile import gettempdir, NamedTemporaryFile
+from tempfile import gettempdir
 from six.moves.urllib.parse import urljoin
 from subprocess import Popen, PIPE, CalledProcessError
 
@@ -33,21 +34,23 @@ DEPLOY_LOG = os.path.join(gettempdir(), 'shub_deploy.log')
 
 
 def make_deploy_request(url, data, files, auth):
-    _remove_old_deploy_log()
-    last_line = None
+    last_logs = deque(maxlen=LAST_N_LOGS)
     try:
         rsp = requests.post(url=url, auth=auth, data=data, files=files,
                             stream=True, timeout=300)
         rsp.raise_for_status()
-        with NamedTemporaryFile() as temp:
-            for last_line in rsp.iter_lines():
-                temp.write(last_line + '\n')
-            temp.flush()
-            if _is_deploy_last_line_ok(last_line):
-                log(last_line)
+        with open(DEPLOY_LOG, 'w') as log_file:
+            for line in rsp.iter_lines():
+                last_logs.append(line)
+                log_file.write(line + '\n')
+                log_file.flush()
+            if _is_deploy_successful(last_logs):
+                log(last_logs[-1])
             else:
-                 shutil.copy(temp.name, DEPLOY_LOG)
-                 _log_bad_deploy()
+                log("Deploy log last lines:\n" % len(last_logs))
+                for line in last_logs:
+                    log(line)
+                log("\nDeploy log location: %s\n" % DEPLOY_LOG)
         return True
     except requests.HTTPError as exc:
         rsp = exc.response
@@ -61,35 +64,13 @@ def make_deploy_request(url, data, files, auth):
         raise ClickException("Deploy failed: {}".format(exc))
 
 
-def _remove_old_deploy_log():
+def _is_deploy_successful(last_logs):
     try:
-        os.remove(DEPLOY_LOG)
-    except OSError:
-        pass
-
-
-def _is_deploy_last_line_ok(last_line):
-    try:
-        data = ast.literal_eval(last_line)
-    except Exception:
-        pass
-    else:
+        data = ast.literal_eval(last_logs[-1])
         if 'status' in data and data['status'] == 'ok':
             return True
-    return False
-
-
-def _log_bad_deploy():
-    if not os.path.exists(DEPLOY_LOG):
-        return
-    logs = subprocess.check_output(
-        ['tail', '-n', str(LAST_N_LOGS), DEPLOY_LOG])
-    log("Last %s deploy logs:\n" % LAST_N_LOGS)
-    for line in logs.split('\n'):
-        if line:
-            log(line)
-    log("Deploy log location: %s\n" % DEPLOY_LOG)
-
+    except Exception:
+        pass
 
 # XXX: The next six should be refactored
 
