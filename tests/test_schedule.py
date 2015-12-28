@@ -3,11 +3,11 @@ import unittest
 
 import mock
 
-from click import ClickException
 from click.testing import CliRunner
 from scrapinghub import APIError
 
 from shub import schedule
+from shub.exceptions import RemoteErrorException
 
 from .utils import mock_conf
 
@@ -43,7 +43,7 @@ class ScheduleTest(unittest.TestCase):
     def test_schedule_invalid_spider(self, mock_conn):
         mock_proj = mock_conn.return_value.__getitem__.return_value
         mock_proj.schedule.side_effect = APIError('')
-        with self.assertRaises(ClickException):
+        with self.assertRaises(RemoteErrorException):
             schedule.schedule_spider(1, 'https://endpoint/api/scrapyd',
                                      'FAKE_API_KEY', 'fake_spider')
 

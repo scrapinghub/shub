@@ -1,23 +1,26 @@
 import unittest
-import os
 from mock import patch
 import textwrap
 
 from click.testing import CliRunner
 import ruamel.yaml as yaml
 
-from shub import config, login
+from shub import login
+from shub.exceptions import AlreadyLoggedInException
+
+from .utils import AssertInvokeRaisesMixin
 
 
 VALID_KEY = 32 * '1'
 
 
-class LoginTest(unittest.TestCase):
+@patch('shub.config.GLOBAL_SCRAPINGHUB_YML_PATH', new='.scrapinghub.yml')
+class LoginTest(AssertInvokeRaisesMixin, unittest.TestCase):
 
     def setUp(self):
         self.runner = CliRunner()
 
-    def _run(self, user_input=VALID_KEY, files=None, fs=None, env=None):
+    def _run(self, user_input=VALID_KEY, files=None, fs=None, **kwargs):
         """Invokes the login cli on an isolated filesystem"""
 
         def write_local_test_files():
@@ -26,13 +29,11 @@ class LoginTest(unittest.TestCase):
                     f.write(content)
 
         def invoke():
-            return self.runner.invoke(login.cli, input=user_input, env=env)
+            return self.runner.invoke(login.cli, input=user_input, **kwargs)
 
         def run():
             write_local_test_files()
-            with patch('shub.config.GLOBAL_SCRAPINGHUB_YML_PATH',
-                       new='.scrapinghub.yml'), \
-                 patch.object(login, '_is_valid_apikey', return_value=True):
+            with patch.object(login, '_is_valid_apikey', return_value=True):
                 return invoke()
 
         if fs:
@@ -90,10 +91,6 @@ class LoginTest(unittest.TestCase):
 
     def test_login_attempt_after_login_doesnt_lead_to_an_error(self):
         with self.runner.isolated_filesystem() as fs:
-            # when
             self._run(fs=fs)
-            result = self._run(fs=fs)
-
-            # then
-            self.assertEqual(0, result.exit_code)
-            self.assertTrue('already logged in' in result.output, result.output)
+            self.assertInvokeRaises(AlreadyLoggedInException, login.cli,
+                                    input=VALID_KEY)
