@@ -2,17 +2,18 @@ from __future__ import unicode_literals, absolute_import
 import ast
 import errno
 import os
+import shutil
 import subprocess
 import sys
 import re
 import warnings
 
-from collections import deque
 from ConfigParser import SafeConfigParser
 from glob import glob
 from importlib import import_module
 from os import devnull
 from os.path import isdir
+from tempfile import gettempdir, NamedTemporaryFile
 from six.moves.urllib.parse import urljoin
 from subprocess import Popen, PIPE, CalledProcessError
 
@@ -28,17 +29,25 @@ SCRAPY_CFG_FILE = os.path.expanduser("~/.scrapy.cfg")
 FALLBACK_ENCODING = 'utf-8'
 STDOUT_ENCODING = sys.stdout.encoding or FALLBACK_ENCODING
 LAST_N_LOGS = 30
+DEPLOY_LOG = os.path.join(gettempdir(), 'shub_deploy.log')
 
 
 def make_deploy_request(url, data, files, auth):
-    logs_deque = deque(maxlen=LAST_N_LOGS)
+    _remove_old_deploy_log()
+    last_line = None
     try:
         rsp = requests.post(url=url, auth=auth, data=data, files=files,
                             stream=True, timeout=300)
         rsp.raise_for_status()
-        for line in rsp.iter_lines():
-            logs_deque.append(line)
-        _maybe_print_build_logs(logs_deque)
+        with NamedTemporaryFile() as temp:
+            for last_line in rsp.iter_lines():
+                temp.write(last_line + '\n')
+            temp.flush()
+            if _is_deploy_last_line_ok(last_line):
+                log(last_line)
+            else:
+                 shutil.copy(temp.name, DEPLOY_LOG)
+                 _log_bad_deploy()
         return True
     except requests.HTTPError as exc:
         rsp = exc.response
@@ -47,27 +56,39 @@ def make_deploy_request(url, data, files, auth):
             raise AuthException()
 
         msg = "Deploy failed ({}):\n{}".format(rsp.status_code, rsp.text)
-        _maybe_print_build_logs(logs_deque)
         raise ClickException(msg)
     except requests.RequestException as exc:
-        _maybe_print_build_logs(logs_deque)
         raise ClickException("Deploy failed: {}".format(exc))
 
 
-def _maybe_print_build_logs(logs):
-    if not logs:
-        return
-    last_line = logs[-1]
+def _remove_old_deploy_log():
+    try:
+        os.remove(DEPLOY_LOG)
+    except OSError:
+        pass
+
+
+def _is_deploy_last_line_ok(last_line):
     try:
         data = ast.literal_eval(last_line)
-        if 'status' in data and data['status'] == 'error':
-            raise ValueError
-    except ValueError:
-        log("Last builder output lines:\n")
-        for line in logs:
-            log(line)
+    except Exception:
+        pass
     else:
-        log(logs[-1])
+        if 'status' in data and data['status'] == 'ok':
+            return True
+    return False
+
+
+def _log_bad_deploy():
+    if not os.path.exists(DEPLOY_LOG):
+        return
+    logs = subprocess.check_output(
+        ['tail', '-n', str(LAST_N_LOGS), DEPLOY_LOG])
+    log("Last %s deploy logs:\n" % LAST_N_LOGS)
+    for line in logs.split('\n'):
+        if line:
+            log(line)
+    log("Deploy log location: %s\n" % DEPLOY_LOG)
 
 
 # XXX: The next six should be refactored
