@@ -12,7 +12,18 @@ from shub.config import get_target
 from shub.exceptions import AuthException
 
 
-@click.command(help="Download a project's eggs from the Scrapy Cloud")
+HELP = """
+Download all eggs deployed to a Scrapy CLoud project into a zip file.
+
+You can either fetch to your default target (as defined in scrapinghub.yml),
+or explicitly supply a numerical project ID or a target defined in
+scrapinghub.yml (see shub deploy).
+"""
+
+SHORT_HELP = "Download project eggs from Scrapy Cloud"
+
+
+@click.command(help=HELP, short_help=SHORT_HELP)
 @click.argument("target", required=False, default='default')
 def cli(target):
     project, endpoint, apikey = get_target(target)

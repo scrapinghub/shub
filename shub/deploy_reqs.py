@@ -9,7 +9,25 @@ from shub.config import get_target
 from shub import utils
 
 
-@click.command(help="Build and deploy eggs from requirements.txt")
+HELP = """
+Build eggs of your project's requirements and deploy them to Scrapy Cloud.
+
+You can either deploy to your default target (as defined in scrapinghub.yml),
+or explicitly supply a numerical project ID or a target defined in
+scrapinghub.yml (see shub deploy).
+
+By default, requirements will be read from requirements.txt. You may supply a
+different file name with the -r option:
+
+    shub deploy-eggs -r myreqs.txt
+
+The requirements file must be in a format parsable by pip.
+"""
+
+SHORT_HELP = "Build and deploy eggs from requirements.txt"
+
+
+@click.command(help=HELP, short_help=SHORT_HELP)
 @click.argument("target", required=False, default="default")
 @click.option("-r", "--requirements-file", default='requirements.txt',
               type=click.STRING)

@@ -16,6 +16,34 @@ from shub.config import load_shub_config
 from shub.utils import make_deploy_request
 
 
+HELP = """
+Deploy the current folder's Scrapy project to Scrapy Cloud.
+
+If you do not supply `target`, the default target from scrapinghub.yml will be
+used. Otherwise, you can specify a numerical project ID:
+
+    shub deploy 12345
+
+Or use any of the targets defined in your scrapinghub.yml:
+
+    shub deploy production
+
+To see a list of all defined targets, run:
+
+    shub deploy -l
+
+You can also deploy an existing project egg:
+
+    shub deploy --egg egg_name
+
+Or build an egg without deploying:
+
+    shub deploy --build-egg egg_name
+"""
+
+SHORT_HELP = "Deploy Scrapy project to Scrapy Cloud"
+
+
 _SETUP_PY_TEMPLATE = """\
 # Automatically created by: shub deploy
 
@@ -30,7 +58,7 @@ setup(
 """
 
 
-@click.command(help="Deploy Scrapy project to Scrapy Cloud")
+@click.command(help=HELP, short_help=SHORT_HELP)
 @click.argument("target", required=False, default="default")
 @click.option("-v", "--version", help="the version to use for deploying")
 @click.option("-l", "--list-targets", help="list available targets", is_flag=True)

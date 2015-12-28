@@ -9,7 +9,37 @@ from six.moves.urllib.parse import urljoin
 from shub.config import get_target
 
 
-@click.command(help='Schedule a spider to run on Scrapy Cloud')
+HELP = """
+Schedule a spider to run on Scrapy Cloud, optionally with provided spider
+arguments and job-specific settings.
+
+The `spider` argument should match the spider's name, e.g.:
+
+    shub schedule myspider
+
+By default, shub will schedule the spider in your default project (as defined
+in scrapinghub.yml). You may also explicitly specify the project to use by
+supplying its ID:
+
+    shub schedule 12345/myspider
+
+Or by supplying an identifier defined in scrapinghub.yml:
+
+    shub schedule production/myspider
+
+Spider arguments can be supplied through the -a option:
+
+    shub schedule myspider -a ARG1=VALUE1 -a ARG2=VALUE2
+
+Similarly, job-specific settings can be supplied through the -s option:
+
+    shub schedule myspider -s SETTING=VALUE -s LOG_LEVEL=DEBUG
+"""
+
+SHORT_HELP = "Schedule a spider to run on Scrapy Cloud"
+
+
+@click.command(help=HELP, short_help=SHORT_HELP)
 @click.argument('spider', type=click.STRING)
 @click.option('-a', '--argument',
               help='spider argument (-a name=value)', multiple=True)
