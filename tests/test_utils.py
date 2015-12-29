@@ -6,6 +6,7 @@ import unittest
 
 from mock import patch
 from click.testing import CliRunner
+from collections import deque
 
 from shub import utils
 from shub.exceptions import BadParameterException, NotFoundException
@@ -74,6 +75,30 @@ class UtilsTest(unittest.TestCase):
         mockjob.metadata = None
         with self.assertRaises(NotFoundException):
             utils.get_job('1/1/1')
+
+    def test_is_deploy_successful(self):
+        # no results
+        last_logs = deque(maxlen=5)
+        assert not utils._is_deploy_successful(last_logs)
+        # missing or incorrect data
+        last_logs.append("")
+        assert not utils._is_deploy_successful(last_logs)
+        last_logs.append("abcdef")
+        assert not utils._is_deploy_successful(last_logs)
+        last_logs.append('{"field":"wrong"}')
+        assert not utils._is_deploy_successful(last_logs)
+        # error status
+        last_logs.append('{"status":"error"}')
+        assert not utils._is_deploy_successful(last_logs)
+        # successful status
+        last_logs.append('{"status":"ok"}')
+        assert utils._is_deploy_successful(last_logs)
+        last_logs.append('{"field":"value","status":"ok"}')
+        assert utils._is_deploy_successful(last_logs)
+        # more complex python expression
+        last_logs.append('{"status":"ok", "project": 1111112, '
+                         '"version": "1234-master", "spiders": 3}')
+        assert utils._is_deploy_successful(last_logs)
 
 
 if __name__ == '__main__':
