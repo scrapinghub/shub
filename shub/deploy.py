@@ -32,15 +32,15 @@ setup(
 
 @click.command(help="Deploy Scrapy project to Scrapy Cloud")
 @click.argument("target", required=False, default="default")
-@click.option("-v", "--version", help="the version to use for deploying")
+@click.option("-V", "--version", help="the version to use for deploying")
 @click.option("-l", "--list-targets", help="list available targets", is_flag=True)
 @click.option("-d", "--debug", help="debug mode (do not remove build dir)", is_flag=True)
 @click.option("--egg", help="deploy the given egg, instead of building one")
 @click.option("--build-egg", help="only build the given egg, don't deploy it")
-@click.option("-V", "--verbose", help="stream deploy logs to console", is_flag=True)
-@click.option("-k", "--keep-deploy-log", help="keep the deploy log", is_flag=True)
+@click.option("-v", "--verbose", help="stream deploy logs to console", is_flag=True)
+@click.option("-k", "--keep-log", help="keep the deploy log", is_flag=True)
 def cli(target, version, list_targets, debug, egg, build_egg,
-        verbose, keep_deploy_log):
+        verbose, keep_log):
     if not inside_project():
         log("Error: no Scrapy project found in this location")
         sys.exit(1)
@@ -72,7 +72,7 @@ def cli(target, version, list_targets, debug, egg, build_egg,
                 egg, tmpdir = _build_egg()
 
             _upload_egg(endpoint, egg, project, version, auth,
-                        verbose, keep_deploy_log)
+                        verbose, keep_log)
             click.echo("Run your spiders at: https://dash.scrapinghub.com/p/%s/" % project)
     finally:
         if tmpdir:
