@@ -14,7 +14,7 @@ from glob import glob
 from importlib import import_module
 from os import devnull
 from os.path import isdir
-from tempfile import gettempdir
+from tempfile import NamedTemporaryFile
 from six.moves.urllib.parse import urljoin
 from subprocess import Popen, PIPE, CalledProcessError
 
@@ -30,7 +30,7 @@ SCRAPY_CFG_FILE = os.path.expanduser("~/.scrapy.cfg")
 FALLBACK_ENCODING = 'utf-8'
 STDOUT_ENCODING = sys.stdout.encoding or FALLBACK_ENCODING
 LAST_N_LOGS = 30
-DEPLOY_LOG = os.path.join(gettempdir(), 'shub_deploy.log')
+DEPLOY_LOG_PREFIX = 'shub_deploy_'
 
 
 def make_deploy_request(url, data, files, auth):
@@ -39,7 +39,7 @@ def make_deploy_request(url, data, files, auth):
         rsp = requests.post(url=url, auth=auth, data=data, files=files,
                             stream=True, timeout=300)
         rsp.raise_for_status()
-        with open(DEPLOY_LOG, 'w') as log_file:
+        with NamedTemporaryFile(prefix=DEPLOY_LOG_PREFIX) as log_file:
             for line in rsp.iter_lines():
                 last_logs.append(line)
                 log_file.write(line + '\n')
@@ -47,10 +47,11 @@ def make_deploy_request(url, data, files, auth):
             if _is_deploy_successful(last_logs):
                 log(last_logs[-1])
             else:
-                log("Deploy log last lines:\n" % len(last_logs))
+                log("Deploy log last %s lines:\n" % len(last_logs))
                 for line in last_logs:
                     log(line)
-                log("\nDeploy log location: %s\n" % DEPLOY_LOG)
+                log_file.delete = False
+                log("\nDeploy log location: %s\n" % log_file.name)
         return True
     except requests.HTTPError as exc:
         rsp = exc.response
