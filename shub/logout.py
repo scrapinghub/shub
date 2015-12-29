@@ -3,7 +3,15 @@ import click
 from shub.config import load_shub_config, update_config
 
 
-@click.command(help='Remove Scrapinghug API key from your .scrapinghub.yml')
+HELP = """
+Remove the Scrapinghub API key that is saved in your global configuration
+file (~/.scrapinghub.yml), if any.
+"""
+
+SHORT_HELP = "Forget saved Scrapinghub API key"
+
+
+@click.command(help=HELP, short_help=SHORT_HELP)
 def cli():
     global_conf = load_shub_config(load_local=False, load_env=False)
     if 'default' not in global_conf.apikeys:

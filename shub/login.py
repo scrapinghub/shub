@@ -7,7 +7,19 @@ from six.moves.urllib.parse import urljoin
 from shub.config import load_shub_config, update_config
 
 
-@click.command(help='Add Scrapinghug API key to your .scrapinghub.yml')
+HELP = """
+Add your Scrapinghub API key to your global configuration file
+(~/.scrapinghub.yml). This is necessary to gain access to projects associated
+with your Scrapinghub account.
+
+You can find your API key in Scrapinghub's dashboard:
+https://dash.scrapinghub.com/account/apikey
+"""
+
+SHORT_HELP = "Save your Scrapinghub API key"
+
+
+@click.command(help=HELP, short_help=SHORT_HELP)
 def cli():
     global_conf = load_shub_config(load_local=False, load_env=False)
     if 'default' in global_conf.apikeys:

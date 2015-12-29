@@ -11,7 +11,33 @@ from shub import utils
 from shub.utils import run, decompress_egg_files
 
 
-@click.command(help="Build and deploy egg from source")
+HELP = """
+Build a Python egg from source and deploy it to Scrapy Cloud.
+
+You can either deploy to your default target (as defined in scrapinghub.yml),
+or explicitly supply a numerical project ID or a target defined in
+scrapinghub.yml (see shub deploy).
+
+By default, shub will try to build the egg using the current folder's setup.py.
+You can also build the egg from a remote (git/mercurial/bazaar) repository by
+using the --from-url option:
+
+    shub deploy-egg --from-url https://github.com/scrapinghub/shub.git
+
+For git repositories, you may additionally specify the branch to be checked
+out:
+
+    shub deploy-egg --from-url https://xy.git --git-branch my-feature
+
+Alternatively, you can build the egg from a PyPI package:
+
+    shub deploy-egg --from-pypi shub
+"""
+
+SHORT_HELP = "Build and deploy egg from source"
+
+
+@click.command(help=HELP, short_help=SHORT_HELP)
 @click.argument("target", required=False, default='default')
 @click.option("--from-url", help="Git, bazaar or mercurial repository URL")
 @click.option("--git-branch", help="Git branch to checkout")
