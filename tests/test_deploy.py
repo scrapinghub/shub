@@ -44,25 +44,26 @@ class DeployTest(unittest.TestCase):
         return mock_deploy_req.call_args[0]
 
     def test_fallback_to_default(self):
-        url, data, files, auth = self._invoke_with_project(None)
+        url, data, files, auth, _, _ = self._invoke_with_project(None)
         self.assertIn(self.conf.endpoints['default'], url)
         self.assertEqual(data, {'project': 1, 'version': 'version'})
         self.assertEqual(auth, (self.conf.apikeys['default'], ''))
 
     def test_with_target(self):
-        url, data, files, auth = self._invoke_with_project(('prod', ))
+        url, data, files, auth, _, _ = self._invoke_with_project(('prod', ))
         self.assertIn(self.conf.endpoints['default'], url)
         self.assertEqual(data, {'project': 2, 'version': 'version'})
         self.assertEqual(auth, (self.conf.apikeys['default'], ''))
 
     def test_with_id(self):
-        url, data, files, auth = self._invoke_with_project(('123', ))
+        url, data, files, auth, _, _ = self._invoke_with_project(('123', ))
         self.assertIn(self.conf.endpoints['default'], url)
         self.assertEqual(data, {'project': 123, 'version': 'version'})
         self.assertEqual(auth, (self.conf.apikeys['default'], ''))
 
     def test_with_external_id(self):
-        url, data, files, auth = self._invoke_with_project(('vagrant/456', ))
+        url, data, files, auth, _, _ = self._invoke_with_project(
+            ('vagrant/456', ))
         self.assertIn(self.conf.endpoints['vagrant'], url)
         self.assertEqual(data, {'project': 456, 'version': 'version'})
         self.assertEqual(auth, (self.conf.apikeys['vagrant'], ''))
