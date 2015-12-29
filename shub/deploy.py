@@ -37,7 +37,10 @@ setup(
 @click.option("-d", "--debug", help="debug mode (do not remove build dir)", is_flag=True)
 @click.option("--egg", help="deploy the given egg, instead of building one")
 @click.option("--build-egg", help="only build the given egg, don't deploy it")
-def cli(target, version, list_targets, debug, egg, build_egg):
+@click.option("-V", "--verbose", help="stream deploy logs to console", is_flag=True)
+@click.option("-k", "--keep-deploy-log", help="keep the deploy log", is_flag=True)
+def cli(target, version, list_targets, debug, egg, build_egg,
+        verbose, keep_deploy_log):
     if not inside_project():
         log("Error: no Scrapy project found in this location")
         sys.exit(1)
@@ -68,7 +71,8 @@ def cli(target, version, list_targets, debug, egg, build_egg):
                 log("Packing version %s" % version)
                 egg, tmpdir = _build_egg()
 
-            _upload_egg(endpoint, egg, project, version, auth)
+            _upload_egg(endpoint, egg, project, version, auth,
+                        verbose, keep_deploy_log)
             click.echo("Run your spiders at: https://dash.scrapinghub.com/p/%s/" % project)
     finally:
         if tmpdir:
@@ -82,12 +86,14 @@ def _url(endpoint, action):
     return urljoin(endpoint, action)
 
 
-def _upload_egg(endpoint, eggpath, project, version, auth):
+def _upload_egg(endpoint, eggpath, project, version, auth,
+                verbose, keep_build_log):
     data = {'project': project, 'version': version}
     files = {'egg': ('project.egg', open(eggpath, 'rb'))}
     url = _url(endpoint, 'addversion.json')
     log('Deploying to Scrapy Cloud project "%s"' % project)
-    return make_deploy_request(url, data, files, auth)
+    return make_deploy_request(url, data, files, auth,
+                               verbose, keep_build_log)
 
 
 def _build_egg():

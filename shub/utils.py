@@ -32,7 +32,7 @@ STDOUT_ENCODING = sys.stdout.encoding or FALLBACK_ENCODING
 LAST_N_LOGS = 30
 
 
-def make_deploy_request(url, data, files, auth):
+def make_deploy_request(url, data, files, auth, verbose, keep_deploy_log):
     last_logs = deque(maxlen=LAST_N_LOGS)
     try:
         rsp = requests.post(url=url, auth=auth, data=data, files=files,
@@ -41,10 +41,15 @@ def make_deploy_request(url, data, files, auth):
         with NamedTemporaryFile(prefix='shub_deploy',
                                 suffix='.log', delete=True) as log_file:
             for line in rsp.iter_lines():
+                if verbose:
+                    log(line)
                 last_logs.append(line)
                 log_file.write(line + '\n')
             if _is_deploy_successful(last_logs):
-                log(last_logs[-1])
+                if not verbose:
+                    log(last_logs[-1])
+                if keep_deploy_log:
+                    log_file.delete = False
             else:
                 log("Deploy log last %s lines:\n" % len(last_logs))
                 for line in last_logs:
