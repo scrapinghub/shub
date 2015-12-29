@@ -1,6 +1,6 @@
 from __future__ import unicode_literals, absolute_import
-import ast
 import errno
+import json
 import os
 import shutil
 import subprocess
@@ -30,7 +30,6 @@ SCRAPY_CFG_FILE = os.path.expanduser("~/.scrapy.cfg")
 FALLBACK_ENCODING = 'utf-8'
 STDOUT_ENCODING = sys.stdout.encoding or FALLBACK_ENCODING
 LAST_N_LOGS = 30
-DEPLOY_LOG_PREFIX = 'shub_deploy_'
 
 
 def make_deploy_request(url, data, files, auth):
@@ -39,11 +38,11 @@ def make_deploy_request(url, data, files, auth):
         rsp = requests.post(url=url, auth=auth, data=data, files=files,
                             stream=True, timeout=300)
         rsp.raise_for_status()
-        with NamedTemporaryFile(prefix=DEPLOY_LOG_PREFIX) as log_file:
+        with NamedTemporaryFile(prefix='shub_deploy',
+                                suffix='.log', delete=True) as log_file:
             for line in rsp.iter_lines():
                 last_logs.append(line)
                 log_file.write(line + '\n')
-                log_file.flush()
             if _is_deploy_successful(last_logs):
                 log(last_logs[-1])
             else:
@@ -67,7 +66,7 @@ def make_deploy_request(url, data, files, auth):
 
 def _is_deploy_successful(last_logs):
     try:
-        data = ast.literal_eval(last_logs[-1])
+        data = json.loads(last_logs[-1])
         if 'status' in data and data['status'] == 'ok':
             return True
     except Exception:
