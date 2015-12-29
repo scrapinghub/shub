@@ -88,19 +88,19 @@ class UtilsTest(unittest.TestCase):
         assert not utils._is_deploy_successful(last_logs)
         last_logs.append("abcdef")
         assert not utils._is_deploy_successful(last_logs)
-        last_logs.append("{'field':'wrong'}")
+        last_logs.append('{"field":"wrong"}')
         assert not utils._is_deploy_successful(last_logs)
         # error status
-        last_logs.append("{'status':'error'}")
+        last_logs.append('{"status":"error"}')
         assert not utils._is_deploy_successful(last_logs)
         # successful status
-        last_logs.append("{'status':'ok'}")
+        last_logs.append('{"status":"ok"}')
         assert utils._is_deploy_successful(last_logs)
-        last_logs.append("{'field':'value','status':'ok'}")
+        last_logs.append('{"field":"value","status":"ok"}')
         assert utils._is_deploy_successful(last_logs)
         # more complex python expression
-        last_logs.append("{'status': 'ok', 'project': 1111112L, "
-                         "'version': u'1234-master', 'spiders': 3}")
+        last_logs.append('{"status":"ok", "project": 1111112, '
+                         '"version": "1234-master", "spiders": 3}')
         assert utils._is_deploy_successful(last_logs)
 
 
