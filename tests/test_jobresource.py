@@ -22,8 +22,22 @@ class JobResourceTest(unittest.TestCase):
             mock_gj.assert_called_once_with(jobid)
             self.assertIn("\n".join(objects), result.output)
 
+    def _test_forwards_follow(self, cmd_mod):
+        with mock.patch.object(cmd_mod, 'get_job'), \
+             mock.patch.object(cmd_mod, 'job_resource_iter', autospec=True) \
+             as mock_jri:
+            self.runner.invoke(cmd_mod.cli, ('1/2/3',))
+            self.assertFalse(mock_jri.call_args[1]['follow'])
+            self.runner.invoke(cmd_mod.cli, ('1/2/3', '-f'))
+            self.assertTrue(mock_jri.call_args[1]['follow'])
+
     def test_items(self):
         self._test_prints_objects(items, 'items')
+        self._test_forwards_follow(items)
+
+    def test_requests(self):
+        self._test_prints_objects(requests, 'requests')
+        self._test_forwards_follow(requests)
 
     def test_log(self):
         objects = [
@@ -37,9 +51,7 @@ class JobResourceTest(unittest.TestCase):
             mock_gj.assert_called_once_with(jobid)
             self.assertIn('1970-01-01 00:00:00 INFO message 1', result.output)
             self.assertIn('2015-12-23 12:41:11 CRITICAL message 2', result.output)
-
-    def test_requests(self):
-        self._test_prints_objects(requests, 'requests')
+        self._test_forwards_follow(log)
 
 
 if __name__ == '__main__':

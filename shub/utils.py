@@ -5,6 +5,7 @@ import os
 import subprocess
 import sys
 import re
+import time
 import warnings
 
 from collections import deque
@@ -299,3 +300,30 @@ def get_sources(use_closest=True):
     if use_closest:
         sources.append(closest_file('scrapy.cfg'))
     return sources
+
+
+def job_resource_iter(iter_func, follow=True, update_interval=5,
+                      key_func=None):
+    """
+    Given a python-hubstorage job resource generator (e.g.
+    job.items.iter_json), return an infinitely running generator that
+    periodically checks the job resource generator and yields its items.
+
+    key_func should be a function which accepts an item from iter_func and
+    returns its key. By default, the key is retrieved via
+    json.loads(item)['_key'] (suitable for the iter_json iterators).
+
+    As a handy shortcut, iter_func will be iterated through only once if
+    `follow` is set to `False`.
+    """
+    if not follow:
+        for item in iter_func():
+            yield item
+        return
+    last_item_key = None
+    key_func = key_func or (lambda item: json.loads(item)['_key'])
+    while True:
+        for item in iter_func(startafter=last_item_key):
+            yield item
+            last_item_key = key_func(item)
+        time.sleep(update_interval)

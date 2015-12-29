@@ -56,10 +56,14 @@ def cli(spider, argument, set):
         endpoint,
         '../../p/{}/job/{}/{}'.format(*job_key.split('/')),
     )
-    click.echo(
-        'Spider {} scheduled, watch it running here:\n{}'
-        ''.format(spider, watch_url)
-    )
+    short_key = job_key.split('/', 1)[1] if target == 'default' else job_key
+    click.echo("Spider {} scheduled, job ID: {}".format(spider, job_key))
+    click.echo("Watch the log on the command line:\n    shub log -f {}"
+               "".format(short_key))
+    click.echo("or print items as they are being scraped:\n    shub items -f "
+               "{}".format(short_key))
+    click.echo("or watch it running in Scrapinghub's web interface:\n    {}"
+               "".format(watch_url))
 
 
 def schedule_spider(project, endpoint, apikey, spider, arguments=(),

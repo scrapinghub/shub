@@ -40,6 +40,7 @@ class UtilsTest(unittest.TestCase):
 
     def test_get_job_specs(self):
         conf = mock_conf(self)
+
         def _test_specs(job, expected_job_id, expected_endpoint):
             self.assertEqual(
                 utils.get_job_specs(job),
@@ -99,6 +100,41 @@ class UtilsTest(unittest.TestCase):
         last_logs.append('{"status":"ok", "project": 1111112, '
                          '"version": "1234-master", "spiders": 3}')
         assert utils._is_deploy_successful(last_logs)
+
+    @patch('shub.utils.time.sleep')
+    def test_job_resource_iter(self, mock_sleep):
+        def magic_iter(*args, **kwargs):
+            """
+            Return an iterator on the first two calls, raise StopIteration on
+            third call (that is, break out of the OUTER iterator, i.e.
+            job_resource_iter).
+            """
+            if magic_iter.stage == 0:
+                if 'startafter' in kwargs:
+                    self.assertEqual(kwargs['startafter'], None)
+                magic_iter.stage = 1
+                return iter([1, 2, 3])
+            elif magic_iter.stage == 1:
+                self.assertEqual(kwargs['startafter'], 456)
+                magic_iter.stage = 2
+                return iter([4, 5, 6])
+            magic_iter.stage = 0
+            raise StopIteration
+        magic_iter.stage = 0
+
+        def jri_result(follow):
+            return list(utils.job_resource_iter(
+                magic_iter,
+                follow,
+                update_interval=123,
+                key_func=lambda _: 456,
+            ))
+
+        self.assertEqual(jri_result(False), [1, 2, 3])
+        self.assertFalse(mock_sleep.called)
+        magic_iter.stage = 0
+        self.assertEqual(jri_result(True), [1, 2, 3, 4, 5, 6])
+        mock_sleep.assert_called_with(123)
 
 
 if __name__ == '__main__':
