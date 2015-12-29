@@ -38,7 +38,7 @@ def make_deploy_request(url, data, files, auth, verbose, keep_deploy_log):
         rsp = requests.post(url=url, auth=auth, data=data, files=files,
                             stream=True, timeout=300)
         rsp.raise_for_status()
-        with NamedTemporaryFile(prefix='shub_deploy',
+        with NamedTemporaryFile(prefix='shub_deploy_',
                                 suffix='.log', delete=True) as log_file:
             for line in rsp.iter_lines():
                 if verbose:
@@ -46,16 +46,18 @@ def make_deploy_request(url, data, files, auth, verbose, keep_deploy_log):
                 last_logs.append(line)
                 log_file.write(line + '\n')
             if _is_deploy_successful(last_logs):
-                if not verbose:
-                    log(last_logs[-1])
                 if keep_deploy_log:
                     log_file.delete = False
+                    log("Deploy log location: %s\n" % log_file.name)
+                if not verbose:
+                    log(last_logs[-1])
             else:
-                log("Deploy log last %s lines:\n" % len(last_logs))
-                for line in last_logs:
-                    log(line)
                 log_file.delete = False
                 log("\nDeploy log location: %s\n" % log_file.name)
+                if not verbose:
+                    log("Deploy log last %s lines:\n" % len(last_logs))
+                    for line in last_logs:
+                        log(line)
         return True
     except requests.HTTPError as exc:
         rsp = exc.response
