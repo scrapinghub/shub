@@ -68,8 +68,8 @@ def schedule_spider(project, endpoint, apikey, spider, arguments=(),
     try:
         return conn[project].schedule(
             spider,
-            job_settings=json.dumps(dict(x.split('=') for x in settings)),
-            **dict(x.split('=') for x in arguments)
+            job_settings=json.dumps(dict(x.split('=', 1) for x in settings)),
+            **dict(x.split('=', 1) for x in arguments)
         )
     except APIError as e:
         raise RemoteErrorException(e.message)

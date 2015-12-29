@@ -59,15 +59,19 @@ class ScheduleTest(unittest.TestCase):
         mock_proj = mock_conn.return_value.__getitem__.return_value
         self.runner.invoke(
             schedule.cli,
-            "testspider -s SETT=99 -a ARG=val1 --set OTHERSETT=10 --argument "
-            "OTHERARG=val2".split(' '),
+            "testspider -s SETT=99 -a ARG=val1 --set SETTWITHEQUAL=10=10 "
+            "--argument ARGWITHEQUAL=val2=val2".split(' '),
         )
         call_kwargs = mock_proj.schedule.call_args[1]
-        self.assertDictContainsSubset({'ARG': 'val1', 'OTHERARG': 'val2'},
-                                      call_kwargs)
+        self.assertDictContainsSubset(
+            {'ARG': 'val1', 'ARGWITHEQUAL': 'val2=val2'},
+            call_kwargs,
+        )
         # SH API expects settings as json-encoded string named 'job_settings'
-        self.assertEqual({'SETT': '99', 'OTHERSETT': '10'},
-                         json.loads(call_kwargs['job_settings']))
+        self.assertEqual(
+            {'SETT': '99', 'SETTWITHEQUAL': '10=10'},
+            json.loads(call_kwargs['job_settings']),
+        )
 
 
 if __name__ == '__main__':
