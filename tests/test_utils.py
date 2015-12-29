@@ -6,9 +6,9 @@ import unittest
 
 from mock import patch
 from click.testing import CliRunner
-from click import ClickException
 
 from shub import utils
+from shub.exceptions import BadParameterException, NotFoundException
 
 from .utils import mock_conf
 
@@ -53,11 +53,8 @@ class UtilsTest(unittest.TestCase):
     def test_get_job_specs_validates_jobid(self):
         invalid_job_ids = ['/1/1', '123', '1/2/a', '1//']
         for job_id in invalid_job_ids:
-            self.assertRaisesRegexp(
-                ClickException,
-                r'{} is invalid'.format(job_id),
-                utils.get_job_specs, job_id,
-            )
+            with self.assertRaises(BadParameterException):
+                utils.get_job_specs(job_id)
 
     @patch('shub.utils.HubstorageClient', autospec=True)
     def test_get_job(self, mock_HSC):
@@ -70,12 +67,12 @@ class UtilsTest(unittest.TestCase):
         self.assertIs(utils.get_job('1/1/1'), mockjob)
         mock_HSC.assert_called_once_with(auth=conf.apikeys['default'])
 
-        with self.assertRaises(ClickException):
+        with self.assertRaises(BadParameterException):
             utils.get_job('1/1/')
 
         # Non-existent job
         mockjob.metadata = None
-        with self.assertRaises(ClickException):
+        with self.assertRaises(NotFoundException):
             utils.get_job('1/1/1')
 
 

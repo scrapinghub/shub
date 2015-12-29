@@ -1,6 +1,22 @@
 import mock
 
+from click.testing import CliRunner
+
 from shub import config
+
+
+class AssertInvokeRaisesMixin(object):
+    def assertInvokeRaises(self, exc, *args, **kwargs):
+        """
+        Invoke self.runner (or a new runner if nonexistent) with given *args
+        and **kwargs, assert that it raised an exception of type exc, and
+        return the runner's result.
+        """
+        runner = getattr(self, 'runner', None) or CliRunner()
+        kwargs['standalone_mode'] = False
+        result = runner.invoke(*args, **kwargs)
+        self.assertIsInstance(result.exception, exc)
+        return result
 
 
 def mock_conf(testcase, target=None, attr=None, conf=None):

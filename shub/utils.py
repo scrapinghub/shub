@@ -14,13 +14,13 @@ from os.path import isdir
 from six.moves.urllib.parse import urljoin
 from subprocess import Popen, PIPE, CalledProcessError
 
+import click
 import requests
 
-from click import ClickException
 from hubstorage import HubstorageClient
 
-from shub.click_utils import log
-from shub.exceptions import AuthException
+from shub.exceptions import (BadParameterException, InvalidAuthException,
+                             NotFoundException, RemoteErrorException)
 
 SCRAPY_CFG_FILE = os.path.expanduser("~/.scrapy.cfg")
 FALLBACK_ENCODING = 'utf-8'
@@ -33,18 +33,18 @@ def make_deploy_request(url, data, files, auth):
                             stream=True, timeout=300)
         rsp.raise_for_status()
         for line in rsp.iter_lines():
-            log(line)
+            click.echo(line)
         return True
     except requests.HTTPError as exc:
         rsp = exc.response
 
         if rsp.status_code == 403:
-            raise AuthException()
+            raise InvalidAuthException
 
         msg = "Deploy failed ({}):\n{}".format(rsp.status_code, rsp.text)
-        raise ClickException(msg)
+        raise RemoteErrorException(msg)
     except requests.RequestException as exc:
-        raise ClickException("Deploy failed: {}".format(exc))
+        raise RemoteErrorException("Deploy failed: {}".format(exc))
 
 
 # XXX: The next six should be refactored
@@ -96,10 +96,10 @@ def decompress_egg_files():
         files = glob('*')
         err = ('No egg files with a supported file extension were found. '
                'Files: %s' % ', '.join(files))
-        raise ClickException(err)
+        raise NotFoundException(err)
 
     for egg in eggs:
-        log("Uncompressing: %s" % egg)
+        click.echo("Uncompressing: %s" % egg)
         run("%s %s" % (decompressor_by_ext[_ext(egg)], egg))
 
 
@@ -127,12 +127,12 @@ def _ext(file_path):
 
 def build_and_deploy_egg(project, endpoint, apikey):
     """Builds and deploys the current dir's egg"""
-    log("Building egg in: %s" % os.getcwd())
+    click.echo("Building egg in: %s" % os.getcwd())
     try:
         run('python setup.py bdist_egg')
     except CalledProcessError:
         # maybe a C extension or distutils package, forcing bdist_egg
-        log("Couldn't build an egg with vanilla setup.py, trying with setuptools...")
+        click.echo("Couldn't build an egg with vanilla setup.py, trying with setuptools...")
         run('python -c  "import setuptools; __file__=\'setup.py\'; execfile(\'setup.py\')" bdist_egg')
 
     _deploy_dependency_egg(project, endpoint, apikey)
@@ -149,10 +149,10 @@ def _deploy_dependency_egg(project, endpoint, apikey):
     files = {'egg': (egg_name, open(egg_path, 'rb'))}
     auth = (apikey, '')
 
-    log('Deploying dependency to Scrapy Cloud project "%s"' % project)
+    click.echo('Deploying dependency to Scrapy Cloud project "%s"' % project)
     make_deploy_request(url, data, files, auth)
     success = "Deployed eggs list at: https://dash.scrapinghub.com/p/%s/eggs"
-    log(success % project)
+    click.echo(success % project)
 
 
 def _last_line_of(s):
@@ -194,11 +194,12 @@ def get_job_specs(job):
     """
     match = re.match(r'^((\w+)/)?(\d+/\d+)$', job)
     if not match:
-        raise ClickException(
+        raise BadParameterException(
             "Job ID {} is invalid. Format should be spiderid/jobid (inside a "
-            "project) or target/spiderid/jobid, where projectid can be either "
-            "a project ID or an identifier defined in scrapinghub.yml."
-            "".format(job)
+            "project) or target/spiderid/jobid, where target can be either a "
+            "project ID or an identifier defined in scrapinghub.yml."
+            "".format(job),
+            param='job_id',
         )
     # XXX: Lazy import due to circular dependency
     from shub.config import get_target
@@ -211,7 +212,7 @@ def get_job(job):
     hsc = HubstorageClient(auth=apikey)
     job = hsc.get_job(jobid)
     if not job.metadata:
-        raise ClickException('Job {} does not exist'.format(jobid))
+        raise NotFoundException('Job {} does not exist'.format(jobid))
     return job
 
 

@@ -7,11 +7,13 @@ import unittest
 
 import mock
 
-from click import ClickException
 from click.testing import CliRunner
 
 from shub.config import (get_target, get_version, load_shub_config, ShubConfig,
                          update_config)
+from shub.exceptions import (BadParameterException, BadConfigException,
+                             ConfigParseException, MissingAuthException,
+                             NotFoundException)
 
 
 VALID_YAML_CFG = """
@@ -76,14 +78,14 @@ class ShubConfigTest(unittest.TestCase):
             apikeys:
                 default: key
         """
-        with self.assertRaises(ClickException):
+        with self.assertRaises(ConfigParseException):
             self._get_conf_with_yml(yml)
         # Valid YAML but not dictionary-like
         yml = """
             endpoints
                 external: ext_endpoint
         """
-        with self.assertRaises(ClickException):
+        with self.assertRaises(ConfigParseException):
             self._get_conf_with_yml(yml)
 
     def test_load_file(self):
@@ -102,7 +104,7 @@ class ShubConfigTest(unittest.TestCase):
         self.assertEqual({'external': 'ext_endpoint'}, conf.apikeys)
 
     def test_get_target(self):
-        with self.assertRaises(ClickException):
+        with self.assertRaises(MissingAuthException):
             self.conf.get_target('externalproj')
         self.assertEqual(
             self.conf.get_target('externalproj', auth_required=False),
@@ -122,13 +124,18 @@ class ShubConfigTest(unittest.TestCase):
             self.conf.get_target('external/99', auth_required=False),
             (99, 'ext_endpoint', None),
         )
-        with self.assertRaises(ClickException):
-            self.conf.get_target('99a')
 
     def test_get_invalid(self):
-        with self.assertRaises(ClickException):
+        # Missing target and no default defined
+        with self.assertRaises(BadParameterException):
+            self.conf.get_target('default')
+        # Bad project ID on command line
+        with self.assertRaises(BadParameterException):
+            self.conf.get_target('99a')
+        # Bad project ID in scrapinghub.yml
+        with self.assertRaises(BadConfigException):
             self.conf.get_target('invalid')
-        with self.assertRaises(ClickException):
+        with self.assertRaises(BadConfigException):
             self.conf.get_target('invalid2')
 
     def test_get_project_id(self):
@@ -144,10 +151,12 @@ class ShubConfigTest(unittest.TestCase):
             self.conf.get_endpoint('externalproj'),
             'ext_endpoint',
         )
+        with self.assertRaises(NotFoundException):
+            self.conf.get_endpoint('nonexisting_ep/33')
 
     def test_get_apikey(self):
         self.assertEqual(self.conf.get_apikey('shproj'), 'key')
-        with self.assertRaises(ClickException):
+        with self.assertRaises(MissingAuthException):
             self.conf.get_apikey('externalproj', required=True)
         self.assertEqual(
             self.conf.get_apikey('externalproj', required=False),
@@ -227,13 +236,13 @@ class LoadShubConfigTest(unittest.TestCase):
         os.remove(self.localpath)
         conf = load_shub_config()
         self.assertEqual(conf.get_apikey('shproj'), 'key')
-        with self.assertRaises(ClickException):
+        with self.assertRaises(BadParameterException):
             conf.get_apikey('localextproj')
 
     def test_no_global_scrapinghub_yml(self):
         os.remove(self.globalpath)
         conf = load_shub_config()
-        with self.assertRaises(ClickException):
+        with self.assertRaises(BadParameterException):
             conf.get_apikey('shproj')
         self.assertEqual(conf.get_apikey('localextproj'), 'key_ext')
 
@@ -260,7 +269,7 @@ class LoadShubConfigTest(unittest.TestCase):
         with open(os.path.join(self.tmpdir, 'scrapy.cfg'), 'w') as f:
             f.write(textwrap.dedent(scrapycfg))
         conf = load_shub_config()
-        with self.assertRaises(ClickException):
+        with self.assertRaises(BadParameterException):
             conf.get_target('ext2')
         os.remove(self.localpath)
         conf = load_shub_config()

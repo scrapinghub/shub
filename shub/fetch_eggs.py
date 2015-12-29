@@ -5,11 +5,8 @@ from six.moves.urllib.parse import urljoin
 import click
 import requests
 
-from click import ClickException
-
-from shub.click_utils import log
 from shub.config import get_target
-from shub.exceptions import AuthException
+from shub.exceptions import InvalidAuthException, RemoteErrorException
 
 
 HELP = """
@@ -38,7 +35,7 @@ def fetch_eggs(project, endpoint, apikey, destfile):
 
     _assert_response_is_valid(rsp)
 
-    log("Downloading eggs to %s" % destfile)
+    click.echo("Downloading eggs to %s" % destfile)
 
     with open(destfile, 'wb') as f:
         for chunk in rsp.iter_content(chunk_size=1024):
@@ -49,7 +46,7 @@ def fetch_eggs(project, endpoint, apikey, destfile):
 
 def _assert_response_is_valid(rsp):
     if rsp.status_code == 403:
-        raise AuthException()
+        raise InvalidAuthException
     elif rsp.status_code != 200:
         msg = 'Eggs could not be fetched. Status: %d' % rsp.status_code
-        raise ClickException(msg)
+        raise RemoteErrorException(msg)

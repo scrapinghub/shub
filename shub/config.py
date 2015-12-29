@@ -4,10 +4,12 @@ import os.path
 import time
 
 import click
-from click import ClickException
 import six
 import ruamel.yaml as yaml
 
+from shub.exceptions import (BadParameterException, BadConfigException,
+                             ConfigParseException, MissingAuthException,
+                             NotFoundException)
 from shub.utils import closest_file, pwd_hg_version, pwd_git_version
 
 
@@ -26,7 +28,7 @@ class ShubConfig(object):
         self.apikeys = {}
         self.version = 'AUTO'
 
-    def load(self, stream, errmsg=None):
+    def load(self, stream):
         """Load Scrapinghub configuration from stream."""
         try:
             yaml_cfg = yaml.safe_load(stream)
@@ -35,13 +37,15 @@ class ShubConfig(object):
             self.version = yaml_cfg.get('version', self.version)
         except (yaml.YAMLError, AttributeError):
             # AttributeError: stream is valid YAML but not dictionary-like
-            raise ClickException(errmsg or "Unable to parse configuration.")
+            raise ConfigParseException
 
     def load_file(self, filename):
         """Load Scrapinghub configuration from YAML file. """
-        with open(filename, 'r') as f:
-            self.load(
-                f,
+        try:
+            with open(filename, 'r') as f:
+                self.load(f)
+        except ConfigParseException:
+            raise ConfigParseException(
                 "Unable to parse configuration file %s. Maybe a missing "
                 "colon?" % filename
             )
@@ -56,11 +60,23 @@ class ShubConfig(object):
         try:
             project_id = int(project_id)
         except ValueError:
-            msg = "\"%s\" is not a valid Scrapinghub project ID." % project_id
             if target == 'default':
-                msg = ("Please specify target or configure a default target "
-                       "in 'scrapinghub.yml'.")
-            raise ClickException(msg)
+                raise BadParameterException(
+                    "Please specify target or configure a default target in "
+                    "scrapinghub.yml.",
+                    param_hint='target',
+                )
+            elif target in self.projects:
+                raise BadConfigException(
+                    "\"%s\" is not a valid Scrapinghub project ID. Please "
+                    "check your scrapinghub.yml" % project_id,
+                )
+            raise BadParameterException(
+                "Could not find target \"%s\". Please define it in your "
+                "scrapinghub.yml or supply a numerical project ID."
+                "" % project_id,
+                param_hint='target',
+            )
         return project_id, endpoint
 
     def get_project_id(self, target):
@@ -73,10 +89,8 @@ class ShubConfig(object):
         try:
             return self.endpoints[endpoint]
         except KeyError:
-            raise ClickException(
-                "Could not find endpoint %s. Please define it in your "
-                "scrapinghub.yml." % endpoint
-            )
+            raise NotFoundException("Could not find endpoint %s. Please define"
+                                    " it in your scrapinghub.yml." % endpoint)
 
     def get_apikey(self, target, required=True):
         """Return API key for endpoint associated with given target"""
@@ -86,10 +100,10 @@ class ShubConfig(object):
         except KeyError:
             if not required:
                 return None
-            msg = "Could not find API key. Please run 'shub login' first."
+            msg = None
             if endpoint != 'default':
                 msg = "Could not find API key for endpoint %s." % endpoint
-            raise ClickException(msg)
+            raise MissingAuthException(msg)
 
     def get_version(self):
         if self.version == 'AUTO':

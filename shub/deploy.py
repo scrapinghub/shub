@@ -11,8 +11,8 @@ import setuptools  # not used in code but needed in runtime, don't remove!
 _ = setuptools  # NOQA
 
 from shub.utils import closest_file, get_config, inside_project, retry_on_eintr
-from shub.click_utils import log
 from shub.config import load_shub_config
+from shub.exceptions import NotFoundException
 from shub.utils import make_deploy_request
 
 
@@ -67,8 +67,7 @@ setup(
 @click.option("--build-egg", help="only build the given egg, don't deploy it")
 def cli(target, version, list_targets, debug, egg, build_egg):
     if not inside_project():
-        log("Error: no Scrapy project found in this location")
-        sys.exit(1)
+        raise NotFoundException("No Scrapy project found in this location.")
 
     conf = load_shub_config()
 
@@ -82,7 +81,7 @@ def cli(target, version, list_targets, debug, egg, build_egg):
     try:
         if build_egg:
             egg, tmpdir = _build_egg()
-            log("Writing egg to %s" % build_egg)
+            click.echo("Writing egg to %s" % build_egg)
             shutil.copyfile(egg, build_egg)
         else:
             project, endpoint, apikey = conf.get_target(target)
@@ -90,10 +89,10 @@ def cli(target, version, list_targets, debug, egg, build_egg):
             auth = (apikey, '')
 
             if egg:
-                log("Using egg: %s" % egg)
+                click.echo("Using egg: %s" % egg)
                 egg = egg
             else:
-                log("Packing version %s" % version)
+                click.echo("Packing version %s" % version)
                 egg, tmpdir = _build_egg()
 
             _upload_egg(endpoint, egg, project, version, auth)
@@ -101,7 +100,7 @@ def cli(target, version, list_targets, debug, egg, build_egg):
     finally:
         if tmpdir:
             if debug:
-                log("Output dir not removed: %s" % tmpdir)
+                click.echo("Output dir not removed: %s" % tmpdir)
             else:
                 shutil.rmtree(tmpdir, ignore_errors=True)
 
@@ -114,7 +113,7 @@ def _upload_egg(endpoint, eggpath, project, version, auth):
     data = {'project': project, 'version': version}
     files = {'egg': ('project.egg', open(eggpath, 'rb'))}
     url = _url(endpoint, 'addversion.json')
-    log('Deploying to Scrapy Cloud project "%s"' % project)
+    click.echo('Deploying to Scrapy Cloud project "%s"' % project)
     return make_deploy_request(url, data, files, auth)
 
 
