@@ -27,7 +27,6 @@ by providing the -f flag:
     shub requests -f 2/15
 """
 
-
 SHORT_HELP = "Fetch requests from Scrapy Cloud"
 
 
@@ -37,5 +36,5 @@ SHORT_HELP = "Fetch requests from Scrapy Cloud"
               is_flag=True)
 def cli(job_id, follow):
     job = get_job(job_id)
-    for item in job_resource_iter(job.requests.iter_json, follow=follow):
+    for item in job_resource_iter(job, job.requests.iter_json, follow=follow):
         click.echo(item)

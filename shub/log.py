@@ -38,7 +38,7 @@ SHORT_HELP = "Fetch log from Scrapy Cloud"
               'produced', is_flag=True)
 def cli(job_id, follow):
     job = get_job(job_id)
-    for item in job_resource_iter(job.logs.iter_values, follow=follow,
+    for item in job_resource_iter(job, job.logs.iter_values, follow=follow,
                                   key_func=lambda item: item['_key']):
         click.echo(
             "{} {} {}".format(

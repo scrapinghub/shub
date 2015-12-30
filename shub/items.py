@@ -36,5 +36,5 @@ SHORT_HELP = "Fetch items from Scrapy Cloud"
               is_flag=True)
 def cli(job_id, follow):
     job = get_job(job_id)
-    for item in job_resource_iter(job.items.iter_json, follow=follow):
+    for item in job_resource_iter(job, job.items.iter_json, follow=follow):
         click.echo(item)

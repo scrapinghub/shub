@@ -302,12 +302,27 @@ def get_sources(use_closest=True):
     return sources
 
 
-def job_resource_iter(iter_func, follow=True, update_interval=5,
-                      key_func=None):
+def job_live(job, refresh_meta_after=60):
     """
-    Given a python-hubstorage job resource generator (e.g.
-    job.items.iter_json), return an infinitely running generator that
-    periodically checks the job resource generator and yields its items.
+    Check whether job is in 'pending' or 'running' state. If job metadata was
+    fetched longer than `refresh_meta_after` seconds ago, refresh it.
+    """
+    if not hasattr(job, '_metadata_updated'):
+        # Assume just loaded
+        job._metadata_updated = time.time()
+    if time.time() - job._metadata_updated > refresh_meta_after:
+        job.metadata.expire()
+        # Fetching actually happens on job.metadata['state'], but close enough
+        job._metadata_updated = time.time()
+    return job.metadata['state'] in ('pending', 'running')
+
+
+def job_resource_iter(job, iter_func, follow=True, key_func=None):
+    """
+    Given a python-hubstorage job and resource generator (e.g.
+    job.items.iter_json), return a generator that periodically checks the job
+    resource generator and yields its items. The generator will exit when the
+    job has finished.
 
     key_func should be a function which accepts an item from iter_func and
     returns its key. By default, the key is retrieved via
@@ -316,6 +331,8 @@ def job_resource_iter(iter_func, follow=True, update_interval=5,
     As a handy shortcut, iter_func will be iterated through only once if
     `follow` is set to `False`.
     """
+    if not job_live(job):
+        follow = False
     if not follow:
         for item in iter_func():
             yield item
@@ -326,4 +343,7 @@ def job_resource_iter(iter_func, follow=True, update_interval=5,
         for item in iter_func(startafter=last_item_key):
             yield item
             last_item_key = key_func(item)
-        time.sleep(update_interval)
+        if not job_live(job):
+            break
+        # Workers only upload data to hubstorage every 15 seconds
+        time.sleep(15)
