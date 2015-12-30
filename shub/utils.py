@@ -1,16 +1,19 @@
 from __future__ import unicode_literals, absolute_import
 import errno
+import json
 import os
 import subprocess
 import sys
 import re
 import warnings
 
+from collections import deque
 from ConfigParser import SafeConfigParser
 from glob import glob
 from importlib import import_module
 from os import devnull
 from os.path import isdir
+from tempfile import NamedTemporaryFile
 from six.moves.urllib.parse import urljoin
 from subprocess import Popen, PIPE, CalledProcessError
 
@@ -25,15 +28,33 @@ from shub.exceptions import (BadParameterException, InvalidAuthException,
 SCRAPY_CFG_FILE = os.path.expanduser("~/.scrapy.cfg")
 FALLBACK_ENCODING = 'utf-8'
 STDOUT_ENCODING = sys.stdout.encoding or FALLBACK_ENCODING
+LAST_N_LOGS = 30
 
 
-def make_deploy_request(url, data, files, auth):
+def make_deploy_request(url, data, files, auth, verbose, keep_log):
+    last_logs = deque(maxlen=LAST_N_LOGS)
     try:
         rsp = requests.post(url=url, auth=auth, data=data, files=files,
                             stream=True, timeout=300)
         rsp.raise_for_status()
-        for line in rsp.iter_lines():
-            click.echo(line)
+        with NamedTemporaryFile(prefix='shub_deploy_', suffix='.log',
+                                delete=(not keep_log)) as log_file:
+            for line in rsp.iter_lines():
+                if verbose:
+                    click.echo(line)
+                last_logs.append(line)
+                log_file.write(line + '\n')
+            if _is_deploy_successful(last_logs):
+                if not verbose:
+                    click.echo(last_logs[-1])
+            else:
+                log_file.delete = False
+                if not verbose:
+                    click.echo("Deploy log last %s lines:" % len(last_logs))
+                    for line in last_logs:
+                        click.echo(line)
+            if not log_file.delete:
+                click.echo("Deploy log location: %s" % log_file.name)
         return True
     except requests.HTTPError as exc:
         rsp = exc.response
@@ -46,6 +67,14 @@ def make_deploy_request(url, data, files, auth):
     except requests.RequestException as exc:
         raise RemoteErrorException("Deploy failed: {}".format(exc))
 
+
+def _is_deploy_successful(last_logs):
+    try:
+        data = json.loads(last_logs[-1])
+        if 'status' in data and data['status'] == 'ok':
+            return True
+    except Exception:
+        pass
 
 # XXX: The next six should be refactored
 
