@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime
 
-from shub.utils import get_job
+from shub.utils import job_resource_iter, get_job
 
 import click
 
@@ -22,6 +22,11 @@ scrapinghub.yml:
 Or use any target defined in your scrapinghub.yml:
 
     shub log production/2/15
+
+If the job is still running, you can watch the log as it is being written by
+providing the -f flag:
+
+    shub log -f 2/15
 """
 
 SHORT_HELP = "Fetch log from Scrapy Cloud"
@@ -29,9 +34,12 @@ SHORT_HELP = "Fetch log from Scrapy Cloud"
 
 @click.command(help=HELP, short_help=SHORT_HELP)
 @click.argument('job_id')
-def cli(job_id):
+@click.option('-f', '--follow', help='output new log entries as they are '
+              'produced', is_flag=True)
+def cli(job_id, follow):
     job = get_job(job_id)
-    for item in job.logs.iter_values():
+    for item in job_resource_iter(job, job.logs.iter_values, follow=follow,
+                                  key_func=lambda item: item['_key']):
         click.echo(
             "{} {} {}".format(
                 datetime.utcfromtimestamp(item['time']/1000),

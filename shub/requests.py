@@ -1,6 +1,6 @@
 import click
 
-from shub.utils import get_job
+from shub.utils import job_resource_iter, get_job
 
 
 HELP = """
@@ -20,15 +20,21 @@ scrapinghub.yml:
 Or use any target defined in your scrapinghub.yml:
 
     shub requests production/2/15
-"""
 
+If the job is still running, you can watch the requests as they are being made
+by providing the -f flag:
+
+    shub requests -f 2/15
+"""
 
 SHORT_HELP = "Fetch requests from Scrapy Cloud"
 
 
 @click.command(help=HELP, short_help=SHORT_HELP)
 @click.argument('job_id')
-def cli(job_id):
+@click.option('-f', '--follow', help='output new requests as they are made',
+              is_flag=True)
+def cli(job_id, follow):
     job = get_job(job_id)
-    for item in job.requests.iter_json():
+    for item in job_resource_iter(job, job.requests.iter_json, follow=follow):
         click.echo(item)
