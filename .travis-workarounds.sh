@@ -11,5 +11,18 @@ if [[ "${TOXENV}" == "pypy" ]]; then
     sudo rm -rf /usr/local/pypy/bin
 fi
 
+if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+    brew update > /dev/null
+
+    brew install python
+    # Now easy_install and pip are in /usr/local we need to force link
+    brew link --overwrite python
+
+    pip install virtualenv
+
+    # Create a virtualenv
+    virtualenv ~/virtualenv/python2.7
+fi
+
 # Workaround travis-ci/travis-ci#2065
 pip install -U wheel
