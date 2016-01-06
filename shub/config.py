@@ -1,6 +1,6 @@
-from ConfigParser import SafeConfigParser
 import contextlib
-import os.path
+import netrc
+import os
 import time
 
 import click
@@ -10,10 +10,12 @@ import ruamel.yaml as yaml
 from shub.exceptions import (BadParameterException, BadConfigException,
                              ConfigParseException, MissingAuthException,
                              NotFoundException)
-from shub.utils import closest_file, pwd_hg_version, pwd_git_version
+from shub.utils import (closest_file, get_scrapycfg_targets, get_sources,
+                        pwd_hg_version, pwd_git_version)
 
 
 GLOBAL_SCRAPINGHUB_YML_PATH = os.path.expanduser("~/.scrapinghub.yml")
+NETRC_PATH = os.path.expanduser('~/_netrc' if os.name == 'nt' else '~/.netrc')
 
 
 class ShubConfig(object):
@@ -32,6 +34,8 @@ class ShubConfig(object):
         """Load Scrapinghub configuration from stream."""
         try:
             yaml_cfg = yaml.safe_load(stream)
+            if not yaml_cfg:
+                return
             for option in ('projects', 'endpoints', 'apikeys'):
                 getattr(self, option).update(yaml_cfg.get(option, {}))
             self.version = yaml_cfg.get('version', self.version)
@@ -49,6 +53,32 @@ class ShubConfig(object):
                 "Unable to parse configuration file %s. Maybe a missing "
                 "colon?" % filename
             )
+
+    def _load_scrapycfg(self, sources):
+        """Load configuration from a list of scrapy.cfg-like sources."""
+        targets = get_scrapycfg_targets(sources)
+        for tname, t in six.iteritems(targets):
+            if 'project' in t:
+                prefix = '' if tname == 'default' else tname + '/'
+                self.projects.update({tname: prefix + t['project']})
+            if 'url' in t:
+                self.endpoints.update({tname: t['url']})
+            if 'username' in t:
+                self.apikeys.update({tname: t['username']})
+            if 'version' in t:
+                self.version = t['version']
+
+    def save(self, path=None):
+        with update_config(path) as yml:
+            yml['projects'] = self.projects
+            yml['endpoints'] = self.endpoints
+            yml['apikeys'] = self.apikeys
+            yml['version'] = self.version
+            # Don't write defaults
+            if self.endpoints['default'] == ShubConfig.DEFAULT_ENDPOINT:
+                del yml['endpoints']['default']
+            if self.version == 'AUTO':
+                del yml['version']
 
     def _parse_project(self, target):
         """Parse project of given target into (project_id, endpoint)."""
@@ -130,42 +160,92 @@ class ShubConfig(object):
         )
 
 
-def _get_scrapycfg_targets(cfgfiles=None):
-    cfg = SafeConfigParser()
-    cfg.read(cfgfiles or [])
-    baset = dict(cfg.items('deploy')) if cfg.has_section('deploy') else {}
-    targets = {}
-    targets['default'] = baset
-    for x in cfg.sections():
-        if x.startswith('deploy:'):
-            t = baset.copy()
-            t.update(cfg.items(x))
-            targets[x[7:]] = t
-    return targets
+MIGRATION_BANNER = """
+-------------------------------------------------------------------------------
+Welcome to shub v1.6!
+
+This release contains major updates to how shub is configured, as well as
+updates to the commands and shub's look & feel.
+
+Run 'shub' to get an overview over all available commands, and
+'shub command --help' to get detailed help on a command. Definitely try the
+new 'shub items -f [JOBID]' to see items live as they are being scraped!
+
+From now on, shub configuration should be done in a file called
+'scrapinghub.yml', living next to the previously used 'scrapy.cfg' in your
+Scrapy project directory. Global configuration, for example API keys, should be
+done in a file called '.scrapinghub.yml' in your home directory.
+
+But no worries, shub has automatically migrated your global settings to
+~/.scrapinghub.yml, and will also automatically migrate your project settings
+when you run a command within a Scrapy project.
+
+Visit http://doc.scrapinghub.com/shub.html for more information on the new
+configuration format and its benefits.
+
+Happy scraping!
+-------------------------------------------------------------------------------
+"""
 
 
-def _import_local_scrapycfg(conf):
+def _migrate_to_global_scrapinghub_yml():
+    conf = ShubConfig()
+    conf._load_scrapycfg(get_sources(use_closest=False))
+    try:
+        info = netrc.netrc(NETRC_PATH)
+        netrc_key, _, _ = info.authenticators("scrapinghub.com")
+    except (IOError, TypeError):
+        netrc_key = None
+    if netrc_key:
+        conf.apikeys['default'] = netrc_key
+    conf.save()
+    default_conf = ShubConfig()
+    migrated_data = any(getattr(conf, attr) != getattr(default_conf, attr)
+                        for attr in ('projects', 'endpoints', 'apikeys',
+                                     'version'))
+    if migrated_data:
+        click.echo(MIGRATION_BANNER, err=True)
+
+
+PROJECT_MIGRATION_OK_BANNER = """
+INFO: Your project configuration has been migrated to scrapinghub.yml.
+shub will no longer read from scrapy.cfg. Visit
+http://doc.scrapinghub.com/shub.html for more information.
+"""
+
+
+PROJECT_MIGRATION_FAILED_BANNER = """
+WARNING: shub failed to convert your scrapy.cfg to scrapinghub.yml. Please
+visit http://doc.scrapinghub.com/shub.html for help on how to use the new
+configuration format. We would be grateful if you could also file a bug report
+at https://github.com/scrapinghub/shub/issues
+
+For now, shub fell back to reading from scrapy.cfg, everything should work as
+expected.
+"""
+
+
+def _migrate_and_load_scrapy_cfg(conf):
+    # Load from closest scrapy.cfg
     closest_scrapycfg = closest_file('scrapy.cfg')
     if not closest_scrapycfg:
         return
-    targets = _get_scrapycfg_targets([closest_scrapycfg])
-    if targets == _get_scrapycfg_targets():
+    targets = get_scrapycfg_targets([closest_scrapycfg])
+    if targets == get_scrapycfg_targets():
         # No deploy configuration in scrapy.cfg
         return
-    click.echo(
-        "WARNING: Configuring Scrapinghub in scrapy.cfg is deprecated. "
-        "Please move your project's scrapinghub configuration to "
-        "scrapinghub.yml. See http://doc.scrapinghub.com/shub.html"
-    )
-    for tname, t in six.iteritems(targets):
-        if 'project' in t:
-            conf.projects.update({tname: tname + '/' + t['project']})
-        if 'url' in t:
-            conf.endpoints.update({tname: t['url']})
-        if 'username' in t:
-            conf.apikeys.update({tname: t['username']})
-        if 'version' in t:
-            conf.version = t['version']
+    conf._load_scrapycfg([closest_scrapycfg])
+    # Migrate to scrapinghub.yml
+    closest_sh_yml = os.path.join(os.path.dirname(closest_scrapycfg),
+                                  'scrapinghub.yml')
+    temp_conf = ShubConfig()
+    temp_conf._load_scrapycfg([closest_scrapycfg])
+    try:
+        temp_conf.save(closest_sh_yml)
+    except Exception:
+        click.echo(PROJECT_MIGRATION_FAILED_BANNER, err=True)
+    else:
+        click.echo(PROJECT_MIGRATION_OK_BANNER, err=True)
 
 
 def load_shub_config(load_global=True, load_local=True, load_env=True):
@@ -174,7 +254,9 @@ def load_shub_config(load_global=True, load_local=True, load_env=True):
     scrapinghub.yml already loaded
     """
     conf = ShubConfig()
-    if load_global and os.path.exists(GLOBAL_SCRAPINGHUB_YML_PATH):
+    if load_global:
+        if not os.path.exists(GLOBAL_SCRAPINGHUB_YML_PATH):
+            _migrate_to_global_scrapinghub_yml()
         conf.load_file(GLOBAL_SCRAPINGHUB_YML_PATH)
     if load_env and 'SHUB_APIKEY' in os.environ:
         conf.apikeys['default'] = os.environ['SHUB_APIKEY']
@@ -183,10 +265,7 @@ def load_shub_config(load_global=True, load_local=True, load_env=True):
         if closest_sh_yml:
             conf.load_file(closest_sh_yml)
         else:
-            # For backwards compatibility, try to read deploy targets from
-            # project scrapy.cfg (only! not from global ones) if no project
-            # scrapinghub.yml found.
-            _import_local_scrapycfg(conf)
+            _migrate_and_load_scrapy_cfg(conf)
     return conf
 
 
@@ -199,15 +278,22 @@ def update_config(conf_path=None):
     conf_path = conf_path or GLOBAL_SCRAPINGHUB_YML_PATH
     try:
         with open(conf_path, 'r') as f:
-            conf = yaml.load(f, yaml.RoundTripLoader)
+            conf = yaml.load(f, yaml.RoundTripLoader) or {}
     except IOError as e:
         if e.errno != 2:
             raise
         conf = {}
     # Code inside context manager is executed after this yield
     yield conf
+    # Avoid writing "key: {}"
+    for key in conf.keys():
+        if conf[key] == {}:
+            del conf[key]
     with open(conf_path, 'w') as f:
-        yaml.dump(conf, f, Dumper=yaml.RoundTripDumper)
+        # Avoid writing "{}"
+        if conf:
+            yaml.dump(conf, f, default_flow_style=False,
+                      Dumper=yaml.RoundTripDumper)
 
 
 def get_target(target, auth_required=True):

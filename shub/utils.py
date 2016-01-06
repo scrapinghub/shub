@@ -302,6 +302,20 @@ def get_sources(use_closest=True):
     return sources
 
 
+def get_scrapycfg_targets(cfgfiles=None):
+    cfg = SafeConfigParser()
+    cfg.read(cfgfiles or [])
+    baset = dict(cfg.items('deploy')) if cfg.has_section('deploy') else {}
+    targets = {}
+    targets['default'] = baset
+    for x in cfg.sections():
+        if x.startswith('deploy:'):
+            t = baset.copy()
+            t.update(cfg.items(x))
+            targets[x[7:]] = t
+    return targets
+
+
 def job_live(job, refresh_meta_after=60):
     """
     Check whether job is in 'pending' or 'running' state. If job metadata was

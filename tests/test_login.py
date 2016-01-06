@@ -15,6 +15,7 @@ VALID_KEY = 32 * '1'
 
 
 @patch('shub.config.GLOBAL_SCRAPINGHUB_YML_PATH', new='.scrapinghub.yml')
+@patch('shub.config.NETRC_PATH', new='.netrc')
 class LoginTest(AssertInvokeRaisesMixin, unittest.TestCase):
 
     def setUp(self):
