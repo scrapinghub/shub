@@ -280,7 +280,7 @@ def inside_project():
                           "" % (scrapy_module, exc))
         else:
             return True
-    return bool(closest_file('scrapy.cfg'))
+    return bool(closest_file('scrapy.cfg')) or bool(closest_file('scrapinghub.yml'))
 
 
 def get_config(use_closest=True):
