@@ -122,7 +122,7 @@ def _upload_egg(endpoint, eggpath, project, version, auth, verbose, keep_log):
 
 
 def _build_egg():
-    closest = closest_file('scrapy.cfg')
+    closest = closest_file('scrapy.cfg') or closest_file('scrapinghub.yml')
     os.chdir(os.path.dirname(closest))
     if not os.path.exists('setup.py'):
         settings = get_config().get('settings', 'default')
