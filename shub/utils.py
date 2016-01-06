@@ -352,14 +352,14 @@ def job_resource_iter(job, iter_func, follow=True, key_func=None, tail_size=None
                 last_items.append(item)
             else:
                 yield item
-            iterate.last_item_key = key_func(item)
+            if follow:
+                iterate.last_item_key = key_func(item)
         for item in last_items:
             yield item
 
     if not job_live(job):
         follow = False
 
-    key_func = key_func or (lambda item: json.loads(item)['_key'])
     while True:
         for item in iterate(tail_size):
             yield item
