@@ -180,7 +180,7 @@ def _deploy_dependency_egg(project, endpoint, apikey):
     auth = (apikey, '')
 
     click.echo('Deploying dependency to Scrapy Cloud project "%s"' % project)
-    make_deploy_request(url, data, files, auth)
+    make_deploy_request(url, data, files, auth, False, False)
     success = "Deployed eggs list at: https://dash.scrapinghub.com/p/%s/eggs"
     click.echo(success % project)
 
