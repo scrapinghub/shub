@@ -1,3 +1,6 @@
+.. BEGIN_SH_DOC - everything in this block will be copied to
+   http://doc.scrapinghub.com/shub.html
+
 Scrapinghub command line client
 ===============================
 
@@ -114,7 +117,7 @@ and run::
     shub deploy [TARGET]
 
 where ``[TARGET]`` is either a project name defined in ``scrapinghub.yml`` or a
-numerical Scrapinghub project ID. If you have configured a default target in 
+numerical Scrapinghub project ID. If you have configured a default target in
 your ``scrapinghub.yml``, you can leave out the parameter completely::
 
     $ shub deploy
@@ -145,7 +148,7 @@ deploy your project from a Python egg, or build one without deploying::
     $ shub deploy --build-egg egg_name
     Writing egg to egg_name
 
- 
+
 Deploying dependencies
 ----------------------
 
@@ -236,7 +239,7 @@ option to receive live updates::
 
     $ shub items 2/15
     {"name": "Example product", description": "Example description"}
-    {"name": "Another product", description": "Another description"} 
+    {"name": "Another product", description": "Another description"}
 
 ::
 
@@ -244,12 +247,12 @@ option to receive live updates::
     {"status": 200, "fp": "1ff11f1543809f1dbd714e3501d8f460b92a7a95", "rs": 138137, "_key": "1/1/1/0", "url": "http://blog.scrapinghub.com", "time": 1449834387621, "duration": 238, "method": "GET"}
     {"status": 200, "fp": "418a0964a93e139166dbf9b33575f10f31f17a1", "rs": 138137, "_key": "1/1/1/0", "url": "http://blog.scrapinghub.com", "time": 1449834390881, "duration": 163, "method": "GET"}
 
+.. END_SH_DOC
 
-Advanced Configuration
-----------------------
+API Endpoints (for Scrapinghub staff only)
+------------------------------------------
 
-Besides projects you can configure different endpoints for project
-deployments::
+It is possible to configure different API endpoints::
 
     # ~/.scrapinghub.yml
     projects:
