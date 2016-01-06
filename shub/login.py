@@ -4,7 +4,7 @@ import requests
 from six.moves import input
 from six.moves.urllib.parse import urljoin
 
-from shub.config import load_shub_config, update_config
+from shub.config import load_shub_config, ShubConfig, update_config
 from shub.exceptions import AlreadyLoggedInException
 
 
@@ -53,7 +53,7 @@ def _get_apikey(suggestion='', endpoint=None):
 
 
 def _is_valid_apikey(key, endpoint=None):
-    endpoint = endpoint or "https://dash.scrapinghub.com/api/scrapyd/"
-    validate_api_key_endpoint = urljoin(endpoint, "../v2/users/me")
+    endpoint = endpoint or ShubConfig.DEFAULT_ENDPOINT
+    validate_api_key_endpoint = urljoin(endpoint, "v2/users/me")
     r = requests.get("%s?apikey=%s" % (validate_api_key_endpoint, key))
     return r.status_code == 200

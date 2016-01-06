@@ -327,20 +327,20 @@ class LoadShubConfigTest(unittest.TestCase):
             conf = load_shub_config()
             self.assertEqual(
                 conf.get_target('default'),
-                (222, 'scrapycfg_endpoint', 'key'),
+                (222, 'scrapycfg_endpoint/', 'key'),
             )
             self.assertEqual(
                 conf.get_target('ext2'),
-                (333, 'ext2_endpoint', 'ext2_key'),
+                (333, 'ext2_endpoint/', 'ext2_key'),
             )
             self.assertEqual(conf.get_version(), 'ext2_ver')
         scrapycfg = """
             [deploy]
             project = 222
-            url = scrapycfg_endpoint
+            url = scrapycfg_endpoint/scrapyd/
 
             [deploy:ext2]
-            url = ext2_endpoint
+            url = ext2_endpoint/scrapyd/
             project = 333
             username = ext2_key
             version = ext2_ver

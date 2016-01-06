@@ -44,13 +44,13 @@ class ScheduleTest(unittest.TestCase):
         mock_proj = mock_conn.return_value.__getitem__.return_value
         mock_proj.schedule.side_effect = APIError('')
         with self.assertRaises(RemoteErrorException):
-            schedule.schedule_spider(1, 'https://endpoint/api/scrapyd',
+            schedule.schedule_spider(1, 'https://endpoint/api/',
                                      'FAKE_API_KEY', 'fake_spider')
 
     @mock.patch('shub.schedule.Connection', autospec=True)
     def test_schedule_spider_calls_project_schedule(self, mock_conn):
         mock_proj = mock_conn.return_value.__getitem__.return_value
-        schedule.schedule_spider(1, 'https://endpoint/api/scrapyd',
+        schedule.schedule_spider(1, 'https://endpoint/api/',
                                  'FAKE_API_KEY', 'fake_spider')
         self.assertTrue(mock_proj.schedule.called)
 

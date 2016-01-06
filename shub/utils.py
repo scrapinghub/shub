@@ -173,8 +173,7 @@ def _deploy_dependency_egg(project, endpoint, apikey):
     version = _get_dependency_version(name)
     egg_name, egg_path = _get_egg_info(name)
 
-    # XXX: Should endpoint point to /api/ instead of /api/scrapyd/ by default?
-    url = urljoin(endpoint, '../eggs/add.json')
+    url = urljoin(endpoint, 'eggs/add.json')
     data = {'project': project, 'name': name, 'version': version}
     files = {'egg': (egg_name, open(egg_path, 'rb'))}
     auth = (apikey, '')
@@ -313,6 +312,9 @@ def get_scrapycfg_targets(cfgfiles=None):
             t = baset.copy()
             t.update(cfg.items(x))
             targets[x[7:]] = t
+    for t in targets.values():
+        if t.get('url', "").endswith('scrapyd/'):
+            t['url'] = t['url'][:-8]
     return targets
 
 
