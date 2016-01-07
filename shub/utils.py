@@ -331,7 +331,7 @@ def job_live(job, refresh_meta_after=60):
     return job.metadata['state'] in ('pending', 'running')
 
 
-def job_resource_iter(job, iter_func, follow=True, key_func=None):
+def job_resource_iter(job, iter_func, follow=True, key_func=None, tail_size=None):
     """
     Given a python-hubstorage job and resource generator (e.g.
     job.items.iter_json), return a generator that periodically checks the job
@@ -345,19 +345,26 @@ def job_resource_iter(job, iter_func, follow=True, key_func=None):
     As a handy shortcut, iter_func will be iterated through only once if
     `follow` is set to `False`.
     """
+    def iterate(tail_size=None):
+        last_items = deque(maxlen=tail_size)
+        for item in iter_func(startafter=getattr(iterate, 'last_item_key', None)):
+            if tail_size:
+                last_items.append(item)
+            else:
+                yield item
+            if follow:
+                iterate.last_item_key = key_func(item)
+        for item in last_items:
+            yield item
+
     if not job_live(job):
         follow = False
-    if not follow:
-        for item in iter_func():
-            yield item
-        return
-    last_item_key = None
-    key_func = key_func or (lambda item: json.loads(item)['_key'])
+
     while True:
-        for item in iter_func(startafter=last_item_key):
+        for item in iterate(tail_size):
             yield item
-            last_item_key = key_func(item)
-        if not job_live(job):
+        tail_size = None # tail works only for the first iteration
+        if not follow or not job_live(job):
             break
         # Workers only upload data to hubstorage every 15 seconds
         time.sleep(15)

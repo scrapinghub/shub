@@ -36,10 +36,11 @@ SHORT_HELP = "Fetch log from Scrapy Cloud"
 @click.argument('job_id')
 @click.option('-f', '--follow', help='output new log entries as they are '
               'produced', is_flag=True)
-def cli(job_id, follow):
+@click.option('--tail', help='outputs only the last `tail` log entries', type=int)
+def cli(job_id, follow, tail):
     job = get_job(job_id)
     for item in job_resource_iter(job, job.logs.iter_values, follow=follow,
-                                  key_func=lambda item: item['_key']):
+                                  key_func=lambda item: item['_key'], tail_size=tail):
         click.echo(
             "{} {} {}".format(
                 datetime.utcfromtimestamp(item['time']/1000),
