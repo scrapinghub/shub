@@ -126,7 +126,7 @@ class UtilsTest(unittest.TestCase):
 
     @patch('shub.utils.time.sleep')
     def test_job_resource_iter(self, mock_sleep):
-        job = MagicMock()
+        job = MagicMock(spec=['metadata'])
         job.metadata = {'state': 'running'}
 
         def magic_iter(*args, **kwargs):
