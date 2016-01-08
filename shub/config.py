@@ -54,23 +54,41 @@ class ShubConfig(object):
                 "colon?" % filename
             )
 
-    def _load_scrapycfg(self, sources):
+    def _load_scrapycfg_target(self, tname, t):
+        default_endpoint = ('url' not in t or
+                            t['url'] == self.endpoints['default'])
+        default_user = ('username' not in t or
+                        t['username'] == self.apikeys.get('default'))
+        if 'project' in t:
+            if tname == 'default' or (default_endpoint and default_user):
+                prefix = ''
+            else:
+                prefix = tname + '/'
+            self.projects[tname] = prefix + t['project']
+        if not default_endpoint:
+            self.endpoints[tname] = t['url']
+        if not default_user or (not default_endpoint and 'username' in t):
+            self.apikeys[tname] = t['username']
+        if 'version' in t:
+            self.version = t['version']
+
+    def load_scrapycfg(self, sources):
         """Load configuration from a list of scrapy.cfg-like sources."""
         targets = get_scrapycfg_targets(sources)
+        self._load_scrapycfg_target('default', targets['default'])
+        del targets['default']
         for tname, t in six.iteritems(targets):
-            if 'project' in t:
-                prefix = '' if tname == 'default' else tname + '/'
-                self.projects.update({tname: prefix + t['project']})
-            if 'url' in t:
-                self.endpoints.update({tname: t['url']})
-            if 'username' in t:
-                self.apikeys.update({tname: t['username']})
-            if 'version' in t:
-                self.version = t['version']
+            self._load_scrapycfg_target(tname, t)
 
     def save(self, path=None):
         with update_config(path) as yml:
             yml['projects'] = self.projects
+            # Write "123" instead of "'123'"
+            for target, project in yml['projects'].iteritems():
+                try:
+                    yml['projects'][target] = int(project)
+                except Exception:
+                    pass
             yml['endpoints'] = self.endpoints
             yml['apikeys'] = self.apikeys
             yml['version'] = self.version
@@ -119,6 +137,8 @@ class ShubConfig(object):
         try:
             return self.endpoints[endpoint]
         except KeyError:
+            if endpoint in self.apikeys:
+                return self.endpoints['default']
             raise NotFoundException("Could not find endpoint %s. Please define"
                                     " it in your scrapinghub.yml." % endpoint)
 
@@ -190,7 +210,7 @@ Happy scraping!
 
 def _migrate_to_global_scrapinghub_yml():
     conf = ShubConfig()
-    conf._load_scrapycfg(get_sources(use_closest=False))
+    conf.load_scrapycfg(get_sources(use_closest=False))
     try:
         info = netrc.netrc(NETRC_PATH)
         netrc_key, _, _ = info.authenticators("scrapinghub.com")
@@ -234,12 +254,12 @@ def _migrate_and_load_scrapy_cfg(conf):
     if targets == get_scrapycfg_targets():
         # No deploy configuration in scrapy.cfg
         return
-    conf._load_scrapycfg([closest_scrapycfg])
+    conf.load_scrapycfg([closest_scrapycfg])
     # Migrate to scrapinghub.yml
     closest_sh_yml = os.path.join(os.path.dirname(closest_scrapycfg),
                                   'scrapinghub.yml')
     temp_conf = ShubConfig()
-    temp_conf._load_scrapycfg([closest_scrapycfg])
+    temp_conf.load_scrapycfg([closest_scrapycfg])
     try:
         temp_conf.save(closest_sh_yml)
     except Exception:
@@ -276,6 +296,7 @@ def update_config(conf_path=None):
     comments.
     """
     conf_path = conf_path or GLOBAL_SCRAPINGHUB_YML_PATH
+    dumper = yaml.RoundTripDumper
     try:
         with open(conf_path, 'r') as f:
             conf = yaml.load(f, yaml.RoundTripLoader) or {}
@@ -283,6 +304,8 @@ def update_config(conf_path=None):
         if e.errno != 2:
             raise
         conf = {}
+        # Use alphabetic order when creating files
+        dumper = yaml.Dumper
     # Code inside context manager is executed after this yield
     yield conf
     # Avoid writing "key: {}"
@@ -292,8 +315,7 @@ def update_config(conf_path=None):
     with open(conf_path, 'w') as f:
         # Avoid writing "{}"
         if conf:
-            yaml.dump(conf, f, default_flow_style=False,
-                      Dumper=yaml.RoundTripDumper)
+            yaml.dump(conf, f, default_flow_style=False, Dumper=dumper)
 
 
 def get_target(target, auth_required=True):

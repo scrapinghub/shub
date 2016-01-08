@@ -21,12 +21,14 @@ VALID_YAML_CFG = """
     projects:
         shproj: 123
         externalproj: external/123
+        notmeproj: otheruser/123
         invalid: 50a
         invalid2: 123/external
     endpoints:
         external: ext_endpoint
     apikeys:
         default: key
+        otheruser: otherkey
 """
 
 
@@ -49,13 +51,14 @@ class ShubConfigTest(unittest.TestCase):
         projects = {
             'shproj': 123,
             'externalproj': 'external/123',
+            'notmeproj': 'otheruser/123',
             'invalid': '50a',
             'invalid2': '123/external',
         }
         self.assertEqual(projects, self.conf.projects)
         endpoints = {'external': 'ext_endpoint'}
         self.assertDictContainsSubset(endpoints, self.conf.endpoints)
-        apikeys = {'default': 'key'}
+        apikeys = {'default': 'key', 'otheruser': 'otherkey'}
         self.assertEqual(apikeys, self.conf.apikeys)
 
     def test_load_partial(self):
@@ -106,6 +109,93 @@ class ShubConfigTest(unittest.TestCase):
         shutil.rmtree(tmpdir)
         self.assertEqual({'external': 'ext_endpoint'}, conf.apikeys)
 
+    def test_load_scrapycfg(self):
+        tmpdir = tempfile.mkdtemp()
+        tmpfilepath = os.path.join(tmpdir, 'scrapy.cfg')
+
+        def _get_conf(scrapycfg_default_target):
+            with open(tmpfilepath, 'w') as f:
+                f.write(textwrap.dedent(scrapycfg_default_target))
+                f.write(textwrap.dedent(
+                    """
+                    [deploy:prod]
+                    project = 222
+
+                    [deploy:otheruser]
+                    project = 333
+                    username = otherkey
+
+                    [deploy:otherurl]
+                    project = 444
+                    url = http://dash.scrapinghub.com/api/scrapyd/
+
+                    [deploy:external]
+                    project = 555
+                    url = external_endpoint
+                    username = externalkey
+                    """
+                ))
+            conf = ShubConfig()
+            conf.load_scrapycfg([tmpfilepath])
+            return conf
+
+        expected_projects = {
+            'prod': '222',
+            'otheruser': 'otheruser/333',
+            'otherurl': 'otherurl/444',
+            'external': 'external/555',
+        }
+        expected_endpoints = {
+            'default': ShubConfig.DEFAULT_ENDPOINT,
+            'external': 'external_endpoint',
+            'otherurl': 'http://dash.scrapinghub.com/api/scrapyd/'
+        }
+        expected_apikeys = {
+            'otheruser': 'otherkey',
+            'external': 'externalkey',
+        }
+
+        # Default with project
+        conf = _get_conf(
+            """
+            [deploy]
+            project = 111
+            """
+        )
+        expected_projects['default'] = '111'
+        self.assertEqual(conf.projects, expected_projects)
+        self.assertEqual(conf.endpoints, expected_endpoints)
+        self.assertEqual(conf.apikeys, expected_apikeys)
+
+        # Default with URL
+        conf = _get_conf(
+            """
+            [deploy]
+            url = http://default_url
+            """
+        )
+        del expected_projects['default']
+        expected_endpoints['default'] = 'http://default_url'
+        self.assertEqual(conf.projects, expected_projects)
+        self.assertEqual(conf.endpoints, expected_endpoints)
+        self.assertEqual(conf.apikeys, expected_apikeys)
+
+        # Default with key
+        conf = _get_conf(
+            """
+            [deploy]
+            username = key
+            """
+        )
+        expected_endpoints['default'] = ShubConfig.DEFAULT_ENDPOINT
+        expected_apikeys['default'] = 'key'
+        expected_apikeys['otherurl'] = 'key'
+        self.assertEqual(conf.projects, expected_projects)
+        self.assertEqual(conf.endpoints, expected_endpoints)
+        self.assertEqual(conf.apikeys, expected_apikeys)
+
+        shutil.rmtree(tmpdir)
+
     def test_save(self):
         tmpdir = tempfile.mkdtemp()
         tmpfilepath = os.path.join(tmpdir, 'saved_conf.yml')
@@ -152,21 +242,27 @@ class ShubConfigTest(unittest.TestCase):
     def test_get_project_id(self):
         self.assertEqual(self.conf.get_project_id('shproj'), 123)
         self.assertEqual(self.conf.get_project_id('externalproj'), 123)
+        self.assertEqual(self.conf.get_project_id('notmeproj'), 123)
 
     def test_get_endpoint(self):
         self.assertEqual(
             self.conf.get_endpoint('shproj'),
-            ShubConfig().endpoints['default'],
+            ShubConfig.DEFAULT_ENDPOINT,
         )
         self.assertEqual(
             self.conf.get_endpoint('externalproj'),
             'ext_endpoint',
+        )
+        self.assertEqual(
+            self.conf.get_endpoint('notmeproj'),
+            ShubConfig.DEFAULT_ENDPOINT,
         )
         with self.assertRaises(NotFoundException):
             self.conf.get_endpoint('nonexisting_ep/33')
 
     def test_get_apikey(self):
         self.assertEqual(self.conf.get_apikey('shproj'), 'key')
+        self.assertEqual(self.conf.get_apikey('notmeproj'), 'otherkey')
         with self.assertRaises(MissingAuthException):
             self.conf.get_apikey('externalproj', required=True)
         self.assertEqual(
@@ -333,6 +429,14 @@ class LoadShubConfigTest(unittest.TestCase):
                 conf.get_target('ext2'),
                 (333, 'ext2_endpoint/', 'ext2_key'),
             )
+            self.assertEqual(
+                conf.get_target('ext3'),
+                (444, 'scrapycfg_endpoint', 'key'),
+            )
+            self.assertEqual(
+                conf.get_target('ext4'),
+                (555, 'scrapycfg_endpoint', 'ext4_key'),
+            )
             self.assertEqual(conf.get_version(), 'ext2_ver')
         scrapycfg = """
             [deploy]
@@ -344,6 +448,13 @@ class LoadShubConfigTest(unittest.TestCase):
             project = 333
             username = ext2_key
             version = ext2_ver
+
+            [deploy:ext3]
+            project = 444
+
+            [deploy:ext4]
+            project = 555
+            username = ext4_key
         """
         with open(self.localscrapycfgpath, 'w') as f:
             f.write(textwrap.dedent(scrapycfg))
