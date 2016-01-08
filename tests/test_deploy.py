@@ -7,8 +7,9 @@ from click.testing import CliRunner
 from mock import patch
 
 from shub import deploy
+from shub.exceptions import NotFoundException
 
-from .utils import mock_conf
+from .utils import AssertInvokeRaisesMixin, mock_conf
 
 
 VALID_SCRAPY_CFG = """
@@ -17,7 +18,7 @@ default = project.settings
 """
 
 
-class DeployTest(unittest.TestCase):
+class DeployTest(AssertInvokeRaisesMixin, unittest.TestCase):
 
     def setUp(self):
         self.runner = CliRunner()
@@ -30,8 +31,7 @@ class DeployTest(unittest.TestCase):
     @patch('shub.deploy.make_deploy_request')
     def test_detect_scrapy_project(self, mock_deploy_req):
         with self.runner.isolated_filesystem():
-            result = self.runner.invoke(deploy.cli)
-            self.assertEqual(1, result.exit_code)
+            self.assertInvokeRaises(NotFoundException, deploy.cli)
             self._make_project()
             result = self.runner.invoke(deploy.cli)
             self.assertEqual(0, result.exit_code)
