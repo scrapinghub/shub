@@ -1,13 +1,16 @@
 language: python
 python: 2.7
 sudo: false
-env:
-- TOXENV=py27
-- TOXENV=freeze
+matrix:
+  include:
+    - os: osx
+      # Using "generic" because osx in Travis doesn't support python
+      language: generic
 install:
 - "./.travis-workarounds.sh"
+- '[ "$TRAVIS_OS_NAME" != osx ] || source ~/virtualenv/python2.7/bin/activate'
 - pip install -U tox twine wheel
-script: tox
+script: tox -e py27,freeze
 deploy:
   provider: pypi
   distributions: sdist bdist_wheel
@@ -18,4 +21,4 @@ deploy:
     tags: true
     all_branches: true
     repo: scrapinghub/shub
-    condition: "$TOXENV == py27"
+    condition: "$TRAVIS_OS_NAME == linux"
