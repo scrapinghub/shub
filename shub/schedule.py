@@ -54,7 +54,7 @@ def cli(spider, argument, set):
     job_key = schedule_spider(project, endpoint, apikey, spider, argument, set)
     watch_url = urljoin(
         endpoint,
-        '../../p/{}/job/{}/{}'.format(*job_key.split('/')),
+        '../p/{}/job/{}/{}'.format(*job_key.split('/')),
     )
     short_key = job_key.split('/', 1)[1] if target == 'default' else job_key
     click.echo("Spider {} scheduled, job ID: {}".format(spider, job_key))
@@ -68,7 +68,7 @@ def cli(spider, argument, set):
 
 def schedule_spider(project, endpoint, apikey, spider, arguments=(),
                     settings=()):
-    conn = Connection(apikey, url=urljoin(endpoint, '..'))
+    conn = Connection(apikey, url=endpoint)
     try:
         return conn[project].schedule(
             spider,

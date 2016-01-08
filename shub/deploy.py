@@ -116,7 +116,7 @@ def _url(endpoint, action):
 def _upload_egg(endpoint, eggpath, project, version, auth, verbose, keep_log):
     data = {'project': project, 'version': version}
     files = {'egg': ('project.egg', open(eggpath, 'rb'))}
-    url = _url(endpoint, 'addversion.json')
+    url = _url(endpoint, 'scrapyd/addversion.json')
     click.echo('Deploying to Scrapy Cloud project "%s"' % project)
     return make_deploy_request(url, data, files, auth, verbose, keep_log)
 

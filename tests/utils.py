@@ -28,7 +28,7 @@ def mock_conf(testcase, target=None, attr=None, conf=None):
             'vagrant': 'vagrant/3',
         })
         conf.endpoints.update({
-            'vagrant': 'https://vagrant_ep/api/scrapyd/',
+            'vagrant': 'https://vagrant_ep/api/',
         })
         conf.apikeys.update({
             'default': 32 * '1',
