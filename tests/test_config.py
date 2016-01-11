@@ -148,7 +148,7 @@ class ShubConfigTest(unittest.TestCase):
         expected_endpoints = {
             'default': ShubConfig.DEFAULT_ENDPOINT,
             'external': 'external_endpoint',
-            'otherurl': 'http://dash.scrapinghub.com/api/scrapyd/'
+            'otherurl': 'http://dash.scrapinghub.com/api/'
         }
         expected_apikeys = {
             'otheruser': 'otherkey',
@@ -431,11 +431,11 @@ class LoadShubConfigTest(unittest.TestCase):
             )
             self.assertEqual(
                 conf.get_target('ext3'),
-                (444, 'scrapycfg_endpoint', 'key'),
+                (333, 'scrapycfg_endpoint/', 'key'),
             )
             self.assertEqual(
                 conf.get_target('ext4'),
-                (555, 'scrapycfg_endpoint', 'ext4_key'),
+                (444, 'scrapycfg_endpoint/', 'ext4_key'),
             )
             self.assertEqual(conf.get_version(), 'ext2_ver')
         scrapycfg = """
@@ -450,10 +450,10 @@ class LoadShubConfigTest(unittest.TestCase):
             version = ext2_ver
 
             [deploy:ext3]
-            project = 444
+            project = 333
 
             [deploy:ext4]
-            project = 555
+            project = 444
             username = ext4_key
         """
         with open(self.localscrapycfgpath, 'w') as f:
