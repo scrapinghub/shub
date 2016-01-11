@@ -258,7 +258,7 @@ It is possible to configure different API endpoints::
     projects:
       dev: vagrant/3
     endpoints:
-      vagrant: http://vagrant:3333/api/scrapyd/
+      vagrant: http://vagrant:3333/api/
     apikeys:  # populated manually or via shub login
       default: 0bbf4f0f691e0d9378ae00ca7bcf7f0c
       vagrant: a1aeecc4cd52744730b1ea6cd3e8412a
