@@ -175,11 +175,14 @@ def _deploy_dependency_egg(project, endpoint, apikey):
 
     url = urljoin(endpoint, 'eggs/add.json')
     data = {'project': project, 'name': name, 'version': version}
-    files = {'egg': (egg_name, open(egg_path, 'rb'))}
     auth = (apikey, '')
 
     click.echo('Deploying dependency to Scrapy Cloud project "%s"' % project)
-    make_deploy_request(url, data, files, auth, False, False)
+
+    with open(egg_path, 'rb') as egg_fp:
+        files = {'egg': (egg_name, egg_fp)}
+        make_deploy_request(url, data, files, auth, False, False)
+
     success = "Deployed eggs list at: https://dash.scrapinghub.com/p/%s/eggs"
     click.echo(success % project)
 
