@@ -6,10 +6,17 @@ matrix:
     - os: osx
       # Using "generic" because osx in Travis doesn't support python
       language: generic
+
+branches:
+  only:
+    - master
+    - /^v\d+\.\d+$/
+
 install:
-- "./.travis-workarounds.sh"
-- '[ "$TRAVIS_OS_NAME" != osx ] || source ~/virtualenv/python2.7/bin/activate'
-- pip install -U tox twine wheel
+  - "./.travis-workarounds.sh"
+  - '[ "$TRAVIS_OS_NAME" != osx ] || source ~/virtualenv/python2.7/bin/activate'
+  - pip install -U tox twine wheel
+
 script: tox -e py27,freeze
 deploy:
   provider: pypi
