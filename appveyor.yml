@@ -1,5 +1,9 @@
-
 version: '{branch}-{build}'
+
+branches:
+  only:
+    - master
+    - /^v\d+\.\d+$/
 
 install:
   - "SET PATH=C:\\Python27;C:\\Python27\\Scripts;%PATH%"
