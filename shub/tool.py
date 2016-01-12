@@ -3,6 +3,7 @@ import importlib
 import click
 
 import shub
+from shub.utils import update_available
 
 
 HELP = """
@@ -23,7 +24,10 @@ For usage and help on a specific command, run it with a --help flag, e.g.:
 @click.group(help=HELP, short_help=SHORT_HELP, epilog=EPILOG)
 @click.version_option(shub.__version__)
 def cli():
-    pass
+    update_url = update_available()
+    if update_url:
+        click.echo("INFO: A newer version of shub is available. Update "
+                   "via pip or get it at {}".format(update_url),  err=True)
 
 commands = [
     "deploy",

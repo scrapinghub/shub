@@ -2,6 +2,8 @@
 # coding=utf-8
 
 
+import os
+import stat
 import unittest
 
 from mock import MagicMock, patch
@@ -164,6 +166,78 @@ class UtilsTest(unittest.TestCase):
         magic_iter.stage = 0
         job.metadata = {'state': 'finished'}
         self.assertEqual(jri_result(True), [1, 2, 3])
+
+    @patch('shub.utils.requests.get', autospec=True)
+    def test_latest_github_release(self, mock_get):
+        with self.runner.isolated_filesystem():
+            mock_get.return_value.json.return_value = {'key': 'value'}
+            self.assertDictContainsSubset(
+                {'key': 'value'},
+                utils.latest_github_release(cache='./cache.txt'),
+            )
+            mock_get.return_value.json.return_value = {'key': 'newvalue'}
+            self.assertDictContainsSubset(
+                {'key': 'value'},
+                utils.latest_github_release(cache='./cache.txt'),
+            )
+            self.assertDictContainsSubset(
+                {'key': 'newvalue'},
+                utils.latest_github_release(force_update=True,
+                                            cache='./cache.txt'),
+            )
+            # Garbage in cache
+            mock_get.return_value.json.return_value = {'key': 'value'}
+            with open('./cache.txt', 'w') as f:
+                f.write('abc')
+            self.assertDictContainsSubset(
+                {'key': 'value'},
+                utils.latest_github_release(cache='./cache.txt'),
+            )
+            mock_get.return_value.json.return_value = {'key': 'newvalue'}
+            self.assertDictContainsSubset(
+                {'key': 'value'},
+                utils.latest_github_release(cache='./cache.txt'),
+            )
+            # Readonly cache file
+            mock_get.return_value.json.return_value = {'key': 'value'}
+            with open('./cache.txt', 'w') as f:
+                f.write('abc')
+            os.chmod('./cache.txt', stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
+            self.assertDictContainsSubset(
+                {'key': 'value'},
+                utils.latest_github_release(cache='./cache.txt'),
+            )
+            mock_get.return_value.json.return_value = {'key': 'newvalue'}
+            self.assertDictContainsSubset(
+                {'key': 'newvalue'},
+                utils.latest_github_release(cache='./cache.txt'),
+            )
+            with open('./cache.txt', 'r') as f:
+                self.assertEqual(f.read(), 'abc')
+
+    @patch('shub.utils.latest_github_release', autospec=True)
+    @patch('shub.utils.shub.__version__', new='1.5.0')
+    def test_update_available(self, mock_lgr):
+        class MockException(Exception):
+            pass
+        mock_lgr.return_value = {'name': 'v1.4.0', 'html_url': 'link'}
+        self.assertIsNone(utils.update_available())
+        mock_lgr.return_value['name'] = 'v1.5.0'
+        self.assertIsNone(utils.update_available())
+        mock_lgr.return_value['name'] = 'v1.5.1'
+        self.assertEqual(utils.update_available(), 'link')
+        mock_lgr.return_value['name'] = 'v1.6.1'
+        self.assertEqual(utils.update_available(), 'link')
+        mock_lgr.return_value['name'] = 'v2.0.0'
+        self.assertEqual(utils.update_available(), 'link')
+        mock_lgr.return_value = {'error': 'unavailable'}
+        self.assertIsNone(utils.update_available())
+        mock_lgr.return_value = None
+        self.assertIsNone(utils.update_available())
+        mock_lgr.side_effect = MockException
+        self.assertIsNone(utils.update_available())
+        with self.assertRaises(MockException):
+            utils.update_available(silent_fail=False)
 
 
 if __name__ == '__main__':

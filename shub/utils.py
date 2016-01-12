@@ -1,4 +1,5 @@
 from __future__ import unicode_literals, absolute_import
+import datetime
 import errno
 import json
 import os
@@ -10,6 +11,7 @@ import warnings
 
 from collections import deque
 from ConfigParser import SafeConfigParser
+from distutils.version import StrictVersion
 from glob import glob
 from importlib import import_module
 from os import devnull
@@ -23,6 +25,7 @@ import requests
 
 from hubstorage import HubstorageClient
 
+import shub
 from shub.exceptions import (BadParameterException, InvalidAuthException,
                              NotFoundException, RemoteErrorException)
 
@@ -366,3 +369,59 @@ def job_resource_iter(job, iter_func, follow=True, key_func=None):
             break
         # Workers only upload data to hubstorage every 15 seconds
         time.sleep(15)
+
+
+def latest_github_release(force_update=False, timeout=1., cache=None):
+    """
+    Get GitHub data for latest shub release. If it was already requested today,
+    return a cached version unless ``force_update`` is set to ``True``.
+    """
+    REQ_URL = "https://api.github.com/repos/scrapinghub/shub/releases/latest"
+    cache = cache or os.path.join(click.get_app_dir('scrapinghub'),
+                                  'last_release.txt')
+    today = datetime.date.today().toordinal()
+    if not force_update and os.path.isfile(cache):
+        with open(cache, 'r') as f:
+            try:
+                release_data = json.load(f)
+            except Exception:
+                release_data = {}
+        # Check for equality (and not smaller or equal) so we don't get thrown
+        # off track if the clock was ever misconfigured and a future date was
+        # saved
+        if release_data.get('_shub_last_update', 0) == today:
+            return release_data
+    release_data = requests.get(REQ_URL, timeout=timeout).json()
+    release_data['_shub_last_update'] = today
+    try:
+        shubdir = os.path.dirname(cache)
+        try:
+            os.makedirs(shubdir)
+        except OSError:
+            if not os.path.isdir(shubdir):
+                raise
+        with open(cache, 'w') as f:
+            json.dump(release_data, f)
+    except Exception:
+        pass
+    return release_data
+
+
+def update_available(silent_fail=True):
+    """
+    Check whether most recent GitHub release of shub is newer than the shub
+    version in use. If a newer version is available, return a link to the
+    release on GitHub, otherwise return ``None``.
+    """
+    try:
+        release_data = latest_github_release()
+        latest_rls = StrictVersion(release_data['name'].lstrip('v'))
+        used_rls = StrictVersion(shub.__version__)
+        if used_rls >= latest_rls:
+            return None
+        return release_data['html_url']
+    except Exception:
+        if not silent_fail:
+            raise
+        # Don't let this interfere with shub usage
+        return None
