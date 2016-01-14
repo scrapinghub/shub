@@ -4,7 +4,7 @@ import requests
 from six.moves import input
 from six.moves.urllib.parse import urljoin
 
-from shub.config import load_shub_config, ShubConfig, update_config
+from shub.config import load_shub_config, ShubConfig, update_yaml_dict
 from shub.exceptions import AlreadyLoggedInException
 
 
@@ -31,7 +31,7 @@ def cli():
         suggestion=conf.apikeys.get('default'),
         endpoint=global_conf.endpoints.get('default'),
     )
-    with update_config() as conf:
+    with update_yaml_dict() as conf:
         conf.setdefault('apikeys', {})
         conf['apikeys']['default'] = key
 

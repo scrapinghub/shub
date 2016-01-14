@@ -28,8 +28,8 @@ class LogoutTestCase(unittest.TestCase):
             conf = config.load_shub_config()
             self.assertNotIn('default', conf.apikeys)
 
-    @mock.patch('shub.logout.update_config')
-    def test_fail_on_not_logged_in(self, mock_uc):
+    @mock.patch('shub.logout.update_yaml_dict')
+    def test_fail_on_not_logged_in(self, mock_uyd):
         with self.runner.isolated_filesystem():
             self.runner.invoke(logout.cli)
-            self.assertFalse(mock_uc.called)
+            self.assertFalse(mock_uyd.called)
