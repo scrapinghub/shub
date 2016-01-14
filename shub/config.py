@@ -182,7 +182,7 @@ class ShubConfig(object):
 
 MIGRATION_BANNER = """
 -------------------------------------------------------------------------------
-Welcome to shub v1.6!
+Welcome to shub version 2!
 
 This release contains major updates to how shub is configured, as well as
 updates to the commands and shub's look & feel.
