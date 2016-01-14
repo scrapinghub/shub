@@ -4,6 +4,7 @@
 
 import os
 import stat
+import textwrap
 import unittest
 
 from mock import MagicMock, patch
@@ -21,6 +22,28 @@ class UtilsTest(unittest.TestCase):
     def setUp(self):
         self.runner = CliRunner()
 
+    @patch('shub.utils.pwd_git_version', return_value='ver_GIT')
+    @patch('shub.utils.pwd_hg_version', return_value='ver_HG')
+    @patch('shub.utils.pwd_bzr_version', return_value='ver_BZR')
+    @patch('shub.utils.time.time', return_value=101)
+    def test_pwd_version(self, mock_time, mock_bzr, mock_hg, mock_git):
+        self.assertEqual(utils.pwd_version(), 'ver_GIT')
+        mock_git.return_value = None
+        self.assertEqual(utils.pwd_version(), 'ver_HG')
+        mock_hg.return_value = None
+        self.assertEqual(utils.pwd_version(), 'ver_BZR')
+        mock_bzr.return_value = None
+        with self.runner.isolated_filesystem():
+            with open('setup.py', 'w') as f:
+                f.write("from setuptools import setup\n")
+                f.write("setup(version='1.0')")
+            self.assertEqual(utils.pwd_version(), '1.0')
+            os.mkdir('subdir')
+            os.chdir('subdir')
+            self.assertEqual(utils.pwd_version(), '101')
+            open('../scrapy.cfg', 'w').close()
+            self.assertEqual(utils.pwd_version(), '1.0')
+
     def test_dependency_version_from_setup_is_parsed_properly(self):
         def check(cmd):
             if cmd == 'python setup.py --version':
@@ -32,6 +55,7 @@ class UtilsTest(unittest.TestCase):
                          '\n3.4.4')
 
         with self.runner.isolated_filesystem():
+            open('setup.py', 'w').close()
             with patch('shub.utils.run', side_effect=check) as mocked_run:
                 # given
                 mocked_run.return_value = setup_version

@@ -11,7 +11,7 @@ from shub.exceptions import (BadParameterException, BadConfigException,
                              ConfigParseException, MissingAuthException,
                              NotFoundException)
 from shub.utils import (closest_file, get_scrapycfg_targets, get_sources,
-                        pwd_hg_version, pwd_git_version)
+                        pwd_hg_version, pwd_git_version, pwd_version)
 
 
 GLOBAL_SCRAPINGHUB_YML_PATH = os.path.expanduser("~/.scrapinghub.yml")
@@ -156,20 +156,14 @@ class ShubConfig(object):
             raise MissingAuthException(msg)
 
     def get_version(self):
-        if self.version == 'AUTO':
-            ver = pwd_git_version()
-            if not ver:
-                ver = pwd_hg_version()
-            if not ver:
-                ver = str(int(time.time()))
-            return ver
+        if not self.version or self.version == 'AUTO':
+            return pwd_version()
         elif self.version == 'GIT':
             return pwd_git_version()
         elif self.version == 'HG':
             return pwd_hg_version()
         elif self.version:
             return str(self.version)
-        return str(int(time.time()))
 
     def get_target(self, target, auth_required=True):
         """Return (project_id, endpoint, apikey) for given target."""
