@@ -2,12 +2,15 @@
 # coding=utf-8
 
 import unittest
+import os
+import textwrap
 
 from click.testing import CliRunner
 from mock import patch
 
 from shub import deploy
-from shub.exceptions import NotFoundException
+from shub.exceptions import (BadParameterException, InvalidAuthException,
+                             NotFoundException)
 
 from .utils import AssertInvokeRaisesMixin, mock_conf
 
@@ -67,6 +70,44 @@ class DeployTest(AssertInvokeRaisesMixin, unittest.TestCase):
         self.assertIn(self.conf.endpoints['vagrant'], url)
         self.assertEqual(data, {'project': 456, 'version': 'version'})
         self.assertEqual(auth, (self.conf.apikeys['vagrant'], ''))
+
+    @patch('shub.deploy.make_deploy_request')
+    @patch('shub.deploy._has_project_access')
+    def test_deploy_wizard(self, mock_project_access, mock_deploy_req):
+        with self.runner.isolated_filesystem():
+            self._make_project()
+            with patch('shub.deploy._deploy_wizard') as mock_wizard:
+                # Don't call when 'default' defined in the global conf
+                self.runner.invoke(deploy.cli)
+                self.assertFalse(mock_wizard.called)
+                del self.conf.projects['default']
+                # Don't call when non-default target was supplied
+                self.runner.invoke(deploy.cli, 'not-default')
+                self.assertFalse(mock_wizard.called)
+            # Wizard is live from here on
+            mock_project_access.return_value = False
+            self.assertInvokeRaises(InvalidAuthException, deploy.cli,
+                                    input='99\nn\n')
+            # Don't create scrapinghub.yml if not wished
+            mock_project_access.return_value = True
+            self.runner.invoke(deploy.cli, input='99\nn\n')
+            self.assertEqual(self.conf.projects['default'], 99)
+            self.assertFalse(os.path.exists('scrapinghub.yml'))
+            # Create scrapinghub.yml if wished
+            del self.conf.projects['default']
+            result = self.runner.invoke(deploy.cli, input='199\n\n')
+            self.assertEqual(self.conf.projects['default'], 199)
+            self.assertTrue(os.path.exists('scrapinghub.yml'))
+            # Don't prompt when there's any target defined in sh.yml
+            del self.conf.projects['default']
+            with open('scrapinghub.yml', 'w') as f:
+                f.write(textwrap.dedent(
+                    """
+                    projects:
+                      some: 123
+                    """
+                ))
+            self.assertInvokeRaises(BadParameterException, deploy.cli)
 
 
 if __name__ == '__main__':
