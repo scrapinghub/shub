@@ -11,7 +11,7 @@ import setuptools  # not used in code but needed in runtime, don't remove!
 _ = setuptools  # NOQA
 from scrapinghub import Connection, APIError
 
-from shub.config import load_shub_config, update_config
+from shub.config import load_shub_config, update_yaml_dict
 from shub.exceptions import (InvalidAuthException, NotFoundException,
                              RemoteErrorException)
 from shub.utils import (closest_file, get_config, inside_project,
@@ -192,7 +192,7 @@ def _deploy_wizard(conf, target='default'):
     conf.projects[target] = project
     if click.confirm("Save as default", default=True):
         try:
-            with update_config(closest_sh_yml) as conf_yml:
+            with update_yaml_dict(closest_sh_yml) as conf_yml:
                 conf_yml['projects'] = {'default': project}
         except Exception:
             click.echo(

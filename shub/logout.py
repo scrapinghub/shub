@@ -1,6 +1,6 @@
 import click
 
-from shub.config import load_shub_config, update_config
+from shub.config import load_shub_config, update_yaml_dict
 
 
 HELP = """
@@ -18,5 +18,5 @@ def cli():
         click.echo("You are not logged in.")
         return 0
 
-    with update_config() as conf:
+    with update_yaml_dict() as conf:
         del conf['apikeys']['default']
