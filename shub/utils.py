@@ -11,11 +11,10 @@ import warnings
 
 from collections import deque
 from ConfigParser import SafeConfigParser
+from distutils.spawn import find_executable
 from distutils.version import StrictVersion
 from glob import glob
 from importlib import import_module
-from os import devnull
-from os.path import isdir
 from tempfile import NamedTemporaryFile
 from six.moves.urllib.parse import urljoin
 from subprocess import Popen, PIPE, CalledProcessError
@@ -80,10 +79,9 @@ def _is_deploy_successful(last_logs):
     except Exception:
         pass
 
-# XXX: The next six should be refactored
 
 def get_cmd(cmd):
-    with open(devnull, 'wb') as null:
+    with open(os.devnull, 'wb') as null:
         return Popen(cmd, stdout=PIPE, stderr=null)
 
 
@@ -92,28 +90,67 @@ def get_cmd_output(cmd):
     return process.communicate()[0].decode(STDOUT_ENCODING)
 
 
+def pwd_version():
+    """
+    Try to find version information on whatever lives in the current directory
+    -- most commonly a Python package or Scrapy project -- by trying (in this
+    order):
+        - git commit/branch
+        - mercurial commit/branch
+        - bazaar commit/branch
+        - setup.py in this folder
+        - setup.py next to closest scrapy.cfg
+    If none of these work, fall back to the UNIX time.
+    """
+    ver = pwd_git_version()
+    if not ver:
+        ver = pwd_hg_version()
+    if not ver:
+        ver = pwd_bzr_version()
+    if not ver and os.path.isfile('setup.py'):
+        ver = _last_line_of(run('python setup.py --version'))
+    if not ver:
+        closest_scrapycfg = closest_file('scrapy.cfg')
+        if closest_scrapycfg:
+            setuppy = os.path.join(os.path.dirname(closest_scrapycfg),
+                                   'setup.py')
+            if os.path.isfile(setuppy):
+                ver = _last_line_of(run('python {} --version'.format(setuppy)))
+    if not ver:
+        ver = str(int(time.time()))
+    return ver
+
+
 def pwd_git_version():
-    process = get_cmd(['git', 'describe', '--always'])
+    git = find_executable('git')
+    if not git:
+        return None
+    process = get_cmd([git, 'describe', '--always'])
     commit_id = process.communicate()[0].decode(STDOUT_ENCODING).strip('\n')
     if process.wait() != 0:
-        commit_id = get_cmd_output(['git', 'rev-list', '--count', 'HEAD']).strip('\n')
-
+        commit_id = get_cmd_output([git, 'rev-list', '--count', 'HEAD']).strip('\n')
     if not commit_id:
         return None
-    branch = get_cmd_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD']).strip('\n')
+    branch = get_cmd_output([git, 'rev-parse', '--abbrev-ref', 'HEAD']).strip('\n')
     return '%s-%s' % (commit_id, branch)
 
 
 def pwd_hg_version():
-    commit_id = get_cmd_output(['hg', 'tip', '--template', '{rev}'])
+    hg = find_executable('hg')
+    if not hg:
+        return None
+    commit_id = get_cmd_output([hg, 'tip', '--template', '{rev}'])
     if not commit_id:
         return None
-    branch = get_cmd_output(['hg', 'branch']).strip('\n')
+    branch = get_cmd_output([hg, 'branch']).strip('\n')
     return 'r%s-%s' % (commit_id, branch)
 
 
 def pwd_bzr_version():
-    return '%s' % get_cmd_output(['bzr', 'revno']).strip()
+    bzr = find_executable('bzr')
+    if not bzr:
+        return None
+    return '%s' % get_cmd_output([bzr, 'revno']).strip()
 
 
 def run(cmd):
@@ -137,7 +174,7 @@ def decompress_egg_files():
 
 
 def build_and_deploy_eggs(project, endpoint, apikey):
-    egg_dirs = (f for f in glob('*') if isdir(f))
+    egg_dirs = (f for f in glob('*') if os.path.isdir(f))
 
     for egg_dir in egg_dirs:
         os.chdir(egg_dir)
@@ -200,15 +237,12 @@ def _get_dependency_name():
 
 
 def _get_dependency_version(name):
-    if isdir('.git'):
-        return pwd_git_version()
-    elif isdir('.hg'):
-        return pwd_hg_version()
-    elif isdir('.bzr'):
-        return pwd_bzr_version()
-
-    version = _last_line_of(run('python setup.py --version'))
-    return "%s-%s" % (name, version)
+    # XXX: Why is the name included in the version? Keeping it that way in case
+    #      there was a good reason behind it
+    if any(os.path.isdir(dirname) for dirname in ('.git', '.hg', '.bzr')):
+        return pwd_version()
+    else:
+        return "%s-%s" % (name, pwd_version())
 
 
 def _get_egg_info(name):

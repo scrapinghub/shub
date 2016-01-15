@@ -273,22 +273,18 @@ class ShubConfigTest(unittest.TestCase):
         self.conf.apikeys['default'] = 123
         self.assertEqual(self.conf.get_apikey('shproj'), '123')
 
+    @mock.patch('shub.config.pwd_version', return_value='ver_AUTO')
     @mock.patch('shub.config.pwd_git_version', return_value='ver_GIT')
     @mock.patch('shub.config.pwd_hg_version', return_value='ver_HG')
-    @mock.patch('shub.config.time.time', return_value=101)
-    def test_get_version(self, mock_time, mock_hg, mock_git):
+    def test_get_version(self, mock_hg, mock_git, mock_ver):
         def _assert_version(version, expected):
             self.conf.version = version
             self.assertEqual(self.conf.get_version(), expected)
         _assert_version('GIT', 'ver_GIT')
         _assert_version('HG', 'ver_HG')
         _assert_version('somestring', 'somestring')
-        _assert_version('', '101')
-        _assert_version('AUTO', 'ver_GIT')
-        mock_git.return_value = None
-        _assert_version('AUTO', 'ver_HG')
-        mock_hg.return_value = None
-        _assert_version('AUTO', '101')
+        _assert_version('', 'ver_AUTO')
+        _assert_version('AUTO', 'ver_AUTO')
 
 
 LOCAL_SCRAPINGHUB_YML = """
