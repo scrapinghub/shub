@@ -22,7 +22,8 @@ HELP = """
 Deploy the current folder's Scrapy project to Scrapy Cloud.
 
 If you do not supply `target`, the default target from scrapinghub.yml will be
-used. Otherwise, you can specify a numerical project ID:
+used. If you have no scrapinghub.yml, you will be guided through a short wizard
+to create one. You can also specify a numerical project ID:
 
     shub deploy 12345
 
