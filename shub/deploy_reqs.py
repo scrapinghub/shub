@@ -56,9 +56,11 @@ def _download_egg_files(eggs_dir, requirements_file):
 
     click.echo('Downloading eggs...')
     try:
-        pip_cmd = ("pip install -d {eggs_dir} -r {requirements_file}"
+        pip = utils.find_exe('pip')
+        pip_cmd = ("{pip} install -d {eggs_dir} -r {requirements_file}"
                    " --src {editable_src_dir} --no-deps --no-use-wheel")
-        click.echo(run(pip_cmd.format(eggs_dir=eggs_dir,
+        click.echo(run(pip_cmd.format(pip=pip,
+                                      eggs_dir=eggs_dir,
                                       editable_src_dir=editable_src_dir,
                                       requirements_file=requirements_file)))
     finally:
