@@ -81,7 +81,7 @@ class ShubConfig(object):
             self._load_scrapycfg_target(tname, t)
 
     def save(self, path=None):
-        with update_config(path) as yml:
+        with update_yaml_dict(path) as yml:
             yml['projects'] = self.projects
             # Write "123" instead of "'123'"
             for target, project in yml['projects'].iteritems():
@@ -176,7 +176,7 @@ class ShubConfig(object):
 
 MIGRATION_BANNER = """
 -------------------------------------------------------------------------------
-Welcome to shub v1.6!
+Welcome to shub version 2!
 
 This release contains major updates to how shub is configured, as well as
 updates to the commands and shub's look & feel.
@@ -284,7 +284,7 @@ def load_shub_config(load_global=True, load_local=True, load_env=True):
 
 
 @contextlib.contextmanager
-def update_config(conf_path=None):
+def update_yaml_dict(conf_path=None):
     """
     Context manager for updating a YAML file while preserving key ordering and
     comments.

@@ -11,7 +11,7 @@ import mock
 from click.testing import CliRunner
 
 from shub.config import (get_target, get_version, load_shub_config, ShubConfig,
-                         update_config)
+                         update_yaml_dict)
 from shub.exceptions import (BadParameterException, BadConfigException,
                              ConfigParseException, MissingAuthException,
                              NotFoundException)
@@ -469,7 +469,7 @@ class LoadShubConfigTest(unittest.TestCase):
 
 class ConfigHelpersTest(unittest.TestCase):
 
-    def test_update_config(self):
+    def test_update_yaml_dict(self):
         YAML_BEFORE = textwrap.dedent("""\
             z_first:
               unrelated: dict
@@ -491,7 +491,7 @@ class ConfigHelpersTest(unittest.TestCase):
         with runner.isolated_filesystem():
             with open('conf.yml', 'w') as f:
                 f.write(YAML_BEFORE)
-            with update_config('conf.yml') as conf:
+            with update_yaml_dict('conf.yml') as conf:
                 conf['a_second']['key1'] = 'newval1'
                 conf['a_second']['key3'] = 'val3'
             with open('conf.yml', 'r') as f:

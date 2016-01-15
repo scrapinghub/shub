@@ -9,18 +9,21 @@ from subprocess import check_call
 import click
 import setuptools  # not used in code but needed in runtime, don't remove!
 _ = setuptools  # NOQA
+from scrapinghub import Connection, APIError
 
-from shub.utils import closest_file, get_config, inside_project, retry_on_eintr
-from shub.config import load_shub_config
-from shub.exceptions import NotFoundException
-from shub.utils import make_deploy_request
+from shub.config import load_shub_config, update_yaml_dict
+from shub.exceptions import (InvalidAuthException, NotFoundException,
+                             RemoteErrorException)
+from shub.utils import (closest_file, get_config, inside_project,
+                        make_deploy_request, retry_on_eintr)
 
 
 HELP = """
 Deploy the current folder's Scrapy project to Scrapy Cloud.
 
 If you do not supply `target`, the default target from scrapinghub.yml will be
-used. Otherwise, you can specify a numerical project ID:
+used. If you have no scrapinghub.yml, you will be guided through a short wizard
+to create one. You can also specify a numerical project ID:
 
     shub deploy 12345
 
@@ -58,35 +61,41 @@ setup(
 """
 
 
+def list_targets(ctx, param, value):
+    if not value:
+        return
+    conf = load_shub_config()
+    for name in conf.projects:
+        click.echo(name)
+    ctx.exit()
+
+
 @click.command(help=HELP, short_help=SHORT_HELP)
 @click.argument("target", required=False, default="default")
+@click.option("-l", "--list-targets", help="list available targets",
+              is_flag=True, is_eager=True, expose_value=False,
+              callback=list_targets)
 @click.option("-V", "--version", help="the version to use for deploying")
-@click.option("-l", "--list-targets", help="list available targets", is_flag=True)
-@click.option("-d", "--debug", help="debug mode (do not remove build dir)", is_flag=True)
+@click.option("-d", "--debug", help="debug mode (do not remove build dir)",
+              is_flag=True)
 @click.option("--egg", help="deploy the given egg, instead of building one")
 @click.option("--build-egg", help="only build the given egg, don't deploy it")
-@click.option("-v", "--verbose", help="stream deploy logs to console", is_flag=True)
+@click.option("-v", "--verbose", help="stream deploy logs to console",
+              is_flag=True)
 @click.option("-k", "--keep-log", help="keep the deploy log", is_flag=True)
-def cli(target, version, list_targets, debug, egg, build_egg,
-        verbose, keep_log):
+def cli(target, version, debug, egg, build_egg, verbose, keep_log):
     if not inside_project():
         raise NotFoundException("No Scrapy project found in this location.")
-
-    conf = load_shub_config()
-
-    if list_targets:
-        for name in conf.projects:
-            click.echo(name)
-        return
-
     tmpdir = None
-
     try:
         if build_egg:
             egg, tmpdir = _build_egg()
             click.echo("Writing egg to %s" % build_egg)
             shutil.copyfile(egg, build_egg)
         else:
+            conf = load_shub_config()
+            if target == 'default' and target not in conf.projects:
+                _deploy_wizard(conf)
             project, endpoint, apikey = conf.get_target(target)
             version = version or conf.get_version()
             auth = (apikey, '')
@@ -100,7 +109,8 @@ def cli(target, version, list_targets, debug, egg, build_egg,
 
             _upload_egg(endpoint, egg, project, version, auth,
                         verbose, keep_log)
-            click.echo("Run your spiders at: https://dash.scrapinghub.com/p/%s/" % project)
+            click.echo("Run your spiders at: "
+                       "https://dash.scrapinghub.com/p/%s/" % project)
     finally:
         if tmpdir:
             if debug:
@@ -130,9 +140,11 @@ def _build_egg():
     d = tempfile.mkdtemp(prefix="shub-deploy-")
     o = open(os.path.join(d, "stdout"), "wb")
     e = open(os.path.join(d, "stderr"), "wb")
-    retry_on_eintr(check_call,
-                   [sys.executable, 'setup.py', 'clean', '-a', 'bdist_egg', '-d', d],
-                   stdout=o, stderr=e)
+    retry_on_eintr(
+        check_call,
+        [sys.executable, 'setup.py', 'clean', '-a', 'bdist_egg', '-d', d],
+        stdout=o, stderr=e,
+    )
     o.close()
     e.close()
     egg = glob.glob(os.path.join(d, '*.egg'))[0]
@@ -142,3 +154,54 @@ def _build_egg():
 def _create_default_setup_py(**kwargs):
     with open('setup.py', 'w') as f:
         f.write(_SETUP_PY_TEMPLATE % kwargs)
+
+
+def _has_project_access(project, endpoint, apikey):
+    conn = Connection(apikey, url=endpoint)
+    try:
+        return project in conn.project_ids()
+    except APIError as e:
+        if 'Authentication failed' in e.message:
+            raise InvalidAuthException
+        else:
+            raise RemoteErrorException(e.message)
+
+
+def _deploy_wizard(conf, target='default'):
+    """
+    Ask user for project ID, ensure they have access to that project, and save
+    it to given ``target`` in local ``scrapinghub.yml`` if desired.
+    """
+    closest_scrapycfg = closest_file('scrapy.cfg')
+    # Double-checking to make deploy_wizard() independent of cli()
+    if not closest_scrapycfg:
+        raise NotFoundException("No Scrapy project found in this location.")
+    closest_sh_yml = os.path.join(os.path.dirname(closest_scrapycfg),
+                                'scrapinghub.yml')
+    if os.path.isfile(closest_sh_yml):
+        return
+    # Get default endpoint and API key (meanwhile making sure the user is
+    # logged in)
+    endpoint, apikey = conf.get_endpoint(0), conf.get_apikey(0)
+    project = click.prompt("Target project ID", type=int)
+    if not _has_project_access(project, endpoint, apikey):
+        raise InvalidAuthException(
+            "The account you logged in to has no access to project {}. Please "
+            "double-check the project ID and make sure you logged in to the "
+            "correct acount.".format(project),
+        )
+    conf.projects[target] = project
+    if click.confirm("Save as default", default=True):
+        try:
+            with update_yaml_dict(closest_sh_yml) as conf_yml:
+                conf_yml['projects'] = {'default': project}
+        except Exception:
+            click.echo(
+                "There was an error while trying to write to scrapinghub.yml. "
+                "Could not save project {} as default.".format(project),
+            )
+        else:
+            click.echo(
+                "Project {} was set as default in scrapinghub.yml. You can "
+                "deploy to it via 'shub deploy' from now on.".format(project),
+            )
