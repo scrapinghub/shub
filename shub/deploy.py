@@ -14,7 +14,7 @@ from scrapinghub import Connection, APIError
 from shub.config import load_shub_config, update_yaml_dict
 from shub.exceptions import (InvalidAuthException, NotFoundException,
                              RemoteErrorException)
-from shub.utils import (closest_file, get_config, inside_project,
+from shub.utils import (closest_file, find_exe, get_config, inside_project,
                         make_deploy_request, retry_on_eintr)
 
 
@@ -132,6 +132,10 @@ def _upload_egg(endpoint, eggpath, project, version, auth, verbose, keep_log):
 
 
 def _build_egg():
+    if getattr(sys, 'frozen', False):
+        exe = find_exe('python')
+    else:
+        exe = sys.executable
     closest = closest_file('scrapy.cfg')
     os.chdir(os.path.dirname(closest))
     if not os.path.exists('setup.py'):
@@ -142,7 +146,7 @@ def _build_egg():
     e = open(os.path.join(d, "stderr"), "wb")
     retry_on_eintr(
         check_call,
-        [sys.executable, 'setup.py', 'clean', '-a', 'bdist_egg', '-d', d],
+        [exe, 'setup.py', 'clean', '-a', 'bdist_egg', '-d', d],
         stdout=o, stderr=e,
     )
     o.close()
@@ -177,7 +181,7 @@ def _deploy_wizard(conf, target='default'):
     if not closest_scrapycfg:
         raise NotFoundException("No Scrapy project found in this location.")
     closest_sh_yml = os.path.join(os.path.dirname(closest_scrapycfg),
-                                'scrapinghub.yml')
+                                  'scrapinghub.yml')
     if os.path.isfile(closest_sh_yml):
         return
     # Get default endpoint and API key (meanwhile making sure the user is

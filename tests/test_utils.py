@@ -4,7 +4,6 @@
 
 import os
 import stat
-import textwrap
 import unittest
 
 from mock import MagicMock, patch
@@ -21,6 +20,14 @@ class UtilsTest(unittest.TestCase):
 
     def setUp(self):
         self.runner = CliRunner()
+
+    @patch('shub.utils.find_executable')
+    def test_find_exe(self, mock_fe):
+        mock_fe.return_value = '/usr/bin/python'
+        self.assertEqual(utils.find_exe('python'), '/usr/bin/python')
+        mock_fe.return_value = None
+        with self.assertRaises(NotFoundException):
+            utils.find_exe('python')
 
     @patch('shub.utils.pwd_git_version', return_value='ver_GIT')
     @patch('shub.utils.pwd_hg_version', return_value='ver_HG')
