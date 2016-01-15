@@ -210,7 +210,7 @@ def build_and_deploy_egg(project, endpoint, apikey):
 
 def _deploy_dependency_egg(project, endpoint, apikey):
     name = _get_dependency_name()
-    version = _get_dependency_version(name)
+    version = pwd_version()
     egg_name, egg_path = _get_egg_info(name)
 
     url = urljoin(endpoint, 'eggs/add.json')
@@ -234,15 +234,6 @@ def _last_line_of(s):
 def _get_dependency_name():
     # In some cases, python setup.py --name returns more than one line, so we use the last one to get the name
     return _last_line_of(run('python setup.py --name'))
-
-
-def _get_dependency_version(name):
-    # XXX: Why is the name included in the version? Keeping it that way in case
-    #      there was a good reason behind it
-    if any(os.path.isdir(dirname) for dirname in ('.git', '.hg', '.bzr')):
-        return pwd_version()
-    else:
-        return "%s-%s" % (name, pwd_version())
 
 
 def _get_egg_info(name):
