@@ -38,31 +38,19 @@ class UtilsTest(unittest.TestCase):
                 f.write("from setuptools import setup\n")
                 f.write("setup(version='1.0')")
             self.assertEqual(utils.pwd_version(), '1.0')
+            long_setup_version = (
+                'Building lxml version 3.4.4.'
+                '\nBuilding without Cython.'
+                '\nUsing build configuration of libxslt 1.1.28'
+                '\n3.4.4'
+            )
+            with patch('shub.utils.run', return_value=long_setup_version):
+                self.assertEqual(utils.pwd_version(), '3.4.4')
             os.mkdir('subdir')
             os.chdir('subdir')
             self.assertEqual(utils.pwd_version(), '101')
             open('../scrapy.cfg', 'w').close()
             self.assertEqual(utils.pwd_version(), '1.0')
-
-    def test_dependency_version_from_setup_is_parsed_properly(self):
-        def check(cmd):
-            if cmd == 'python setup.py --version':
-                return setup_version
-
-        setup_version = ('Building lxml version 3.4.4.'
-                         '\nBuilding without Cython.'
-                         '\nUsing build configuration of libxslt 1.1.28'
-                         '\n3.4.4')
-
-        with self.runner.isolated_filesystem():
-            open('setup.py', 'w').close()
-            with patch('shub.utils.run', side_effect=check) as mocked_run:
-                # given
-                mocked_run.return_value = setup_version
-                # when
-                version = utils._get_dependency_version('lxml')
-                # then
-                self.assertEquals('lxml-3.4.4', version)
 
     def test_get_job_specs(self):
         conf = mock_conf(self)

@@ -42,7 +42,7 @@ class TestDeployEgg(unittest.TestCase):
         os.chdir(self.tmp_dir)
 
         data = self.call_main_and_check_request_data()
-        self.assertEqual('test_project-1.2.0', data['version'])
+        self.assertEqual('1.2.0', data['version'])
 
     def test_can_clone_a_git_repo_and_deploy_the_egg(self):
         self._unzip_git_repo_to(self.tmp_dir)
