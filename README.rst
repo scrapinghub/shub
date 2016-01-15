@@ -47,14 +47,13 @@ This will save your Scrapinghub API key to a file in your home directory
 with your Scrapinghub account.
 
 Next, navigate to a Scrapy project that you wish to upload to Scrapinghub. You
-can deploy it to Scrapy Cloud by providing the Scrapinghub project ID, e.g.::
+can deploy it to Scrapy Cloud via::
 
-    shub deploy 12345
+    shub deploy
 
-Of course, it would be cumbersome if you had to re-enter the project ID
-everytime you wish to deploy. You can define a default project ID, and even
-aliases for multiple project IDs in a YAML configuration file named
-``scrapinghub.yml``, living next to your ``scrapy.cfg``::
+On the first call, this will guide you through a wizard to save your project ID
+into a YAML file named ``scrapinghub.yml``, living next to your ``scrapy.cfg``.
+For advanced uses, you can even define aliases for multiple project IDs there::
 
     # project_directory/scrapinghub.yml
     projects:
@@ -63,6 +62,10 @@ aliases for multiple project IDs in a YAML configuration file named
 
 From anywhere within the project directory tree, you can now deploy via
 ``shub deploy`` (to project 12345) or ``shub deploy prod`` (to project 33333).
+
+You can also directly supply the Scrapinghub project ID, e.g.::
+
+    shub deploy 12345
 
 Next, schedule one of your spiders to run on Scrapy Cloud::
 
