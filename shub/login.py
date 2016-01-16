@@ -55,5 +55,5 @@ def _get_apikey(suggestion='', endpoint=None):
 def _is_valid_apikey(key, endpoint=None):
     endpoint = endpoint or ShubConfig.DEFAULT_ENDPOINT
     validate_api_key_endpoint = urljoin(endpoint, "v2/users/me")
-    r = requests.get("%s?apikey=%s" % (validate_api_key_endpoint, key))
+    r = requests.get(validate_api_key_endpoint, params={'apikey': key})
     return r.status_code == 200
