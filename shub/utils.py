@@ -80,6 +80,13 @@ def _is_deploy_successful(last_logs):
         pass
 
 
+def find_exe(exe_name):
+    exe = find_executable(exe_name)
+    if not exe:
+        raise NotFoundException("Please install {}".format(exe_name))
+    return exe
+
+
 def get_cmd(cmd):
     with open(os.devnull, 'wb') as null:
         return Popen(cmd, stdout=PIPE, stderr=null)
