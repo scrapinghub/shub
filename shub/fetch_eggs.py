@@ -30,8 +30,9 @@ def cli(target):
 
 def fetch_eggs(project, endpoint, apikey, destfile):
     auth = (apikey, '')
-    url = urljoin(endpoint, "eggs/bundle.zip?project=%s" % project)
-    rsp = requests.get(url=url, auth=auth, stream=True, timeout=300)
+    url = urljoin(endpoint, "eggs/bundle.zip")
+    rsp = requests.get(url=url, params={'project': project}, auth=auth,
+                       stream=True, timeout=300)
 
     _assert_response_is_valid(rsp)
 
