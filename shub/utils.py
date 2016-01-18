@@ -49,9 +49,8 @@ def make_deploy_request(url, data, files, auth, verbose, keep_log):
                     click.echo(line)
                 last_logs.append(line)
                 log_file.write(line + '\n')
-            if _is_deploy_successful(last_logs):
-                if not verbose:
-                    click.echo(last_logs[-1])
+            if _is_deploy_successful(last_logs) and not verbose:
+                click.echo(last_logs[-1])
             else:
                 log_file.delete = False
                 if not verbose:
