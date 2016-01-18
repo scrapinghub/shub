@@ -1,6 +1,6 @@
 click
 requests
-ruamel.yaml
+ruamel.yaml==0.10.13
 six
 
 hubstorage
