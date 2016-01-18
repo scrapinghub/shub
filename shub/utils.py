@@ -1,4 +1,5 @@
 from __future__ import unicode_literals, absolute_import
+import contextlib
 import datetime
 import errno
 import json
@@ -79,6 +80,25 @@ def _is_deploy_successful(last_logs):
             return True
     except Exception:
         pass
+
+
+@contextlib.contextmanager
+def patch_sys_executable():
+    """
+    Context manager that monkey-patches sys.executable to point to the Python
+    interpreter.
+
+    Some scripts, in particular pip, depend on sys.executable pointing to the
+    Python interpreter. When frozen, however, sys.executable points to the
+    stand-alone file (i.e. the frozen script).
+    """
+    if getattr(sys, 'frozen', False):
+        orig_exe = sys.executable
+        sys.executable = find_exe('python')
+        yield
+        sys.executable = orig_exe
+    else:
+        yield
 
 
 def find_exe(exe_name):

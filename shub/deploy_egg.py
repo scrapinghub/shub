@@ -4,11 +4,12 @@ import tempfile
 from subprocess import Popen, PIPE
 
 import click
+import pip
 
 from shub import utils
 from shub.config import get_target
 from shub.exceptions import BadParameterException, NotFoundException
-from shub.utils import decompress_egg_files, find_exe, run
+from shub.utils import decompress_egg_files, patch_sys_executable
 
 
 HELP = """
@@ -86,12 +87,10 @@ def _checkout(repo, git_branch=None):
 
 
 def _fetch_from_pypi(pkg):
-    pip = find_exe('pip')
     tmpdir = tempfile.mkdtemp(prefix='shub-deploy-egg-from-pypi')
     click.echo('Fetching %s from pypi' % pkg)
-    pip_cmd = ("%s install -d %s %s --no-deps --no-use-wheel"
-               "" % (pip, tmpdir, pkg))
-    click.echo(run(pip_cmd))
+    with patch_sys_executable():
+        pip.main(["install", "-d", tmpdir, pkg, "--no-deps", "--no-use-wheel"])
     click.echo('Package fetched successfully')
     os.chdir(tmpdir)
 
