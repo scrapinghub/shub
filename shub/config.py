@@ -1,7 +1,6 @@
 import contextlib
 import netrc
 import os
-import time
 
 import click
 import six
