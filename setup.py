@@ -18,7 +18,7 @@ setup(
     },
     include_package_data=True,
     zip_safe=False,
-    install_requires=['click', 'hubstorage', 'requests', 'ruamel.yaml',
+    install_requires=['click', 'hubstorage', 'pip', 'requests', 'ruamel.yaml',
                       'scrapinghub', 'six'],
     classifiers=[
         'Development Status :: 5 - Production/Stable',

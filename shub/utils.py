@@ -20,6 +20,7 @@ from six.moves.urllib.parse import urljoin
 from subprocess import Popen, PIPE, CalledProcessError
 
 import click
+import pip
 import requests
 
 from hubstorage import HubstorageClient
@@ -166,18 +167,18 @@ def run(cmd):
 
 
 def decompress_egg_files():
-    decompressor_by_ext = _build_decompressor_by_ext_map()
-    eggs = [f for ext in decompressor_by_ext for f in glob('*.%s' % ext)]
-
+    EXTS = pip.utils.ARCHIVE_EXTENSIONS
+    eggs = [f for ext in EXTS for f in glob('*%s' % ext)]
     if not eggs:
         files = glob('*')
         err = ('No egg files with a supported file extension were found. '
                'Files: %s' % ', '.join(files))
         raise NotFoundException(err)
-
     for egg in eggs:
         click.echo("Uncompressing: %s" % egg)
-        run("%s %s" % (decompressor_by_ext[_ext(egg)], egg))
+        egg_ext = EXTS[list(egg.endswith(ext) for ext in EXTS).index(True)]
+        decompress_location = egg[:-len(egg_ext)]
+        pip.utils.unpack_file(egg, decompress_location, None, None)
 
 
 def build_and_deploy_eggs(project, endpoint, apikey):
@@ -187,19 +188,6 @@ def build_and_deploy_eggs(project, endpoint, apikey):
         os.chdir(egg_dir)
         build_and_deploy_egg(project, endpoint, apikey)
         os.chdir('..')
-
-
-def _build_decompressor_by_ext_map():
-    unzip = 'unzip -q'
-
-    return {'zip': unzip,
-            'whl': unzip,
-            'bz2': 'tar jxf',
-            'gz': 'tar zxf'}
-
-
-def _ext(file_path):
-    return os.path.splitext(file_path)[1].strip('.')
 
 
 def build_and_deploy_egg(project, endpoint, apikey):
