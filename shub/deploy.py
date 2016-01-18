@@ -142,15 +142,13 @@ def _build_egg():
         settings = get_config().get('settings', 'default')
         _create_default_setup_py(settings=settings)
     d = tempfile.mkdtemp(prefix="shub-deploy-")
-    o = open(os.path.join(d, "stdout"), "wb")
-    e = open(os.path.join(d, "stderr"), "wb")
-    retry_on_eintr(
-        check_call,
-        [exe, 'setup.py', 'clean', '-a', 'bdist_egg', '-d', d],
-        stdout=o, stderr=e,
-    )
-    o.close()
-    e.close()
+    with open(os.path.join(d, "stdout"), "wb") as o, \
+            open(os.path.join(d, "stderr"), "wb") as e:
+        retry_on_eintr(
+            check_call,
+            [exe, 'setup.py', 'clean', '-a', 'bdist_egg', '-d', d],
+            stdout=o, stderr=e,
+        )
     egg = glob.glob(os.path.join(d, '*.egg'))[0]
     return egg, d
 
