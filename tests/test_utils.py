@@ -7,7 +7,7 @@ import stat
 import sys
 import unittest
 
-from mock import MagicMock, patch
+from mock import Mock, MagicMock, patch
 from click.testing import CliRunner
 from collections import deque
 
@@ -15,11 +15,6 @@ from shub import utils
 from shub.exceptions import BadParameterException, NotFoundException
 
 from .utils import mock_conf
-
-
-class LogFile(object):
-    def __init__(self):
-        self.delete = None
 
 
 class UtilsTest(unittest.TestCase):
@@ -344,7 +339,7 @@ class UtilsTest(unittest.TestCase):
 
     @patch('shub.utils._is_deploy_successful', return_value=True)
     def test_echo_short_log_if_deployed_true(self, mock_dep_success):
-        log_file = LogFile()
+        log_file = Mock(delete=None)
         last_logs = ["last log line"]
         verbose = True
         utils.echo_short_log_if_deployed(last_logs, log_file, verbose)
@@ -356,7 +351,7 @@ class UtilsTest(unittest.TestCase):
 
     @patch('shub.utils._is_deploy_successful', return_value=None)
     def test_echo_short_log_if_deployed_none(self, mock_dep_success):
-        log_file = LogFile()
+        log_file = Mock(delete=None)
         last_logs = ["last log line"]
         verbose = True
         utils.echo_short_log_if_deployed(last_logs, log_file, verbose)
