@@ -94,7 +94,18 @@ def patch_sys_executable():
     """
     if getattr(sys, 'frozen', False):
         orig_exe = sys.executable
-        sys.executable = find_exe('python')
+        try:
+            py_exe = find_exe('python2')
+        except NotFoundException:
+            try:
+                # Will raise NotFoundException if no Python installation found
+                py_exe = find_exe('python')
+                if '2.' not in get_cmd_output([py_exe, '--version']):
+                    raise NotFoundException
+            except NotFoundException:
+                # Explicitly ask for installing 2.7
+                raise NotFoundException("Please install Python 2.7")
+        sys.executable = py_exe
         yield
         sys.executable = orig_exe
     else:
