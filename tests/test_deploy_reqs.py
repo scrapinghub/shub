@@ -21,7 +21,7 @@ class TestDeployReqs(unittest.TestCase):
 
     def test_can_decompress_downloaded_packages_and_call_deploy_reqs(self):
         requirements_file = self._write_tmp_requirements_file()
-        with mock.patch('shub.deploy_reqs.utils.build_and_deploy_egg') as m:
+        with mock.patch('shub.utils.build_and_deploy_egg') as m:
             self.runner.invoke(
                 deploy_reqs.cli,
                 ('-r', requirements_file),

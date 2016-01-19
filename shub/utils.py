@@ -1,4 +1,5 @@
 from __future__ import unicode_literals, absolute_import
+import contextlib
 import datetime
 import errno
 import json
@@ -20,6 +21,7 @@ from six.moves.urllib.parse import urljoin
 from subprocess import Popen, PIPE, CalledProcessError
 
 import click
+import pip
 import requests
 
 from hubstorage import HubstorageClient
@@ -80,6 +82,36 @@ def _is_deploy_successful(last_logs):
         pass
 
 
+@contextlib.contextmanager
+def patch_sys_executable():
+    """
+    Context manager that monkey-patches sys.executable to point to the Python
+    interpreter.
+
+    Some scripts, in particular pip, depend on sys.executable pointing to the
+    Python interpreter. When frozen, however, sys.executable points to the
+    stand-alone file (i.e. the frozen script).
+    """
+    if getattr(sys, 'frozen', False):
+        orig_exe = sys.executable
+        try:
+            py_exe = find_exe('python2')
+        except NotFoundException:
+            try:
+                # Will raise NotFoundException if no Python installation found
+                py_exe = find_exe('python')
+                if '2.' not in get_cmd_output([py_exe, '--version']):
+                    raise NotFoundException
+            except NotFoundException:
+                # Explicitly ask for installing 2.7
+                raise NotFoundException("Please install Python 2.7")
+        sys.executable = py_exe
+        yield
+        sys.executable = orig_exe
+    else:
+        yield
+
+
 def find_exe(exe_name):
     exe = find_executable(exe_name)
     if not exe:
@@ -115,14 +147,14 @@ def pwd_version():
     if not ver:
         ver = pwd_bzr_version()
     if not ver and os.path.isfile('setup.py'):
-        ver = _last_line_of(run('python setup.py --version'))
+        ver = _last_line_of(run_python(['setup.py', '--version']))
     if not ver:
         closest_scrapycfg = closest_file('scrapy.cfg')
         if closest_scrapycfg:
             setuppy = os.path.join(os.path.dirname(closest_scrapycfg),
                                    'setup.py')
             if os.path.isfile(setuppy):
-                ver = _last_line_of(run('python {} --version'.format(setuppy)))
+                ver = _last_line_of(run_python([setuppy, '--version']))
     if not ver:
         ver = str(int(time.time()))
     return ver
@@ -160,24 +192,29 @@ def pwd_bzr_version():
     return '%s' % get_cmd_output([bzr, 'revno']).strip()
 
 
-def run(cmd):
-    output = subprocess.check_output(cmd, shell=True)
-    return output.decode(STDOUT_ENCODING).strip()
+def run_python(args):
+    """
+    Call Python 2 interpreter with supplied list of arguments and return its
+    output.
+    """
+    with patch_sys_executable():
+        output = subprocess.check_output([sys.executable] + args)
+        return output.decode(STDOUT_ENCODING).strip()
 
 
 def decompress_egg_files():
-    decompressor_by_ext = _build_decompressor_by_ext_map()
-    eggs = [f for ext in decompressor_by_ext for f in glob('*.%s' % ext)]
-
+    EXTS = pip.utils.ARCHIVE_EXTENSIONS
+    eggs = [f for ext in EXTS for f in glob('*%s' % ext)]
     if not eggs:
         files = glob('*')
         err = ('No egg files with a supported file extension were found. '
                'Files: %s' % ', '.join(files))
         raise NotFoundException(err)
-
     for egg in eggs:
         click.echo("Uncompressing: %s" % egg)
-        run("%s %s" % (decompressor_by_ext[_ext(egg)], egg))
+        egg_ext = EXTS[list(egg.endswith(ext) for ext in EXTS).index(True)]
+        decompress_location = egg[:-len(egg_ext)]
+        pip.utils.unpack_file(egg, decompress_location, None, None)
 
 
 def build_and_deploy_eggs(project, endpoint, apikey):
@@ -189,28 +226,17 @@ def build_and_deploy_eggs(project, endpoint, apikey):
         os.chdir('..')
 
 
-def _build_decompressor_by_ext_map():
-    unzip = 'unzip -q'
-
-    return {'zip': unzip,
-            'whl': unzip,
-            'bz2': 'tar jxf',
-            'gz': 'tar zxf'}
-
-
-def _ext(file_path):
-    return os.path.splitext(file_path)[1].strip('.')
-
-
 def build_and_deploy_egg(project, endpoint, apikey):
     """Builds and deploys the current dir's egg"""
     click.echo("Building egg in: %s" % os.getcwd())
     try:
-        run('python setup.py bdist_egg')
+        run_python(['setup.py', 'bdist_egg'])
     except CalledProcessError:
         # maybe a C extension or distutils package, forcing bdist_egg
-        click.echo("Couldn't build an egg with vanilla setup.py, trying with setuptools...")
-        run('python -c  "import setuptools; __file__=\'setup.py\'; execfile(\'setup.py\')" bdist_egg')
+        click.echo("Couldn't build an egg with vanilla setup.py, trying with "
+                   "setuptools...")
+        script = "import setuptools; __file__='setup.py'; execfile('setup.py')"
+        run_python(['-c', script, 'bdist_egg'])
 
     _deploy_dependency_egg(project, endpoint, apikey)
 
@@ -239,8 +265,9 @@ def _last_line_of(s):
 
 
 def _get_dependency_name():
-    # In some cases, python setup.py --name returns more than one line, so we use the last one to get the name
-    return _last_line_of(run('python setup.py --name'))
+    # In some cases, python setup.py --name returns more than one line, so we
+    # use the last one to get the name
+    return _last_line_of(run_python(['setup.py', '--name']))
 
 
 def _get_egg_info(name):

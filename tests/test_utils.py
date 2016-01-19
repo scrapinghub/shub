@@ -4,6 +4,7 @@
 
 import os
 import stat
+import sys
 import unittest
 
 from mock import MagicMock, patch
@@ -20,6 +21,44 @@ class UtilsTest(unittest.TestCase):
 
     def setUp(self):
         self.runner = CliRunner()
+
+    @patch('shub.utils.sys.frozen', new=True, create=True)
+    def test_patch_sys_executable(self):
+        def make_mock_find_exe(py2=True, py=True):
+            def find_exe(exe_name):
+                if exe_name == 'python2' and py2:
+                    return '/my/python2'
+                elif exe_name == 'python' and py:
+                    return '/my/python'
+                raise NotFoundException
+            return find_exe
+
+        original_exe = sys.executable
+        with patch('shub.utils.sys.frozen', new=False):
+            with utils.patch_sys_executable():
+                self.assertEqual(sys.executable, original_exe)
+
+        with patch('shub.utils.find_exe', new=make_mock_find_exe()):
+            with utils.patch_sys_executable():
+                self.assertEqual(sys.executable, '/my/python2')
+
+        with patch('shub.utils.find_exe', new=make_mock_find_exe(py2=False)), \
+                patch('shub.utils.get_cmd_output') as mock_gco:
+            mock_gco.return_value = "Python 2.7.11"
+            with utils.patch_sys_executable():
+                self.assertEqual(sys.executable, '/my/python')
+            mock_gco.return_value = "Python 3.5.1"
+            with self.assertRaises(NotFoundException):
+                with utils.patch_sys_executable():
+                    pass
+            # Make sure we properly cleaned up after ourselves
+            self.assertEqual(sys.executable, original_exe)
+
+        with patch('shub.utils.find_exe',
+                   new=make_mock_find_exe(py2=False, py=False)):
+            with self.assertRaises(NotFoundException):
+                with utils.patch_sys_executable():
+                    pass
 
     @patch('shub.utils.find_executable')
     def test_find_exe(self, mock_fe):
@@ -45,13 +84,13 @@ class UtilsTest(unittest.TestCase):
                 f.write("from setuptools import setup\n")
                 f.write("setup(version='1.0')")
             self.assertEqual(utils.pwd_version(), '1.0')
-            long_setup_version = (
+            setup_version = (
                 'Building lxml version 3.4.4.'
                 '\nBuilding without Cython.'
                 '\nUsing build configuration of libxslt 1.1.28'
                 '\n3.4.4'
             )
-            with patch('shub.utils.run', return_value=long_setup_version):
+            with patch('shub.utils.run_python', return_value=setup_version):
                 self.assertEqual(utils.pwd_version(), '3.4.4')
             os.mkdir('subdir')
             os.chdir('subdir')

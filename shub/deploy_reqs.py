@@ -3,9 +3,11 @@ import os
 import tempfile
 import shutil
 
-from shub.utils import run, decompress_egg_files
+import pip
+
 from shub.config import get_target
-from shub import utils
+from shub.utils import (build_and_deploy_eggs, decompress_egg_files,
+                        patch_sys_executable)
 
 
 HELP = """
@@ -40,7 +42,7 @@ def main(target, requirements_file):
     eggs_tmp_dir = _mk_and_cd_eggs_tmpdir()
     _download_egg_files(eggs_tmp_dir, requirements_full_path)
     decompress_egg_files()
-    utils.build_and_deploy_eggs(project, endpoint, apikey)
+    build_and_deploy_eggs(project, endpoint, apikey)
 
 
 def _mk_and_cd_eggs_tmpdir():
@@ -56,12 +58,11 @@ def _download_egg_files(eggs_dir, requirements_file):
 
     click.echo('Downloading eggs...')
     try:
-        pip = utils.find_exe('pip')
-        pip_cmd = ("{pip} install -d {eggs_dir} -r {requirements_file}"
-                   " --src {editable_src_dir} --no-deps --no-use-wheel")
-        click.echo(run(pip_cmd.format(pip=pip,
-                                      eggs_dir=eggs_dir,
-                                      editable_src_dir=editable_src_dir,
-                                      requirements_file=requirements_file)))
+        with patch_sys_executable():
+            pip.main(
+                ["install", "-d", eggs_dir, "-r", requirements_file, "--src",
+                 editable_src_dir, "--no-deps", "--no-use-wheel"]
+                )
+
     finally:
         shutil.rmtree(editable_src_dir, ignore_errors=True)
