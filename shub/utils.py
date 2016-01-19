@@ -147,14 +147,14 @@ def pwd_version():
     if not ver:
         ver = pwd_bzr_version()
     if not ver and os.path.isfile('setup.py'):
-        ver = _last_line_of(run('python setup.py --version'))
+        ver = _last_line_of(run_python(['setup.py', '--version']))
     if not ver:
         closest_scrapycfg = closest_file('scrapy.cfg')
         if closest_scrapycfg:
             setuppy = os.path.join(os.path.dirname(closest_scrapycfg),
                                    'setup.py')
             if os.path.isfile(setuppy):
-                ver = _last_line_of(run('python {} --version'.format(setuppy)))
+                ver = _last_line_of(run_python([setuppy, '--version']))
     if not ver:
         ver = str(int(time.time()))
     return ver
@@ -192,9 +192,14 @@ def pwd_bzr_version():
     return '%s' % get_cmd_output([bzr, 'revno']).strip()
 
 
-def run(cmd):
-    output = subprocess.check_output(cmd, shell=True)
-    return output.decode(STDOUT_ENCODING).strip()
+def run_python(args):
+    """
+    Call Python 2 interpreter with supplied list of arguments and return its
+    output.
+    """
+    with patch_sys_executable():
+        output = subprocess.check_output([sys.executable] + args)
+        return output.decode(STDOUT_ENCODING).strip()
 
 
 def decompress_egg_files():
@@ -225,11 +230,13 @@ def build_and_deploy_egg(project, endpoint, apikey):
     """Builds and deploys the current dir's egg"""
     click.echo("Building egg in: %s" % os.getcwd())
     try:
-        run('python setup.py bdist_egg')
+        run_python(['setup.py', 'bdist_egg'])
     except CalledProcessError:
         # maybe a C extension or distutils package, forcing bdist_egg
-        click.echo("Couldn't build an egg with vanilla setup.py, trying with setuptools...")
-        run('python -c  "import setuptools; __file__=\'setup.py\'; execfile(\'setup.py\')" bdist_egg')
+        click.echo("Couldn't build an egg with vanilla setup.py, trying with "
+                   "setuptools...")
+        script = "import setuptools; __file__='setup.py'; execfile('setup.py')"
+        run_python(['-c', script, 'bdist_egg'])
 
     _deploy_dependency_egg(project, endpoint, apikey)
 
@@ -258,8 +265,9 @@ def _last_line_of(s):
 
 
 def _get_dependency_name():
-    # In some cases, python setup.py --name returns more than one line, so we use the last one to get the name
-    return _last_line_of(run('python setup.py --name'))
+    # In some cases, python setup.py --name returns more than one line, so we
+    # use the last one to get the name
+    return _last_line_of(run_python(['setup.py', '--name']))
 
 
 def _get_egg_info(name):

@@ -45,13 +45,13 @@ class UtilsTest(unittest.TestCase):
                 f.write("from setuptools import setup\n")
                 f.write("setup(version='1.0')")
             self.assertEqual(utils.pwd_version(), '1.0')
-            long_setup_version = (
+            setup_version = (
                 'Building lxml version 3.4.4.'
                 '\nBuilding without Cython.'
                 '\nUsing build configuration of libxslt 1.1.28'
                 '\n3.4.4'
             )
-            with patch('shub.utils.run', return_value=long_setup_version):
+            with patch('shub.utils.run_python', return_value=setup_version):
                 self.assertEqual(utils.pwd_version(), '3.4.4')
             os.mkdir('subdir')
             os.chdir('subdir')

@@ -14,8 +14,9 @@ from scrapinghub import Connection, APIError
 from shub.config import load_shub_config, update_yaml_dict
 from shub.exceptions import (InvalidAuthException, NotFoundException,
                              RemoteErrorException)
-from shub.utils import (closest_file, find_exe, get_config, inside_project,
-                        make_deploy_request, retry_on_eintr)
+from shub.utils import (closest_file, get_config, inside_project,
+                        make_deploy_request, patch_sys_executable,
+                        retry_on_eintr)
 
 
 HELP = """
@@ -132,10 +133,6 @@ def _upload_egg(endpoint, eggpath, project, version, auth, verbose, keep_log):
 
 
 def _build_egg():
-    if getattr(sys, 'frozen', False):
-        exe = find_exe('python')
-    else:
-        exe = sys.executable
     closest = closest_file('scrapy.cfg')
     os.chdir(os.path.dirname(closest))
     if not os.path.exists('setup.py'):
@@ -143,10 +140,11 @@ def _build_egg():
         _create_default_setup_py(settings=settings)
     d = tempfile.mkdtemp(prefix="shub-deploy-")
     with open(os.path.join(d, "stdout"), "wb") as o, \
-            open(os.path.join(d, "stderr"), "wb") as e:
+            open(os.path.join(d, "stderr"), "wb") as e, \
+            patch_sys_executable():
         retry_on_eintr(
             check_call,
-            [exe, 'setup.py', 'clean', '-a', 'bdist_egg', '-d', d],
+            [sys.executable, 'setup.py', 'clean', '-a', 'bdist_egg', '-d', d],
             stdout=o, stderr=e,
         )
     egg = glob.glob(os.path.join(d, '*.egg'))[0]
