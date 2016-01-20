@@ -100,7 +100,9 @@ def patch_sys_executable():
             try:
                 # Will raise NotFoundException if no Python installation found
                 py_exe = find_exe('python')
-                if '2.' not in get_cmd_output([py_exe, '--version']):
+                py_ver = subprocess.check_output([py_exe, '--version'],
+                                                 stderr=subprocess.STDOUT)
+                if '2.' not in py_ver:
                     raise NotFoundException
             except NotFoundException:
                 # Explicitly ask for installing 2.7
