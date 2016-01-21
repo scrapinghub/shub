@@ -43,11 +43,11 @@ class UtilsTest(unittest.TestCase):
                 self.assertEqual(sys.executable, '/my/python2')
 
         with patch('shub.utils.find_exe', new=make_mock_find_exe(py2=False)), \
-                patch('shub.utils.get_cmd_output') as mock_gco:
-            mock_gco.return_value = "Python 2.7.11"
+                patch('shub.utils.subprocess.check_output') as mock_co:
+            mock_co.return_value = "Python 2.7.11"
             with utils.patch_sys_executable():
                 self.assertEqual(sys.executable, '/my/python')
-            mock_gco.return_value = "Python 3.5.1"
+            mock_co.return_value = "Python 3.5.1"
             with self.assertRaises(NotFoundException):
                 with utils.patch_sys_executable():
                     pass
