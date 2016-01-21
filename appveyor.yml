@@ -1,21 +1,35 @@
+platform: x86
+
 version: '{branch}-{build}'
 
 branches:
   only:
     - master
-    - /^v\d+\.\d+$/
+    - /^v\d+\.\d+\.\d+[\w\-]*$/
 
 install:
   - "SET PATH=C:\\Python27;C:\\Python27\\Scripts;%PATH%"
   - "SET TOX_TESTENV_PASSENV=HOME USERPROFILE HOMEPATH HOMEDRIVE"
   - "pip install -U tox twine wheel"
 
-# Build the binary after tests
+# No build stage, binaries are built in 'freeze' test environment
 build: false
 
 test_script:
   - tox -e py27,freeze
 
 artifacts:
-  - path: .\dist\shub.exe
-    name: "shub Windows binary"
+  - path: dist\shub.exe
+  - path: dist\shub-$(APPVEYOR_REPO_TAG_NAME)-windows-$(PLATFORM).zip
+
+after_test:
+  - 7z a dist\shub-%APPVEYOR_REPO_TAG_NAME%-windows-%PLATFORM%.zip %APPVEYOR_BUILD_FOLDER%\dist\shub.exe
+
+deploy:
+  provider: GitHub
+  auth_token:
+    secure: mNA38grRkwGjw4zSUX1qA67eE6CRPjk97hRngZf19FuopBwbpPjOALBIlYZWKlDv
+  artifact: dist\shub-$(APPVEYOR_REPO_TAG_NAME)-windows-$(PLATFORM).zip
+  draft: true
+  on:
+    appveyor_repo_tag: true

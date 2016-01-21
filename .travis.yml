@@ -10,7 +10,7 @@ matrix:
 branches:
   only:
     - master
-    - /^v\d+\.\d+$/
+    - /^v\d+\.\d+\.\d+[\w\-]*$/
 
 install:
   - "./.travis-workarounds.sh"
@@ -18,14 +18,27 @@ install:
   - pip install -U tox twine wheel
 
 script: tox -e py27,freeze
+
+before_deploy:
+  - tar -czf dist/shub-${TRAVIS_TAG}-${TRAVIS_OS_NAME}-x64.tar.gz -C dist shub
+
 deploy:
-  provider: pypi
-  distributions: sdist bdist_wheel
-  user: scrapinghub
-  password:
-    secure: CJWIRI51KvqZrkPf7At1li+bbAZ/pN3iWRUPy0JaKWAC8O8B+GljXQxiXisPyLL1pIikcfLYZScOsKEhE+Uon/beeL1TPimVU3ELr7GYzuIkl3eK7quFUOiJ7glEggA5UyGNmk6goMVgaBQEOwT3gwH2LYwd1uFRvQsgIPY+tks=
-  on:
-    tags: true
-    all_branches: true
-    repo: scrapinghub/shub
-    condition: "$TRAVIS_OS_NAME == linux"
+  - provider: pypi
+    distributions: sdist bdist_wheel
+    user: scrapinghub
+    password:
+      secure: CJWIRI51KvqZrkPf7At1li+bbAZ/pN3iWRUPy0JaKWAC8O8B+GljXQxiXisPyLL1pIikcfLYZScOsKEhE+Uon/beeL1TPimVU3ELr7GYzuIkl3eK7quFUOiJ7glEggA5UyGNmk6goMVgaBQEOwT3gwH2LYwd1uFRvQsgIPY+tks=
+    on:
+      tags: true
+      all_branches: true
+      repo: scrapinghub/shub
+      condition: "$TRAVIS_OS_NAME == linux"
+  - provider: releases
+    api_key:
+      secure: uRviyXNC+lAa/WE5vnCiu4AfG0t+x4+O3noXRbzBPjUn17SfPhC2RUZvIKt+KiO4jLojWBW9CeUVzFiA/3+uZZ9mVejByuXxb1h2IvHhYdoJU2Ui8XEcSQWezNoz9nGpHqPibcA2dea7L1jeJn/M8jX4o0yCaXR/0gKwc6QCImFZqOWpAZPltdWlH7bW/Os2pIeqv3/fiTNLAwOdygJmfZrodJpidIVDwSvm5+SGsGPd1P9vEnAzztKOvTihYRD22hh29eJ9iFts8YMwFN8x/6ioMrqAhcsX8F60cFxpH6fbR+MSCGU2x1ljhZUZfcxSQZ5vDYdmIqjTdAq86gNHYTk5ZOTtZWwnBNTls4Zu0B1ff5sjgtY5TlGoQ/cfrZxYqH0Rm2lypycdcTeGVPV5GqlPmqMtMSkbOTaHDL39JgIfCGH1mP2rXcy/XpQTj1S9D+vd0L3aCBrJtmHeWIKZSvkp4W2iBW92jj1dwf5vYfbX6LdMop6FUs2SQFrO4jFVfxDKlB2Fsbkz1wEX0ZM1L5Vh35jSRJQQ7EmwkNXePwpFwCeDieax7H4HhecrghEoHIRdwH5yko5PgclPJrp31bRmuTz5rE2Jdy4HZFVS8iF7ut0ymcUYI0eU4aeM3RrvTSYQItzd7V4lHZDpHrnRA9kxJd5zWmK0pd1tHKeVZuc=
+    file: dist/shub-${TRAVIS_TAG}-${TRAVIS_OS_NAME}-x64.tar.gz
+    skip_cleanup: true
+    draft: true
+    on:
+      tags: true
+      repo: scrapinghub/shub
