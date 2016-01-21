@@ -105,7 +105,7 @@ def patch_sys_executable():
 
         output = subprocess.check_output([py_exe, '--version'],
                                          stderr=subprocess.STDOUT)
-        if not output.startswith('Python 2.7.'):
+        if 'Python 2.7.' not in output:
             raise NotFoundException('Please install Python 2.7')
 
         # PyInstaller sets this environment variable in its bootloader. Remove
