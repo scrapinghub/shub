@@ -38,12 +38,14 @@ class UtilsTest(unittest.TestCase):
             with utils.patch_sys_executable():
                 self.assertEqual(sys.executable, original_exe)
 
-        with patch('shub.utils.find_exe', new=make_mock_find_exe()):
+        with patch('shub.utils.find_exe', new=make_mock_find_exe()), \
+                patch('subprocess.check_output') as mock_gco:
+            mock_gco.return_value = "Python 2.7.11"
             with utils.patch_sys_executable():
                 self.assertEqual(sys.executable, '/my/python2')
 
         with patch('shub.utils.find_exe', new=make_mock_find_exe(py2=False)), \
-                patch('shub.utils.get_cmd_output') as mock_gco:
+                patch('subprocess.check_output') as mock_gco:
             mock_gco.return_value = "Python 2.7.11"
             with utils.patch_sys_executable():
                 self.assertEqual(sys.executable, '/my/python')
