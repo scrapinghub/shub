@@ -360,6 +360,14 @@ class UtilsTest(unittest.TestCase):
                 utils.echo_short_log_if_deployed(last_logs, log_file, verbose)
                 self.assertEqual(False, log_file.delete)
 
+    def test_write_and_echo_logs(self):
+        last_logs = []
+        rsp = Mock()
+        rsp.iter_lines = Mock(return_value=iter(["line1", "line2"]))
+        utils.write_and_echo_logs(keep_log=True, last_logs=last_logs,
+                                  rsp=rsp, verbose=True)
+        self.assertEqual(last_logs, ["line1", "line2"])
+
 
 if __name__ == '__main__':
     unittest.main()
