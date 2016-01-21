@@ -1,0 +1,13 @@
+projects:
+  default: 1
+  next: 2
+  nested: default/3
+  nested2: numeric/4
+
+endpoints:
+  default: http://localhost:7999/api/
+  nuneric: http://127.0.0.1:7999/api/
+
+apikeys:
+  default: abcdabcdabcdabcdabcdabcdabcdabcd
+

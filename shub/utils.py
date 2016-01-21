@@ -94,27 +94,30 @@ def patch_sys_executable():
     """
     if getattr(sys, 'frozen', False):
         orig_exe = sys.executable
-        try:
-            py_exe = find_exe('python2')
-        except NotFoundException:
+        for pythonname in ('python2.7', 'python2', 'python'):
             try:
-                # Will raise NotFoundException if no Python installation found
-                py_exe = find_exe('python')
-                if '2.' not in get_cmd_output([py_exe, '--version']):
-                    raise NotFoundException
+                py_exe = find_exe(pythonname)
+                break
             except NotFoundException:
-                # Explicitly ask for installing 2.7
-                raise NotFoundException("Please install Python 2.7")
+                pass
+        else:
+            raise NotFoundException('Please install Python 2.7')
+
+        output = subprocess.check_output([py_exe, '--version'],
+                                         stderr=subprocess.STDOUT)
+        if not output.startswith('Python 2.7.'):
+            raise NotFoundException('Please install Python 2.7')
+
         # PyInstaller sets this environment variable in its bootloader. Remove
         # it so the system-wide Python installation uses its own library path
         # (this is particularly important if the system Python version differs
         # from the Python version that the binary was compiled with)
-        orig_lib_path = os.environ.pop('LD_LIBRARY_PATH', None)
+        orig_lib_path = os.environ.pop(b'LD_LIBRARY_PATH', None)
         sys.executable = py_exe
         yield
         sys.executable = orig_exe
         if orig_lib_path:
-            os.environ[str('LD_LIBRARY_PATH')] = orig_lib_path
+            os.environ[b'LD_LIBRARY_PATH'] = orig_lib_path
     else:
         yield
 
