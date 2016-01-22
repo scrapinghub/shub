@@ -275,6 +275,17 @@ class UtilsTest(unittest.TestCase):
             with open('./cache.txt', 'r') as f:
                 self.assertEqual(f.read(), 'abc')
 
+    def test_read_release_data(self):
+        with open('./cache.txt', 'w') as f:
+            f.write('abc')
+        self.assertEqual({}, utils.read_release_data('./cache.txt'))
+
+        with open('./cache.txt', 'w') as f:
+            f.write('{"key": "value"}')
+        self.assertEqual(
+                {"key": "value"},
+                utils.read_release_data('./cache.txt'))
+
     @patch('shub.utils.latest_github_release', autospec=True)
     @patch('shub.utils.shub.__version__', new='1.5.0')
     def test_update_available(self, mock_lgr):
