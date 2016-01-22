@@ -303,7 +303,7 @@ def get_job_specs(job):
             "project) or target/spiderid/jobid, where target can be either a "
             "project ID or an identifier defined in scrapinghub.yml."
             "".format(job),
-            param='job_id',
+            param_hint='job_id',
         )
     # XXX: Lazy import due to circular dependency
     from shub.config import get_target
