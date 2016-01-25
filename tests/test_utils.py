@@ -299,6 +299,44 @@ class UtilsTest(unittest.TestCase):
         with self.assertRaises(MockException):
             utils.update_available(silent_fail=False)
 
+    @patch('shub.utils.pip', autospec=True)
+    def test_download_from_pypi(self, mock_pip):
+        def _call(*args, **kwargs):
+            utils.download_from_pypi(*args, **kwargs)
+            return mock_pip.main.call_args[0][0]
+
+        with self.assertRaises(ValueError):
+            utils.download_from_pypi('tmpdir')
+        with self.assertRaises(ValueError):
+            utils.download_from_pypi('tmpdir', pkg='shub', reqfile='req.txt')
+        self.assertFalse(mock_pip.main.called)
+
+        # 1.0 (Ubuntu Precise)
+        del mock_pip.__version__
+        pipargs = _call('tmpdir', pkg='shub')
+        self.assertNotIn('--no-use-wheel', pipargs)
+
+        # 1.5.4 (Ubuntu Trusty)
+        mock_pip.__version__ = '1.5.4'
+        pipargs = _call('tmpdir', pkg='shub', extra_args=['--x'])
+        self.assertEqual(pipargs[0], 'install')
+        for expected_arg in ['--no-use-wheel', '--no-deps', 'shub', '--x']:
+            self.assertIn(expected_arg, pipargs)
+        # Make sure list contains '-d' followed by 'tmpdir'
+        self.assertEqual(pipargs.index('-d') + 1, pipargs.index('tmpdir'))
+        pipargs = _call('tmpdir', reqfile='req.txt')
+        self.assertEqual(pipargs.index('-r') + 1, pipargs.index('req.txt'))
+
+        # Replace deprecated commands in newer versions
+        mock_pip.__version__ = '7.1.2.dev0'
+        pipargs = _call('tmpdir', pkg='shub')
+        self.assertEqual(pipargs[0], 'install')
+        self.assertIn('--no-binary=:all:', pipargs)
+        mock_pip.__version__ = '8.0.2'
+        pipargs = _call('tmpdir', pkg='shub')
+        self.assertEqual(pipargs[0], 'download')
+        self.assertIn('--no-binary=:all:', pipargs)
+
 
 if __name__ == '__main__':
     unittest.main()

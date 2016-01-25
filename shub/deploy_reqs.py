@@ -3,11 +3,9 @@ import os
 import tempfile
 import shutil
 
-import pip
-
 from shub.config import get_target
 from shub.utils import (build_and_deploy_eggs, decompress_egg_files,
-                        patch_sys_executable)
+                        download_from_pypi)
 
 
 HELP = """
@@ -58,11 +56,7 @@ def _download_egg_files(eggs_dir, requirements_file):
 
     click.echo('Downloading eggs...')
     try:
-        with patch_sys_executable():
-            pip.main(
-                ["install", "-d", eggs_dir, "-r", requirements_file, "--src",
-                 editable_src_dir, "--no-deps", "--no-use-wheel"]
-                )
-
+        download_from_pypi(eggs_dir, reqfile=requirements_file,
+                           extra_args=["--src", editable_src_dir])
     finally:
         shutil.rmtree(editable_src_dir, ignore_errors=True)

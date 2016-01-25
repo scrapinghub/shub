@@ -13,7 +13,7 @@ import warnings
 from collections import deque
 from ConfigParser import SafeConfigParser
 from distutils.spawn import find_executable
-from distutils.version import StrictVersion
+from distutils.version import LooseVersion, StrictVersion
 from glob import glob
 from importlib import import_module
 from tempfile import NamedTemporaryFile
@@ -213,7 +213,14 @@ def run_python(args):
 
 
 def decompress_egg_files():
-    EXTS = pip.utils.ARCHIVE_EXTENSIONS
+    try:
+        EXTS = pip.utils.ARCHIVE_EXTENSIONS
+    except AttributeError:
+        EXTS = ('.zip', '.whl', '.tar', '.tar.gz', '.tar.bz2')
+    try:
+        unpack_file = pip.utils.unpack_file
+    except AttributeError:
+        unpack_file = pip.util.unpack_file
     eggs = [f for ext in EXTS for f in glob('*%s' % ext)]
     if not eggs:
         files = glob('*')
@@ -224,7 +231,7 @@ def decompress_egg_files():
         click.echo("Uncompressing: %s" % egg)
         egg_ext = EXTS[list(egg.endswith(ext) for ext in EXTS).index(True)]
         decompress_location = egg[:-len(egg_ext)]
-        pip.utils.unpack_file(egg, decompress_location, None, None)
+        unpack_file(egg, decompress_location, None, None)
 
 
 def build_and_deploy_eggs(project, endpoint, apikey):
@@ -494,3 +501,22 @@ def update_available(silent_fail=True):
             raise
         # Don't let this interfere with shub usage
         return None
+
+
+def download_from_pypi(dest, pkg=None, reqfile=None, extra_args=None):
+    if (not pkg and not reqfile) or (pkg and reqfile):
+        raise ValueError('Call with either pkg or reqfile')
+    extra_args = extra_args or []
+    pip_version = LooseVersion(getattr(pip, '__version__', '1.0'))
+    cmd = 'install'
+    no_wheel = []
+    target = [pkg] if pkg else ['-r', reqfile]
+    if pip_version >= LooseVersion('1.4'):
+        no_wheel = ['--no-use-wheel']
+    if pip_version >= LooseVersion('7'):
+        no_wheel = ['--no-binary=:all:']
+    if pip_version >= LooseVersion('8'):
+        cmd = 'download'
+    with patch_sys_executable():
+        pip.main([cmd, '-d', dest, '--no-deps'] + no_wheel + extra_args +
+                 target)
