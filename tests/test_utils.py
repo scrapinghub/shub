@@ -337,29 +337,28 @@ class UtilsTest(unittest.TestCase):
         self.assertEqual(pipargs[0], 'download')
         self.assertIn('--no-binary=:all:', pipargs)
 
-    @patch('shub.utils._is_deploy_successful', return_value=True)
-    def test_echo_short_log_if_deployed_true(self, mock_dep_success):
+    @patch('shub.utils._is_deploy_successful')
+    def test_echo_short_log_if_deployed(self, mock_dep_success):
         log_file = Mock(delete=None)
         last_logs = ["last log line"]
-        verbose = True
-        utils.echo_short_log_if_deployed(last_logs, log_file, verbose)
-        self.assertEqual(None, log_file.delete)
 
-        verbose = False
-        utils.echo_short_log_if_deployed(last_logs, log_file, verbose)
-        self.assertEqual(None, log_file.delete)
+        mock_dep_success.return_value = True
+        for verbose in [True, False]:
+            if verbose:
+                utils.echo_short_log_if_deployed(last_logs, log_file, verbose)
+                self.assertEqual(None, log_file.delete)
+            else:
+                utils.echo_short_log_if_deployed(last_logs, log_file, verbose)
+                self.assertEqual(None, log_file.delete)
 
-    @patch('shub.utils._is_deploy_successful', return_value=None)
-    def test_echo_short_log_if_deployed_none(self, mock_dep_success):
-        log_file = Mock(delete=None)
-        last_logs = ["last log line"]
-        verbose = True
-        utils.echo_short_log_if_deployed(last_logs, log_file, verbose)
-        self.assertEqual(False, log_file.delete)
-
-        verbose = False
-        utils.echo_short_log_if_deployed(last_logs, log_file, verbose)
-        self.assertEqual(False, log_file.delete)
+        mock_dep_success.return_value = None
+        for verbose in [True, False]:
+            if verbose:
+                utils.echo_short_log_if_deployed(last_logs, log_file, verbose)
+                self.assertEqual(False, log_file.delete)
+            else:
+                utils.echo_short_log_if_deployed(last_logs, log_file, verbose)
+                self.assertEqual(False, log_file.delete)
 
 
 if __name__ == '__main__':
