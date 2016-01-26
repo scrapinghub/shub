@@ -49,14 +49,7 @@ def make_deploy_request(url, data, files, auth, verbose, keep_log):
                     click.echo(line)
                 last_logs.append(line)
                 log_file.write(line + '\n')
-            if _is_deploy_successful(last_logs) and not verbose:
-                click.echo(last_logs[-1])
-            else:
-                log_file.delete = False
-                if not verbose:
-                    click.echo("Deploy log last %s lines:" % len(last_logs))
-                    for line in last_logs:
-                        click.echo(line)
+            echo_short_log_if_deployed(last_logs, log_file, verbose)
             if not log_file.delete:
                 click.echo("Deploy log location: %s" % log_file.name)
         return True
@@ -70,6 +63,18 @@ def make_deploy_request(url, data, files, auth, verbose, keep_log):
         raise RemoteErrorException(msg)
     except requests.RequestException as exc:
         raise RemoteErrorException("Deploy failed: {}".format(exc))
+
+
+def echo_short_log_if_deployed(last_logs, log_file, verbose):
+    if _is_deploy_successful(last_logs):
+        if not verbose:
+            click.echo(last_logs[-1])
+    else:
+        log_file.delete = False
+        if not verbose:
+            click.echo("Deploy log last %s lines:" % len(last_logs))
+            for line in last_logs:
+                click.echo(line)
 
 
 def _is_deploy_successful(last_logs):

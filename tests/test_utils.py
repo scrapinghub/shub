@@ -17,6 +17,11 @@ from shub.exceptions import BadParameterException, NotFoundException
 from .utils import mock_conf
 
 
+class LogFile(object):
+    def __init__(self):
+        self.delete = None
+
+
 class UtilsTest(unittest.TestCase):
 
     def setUp(self):
@@ -336,6 +341,30 @@ class UtilsTest(unittest.TestCase):
         pipargs = _call('tmpdir', pkg='shub')
         self.assertEqual(pipargs[0], 'download')
         self.assertIn('--no-binary=:all:', pipargs)
+
+    @patch('shub.utils._is_deploy_successful', return_value=True)
+    def test_echo_short_log_if_deployed_true(self, mock_dep_success):
+        log_file = LogFile()
+        last_logs = ["last log line"]
+        verbose = True
+        utils.echo_short_log_if_deployed(last_logs, log_file, verbose)
+        self.assertEqual(None, log_file.delete)
+
+        verbose = False
+        utils.echo_short_log_if_deployed(last_logs, log_file, verbose)
+        self.assertEqual(None, log_file.delete)
+
+    @patch('shub.utils._is_deploy_successful', return_value=None)
+    def test_echo_short_log_if_deployed_none(self, mock_dep_success):
+        log_file = LogFile()
+        last_logs = ["last log line"]
+        verbose = True
+        utils.echo_short_log_if_deployed(last_logs, log_file, verbose)
+        self.assertEqual(False, log_file.delete)
+
+        verbose = False
+        utils.echo_short_log_if_deployed(last_logs, log_file, verbose)
+        self.assertEqual(False, log_file.delete)
 
 
 if __name__ == '__main__':
