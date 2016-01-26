@@ -41,4 +41,4 @@ deploy:
     draft: true
     on:
       tags: true
-      repo: scrapinghub/shub
+      # repo: scrapinghub/shub
