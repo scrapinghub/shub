@@ -344,21 +344,13 @@ class UtilsTest(unittest.TestCase):
 
         mock_dep_success.return_value = True
         for verbose in [True, False]:
-            if verbose:
-                utils.echo_short_log_if_deployed(last_logs, log_file, verbose)
-                self.assertEqual(None, log_file.delete)
-            else:
-                utils.echo_short_log_if_deployed(last_logs, log_file, verbose)
-                self.assertEqual(None, log_file.delete)
+            utils.echo_short_log_if_deployed(last_logs, log_file, verbose)
+            self.assertEqual(None, log_file.delete)
 
         mock_dep_success.return_value = None
         for verbose in [True, False]:
-            if verbose:
-                utils.echo_short_log_if_deployed(last_logs, log_file, verbose)
-                self.assertEqual(False, log_file.delete)
-            else:
-                utils.echo_short_log_if_deployed(last_logs, log_file, verbose)
-                self.assertEqual(False, log_file.delete)
+            utils.echo_short_log_if_deployed(last_logs, log_file, verbose)
+            self.assertEqual(False, log_file.delete)
 
     def test_write_and_echo_logs(self):
         last_logs = []
