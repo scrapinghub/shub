@@ -258,16 +258,20 @@ def build_and_deploy_egg(project, endpoint, apikey):
     _deploy_dependency_egg(project, endpoint, apikey)
 
 
-def _deploy_dependency_egg(project, endpoint, apikey):
-    name = _get_dependency_name()
-    version = pwd_version()
-    egg_name, egg_path = _get_egg_info(name)
+def _deploy_dependency_egg(project, endpoint, apikey, name=None, version=None, egg_info=None):
+    if name is None:
+        name = _get_dependency_name()
+    if version is None:
+        version = pwd_version()
 
+    if egg_info is None:
+        egg_info = _get_egg_info(name)
+    egg_name, egg_path = egg_info
     url = urljoin(endpoint, 'eggs/add.json')
     data = {'project': project, 'name': name, 'version': version}
     auth = (apikey, '')
 
-    click.echo('Deploying dependency to Scrapy Cloud project "%s"' % project)
+    click.echo('Deploying dependency {} {} to Scrapy Cloud project {}'.format(name, version, project))
 
     with open(egg_path, 'rb') as egg_fp:
         files = {'egg': (egg_name, egg_fp)}

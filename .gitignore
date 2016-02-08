@@ -5,3 +5,4 @@ dist
 .eggs/
 .tox
 .cache
+.idea
