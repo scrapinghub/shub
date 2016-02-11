@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 import os
 from six.moves.urllib.parse import urljoin
 import click
@@ -20,19 +21,22 @@ project in dash.
 @click.command(help=HELP, short_help=SHORT_HELP)
 @click.argument("target", required=False, default='default')
 @click.argument("new_project", required=True)
-def cli(target, new_project):
+@click.option("-m", "--copy-main", default=False, is_flag=True, help="copy main Scrapy project egg")
+def cli(target, new_project, copy_main):
     project, endpoint, apikey = get_target(target)
-    sync_project(project, endpoint, apikey, int(new_project))
+
+    copy_eggs(project, endpoint, apikey, int(new_project), copy_main)
 
 
-def sync_project(project, endpoint, apikey, new_project):
+def copy_eggs(project, endpoint, apikey, new_project, copy_main):
+
     egg_versions = get_eggs_versions(project, endpoint, apikey)
     destfile = 'eggs-%s.zip' % project
     fetch_eggs(project, endpoint, apikey, destfile)
     decompress_egg_files()
     destdir = "eggs-{}".format(project)
     for egg_name in os.listdir(destdir):
-        if egg_name == "__main__.egg":
+        if egg_name == "__main__.egg" and not copy_main:
             continue
         name = egg_name.partition(".egg")[0]
         version = egg_versions[name]
