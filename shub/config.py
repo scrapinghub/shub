@@ -222,8 +222,8 @@ def _migrate_to_global_scrapinghub_yml():
 
 PROJECT_MIGRATION_OK_BANNER = """
 INFO: Your project configuration has been migrated to scrapinghub.yml.
-shub will no longer read from scrapy.cfg. Visit
-http://doc.scrapinghub.com/shub.html for more information.
+shub will no longer read from scrapy.cfg (but Scrapy will, so don't delete it).
+Visit http://doc.scrapinghub.com/shub.html for more information.
 """
 
 
