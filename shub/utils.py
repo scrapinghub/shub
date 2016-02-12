@@ -42,24 +42,7 @@ def make_deploy_request(url, data, files, auth, verbose, keep_log):
         rsp = requests.post(url=url, auth=auth, data=data, files=files,
                             stream=True, timeout=300)
         rsp.raise_for_status()
-        with NamedTemporaryFile(prefix='shub_deploy_', suffix='.log',
-                                delete=(not keep_log)) as log_file:
-            for line in rsp.iter_lines():
-                if verbose:
-                    click.echo(line)
-                last_logs.append(line)
-                log_file.write(line + '\n')
-            if _is_deploy_successful(last_logs):
-                if not verbose:
-                    click.echo(last_logs[-1])
-            else:
-                log_file.delete = False
-                if not verbose:
-                    click.echo("Deploy log last %s lines:" % len(last_logs))
-                    for line in last_logs:
-                        click.echo(line)
-            if not log_file.delete:
-                click.echo("Deploy log location: %s" % log_file.name)
+        write_and_echo_logs(keep_log, last_logs, rsp, verbose)
         return True
     except requests.HTTPError as exc:
         rsp = exc.response
@@ -71,6 +54,32 @@ def make_deploy_request(url, data, files, auth, verbose, keep_log):
         raise RemoteErrorException(msg)
     except requests.RequestException as exc:
         raise RemoteErrorException("Deploy failed: {}".format(exc))
+
+
+def write_and_echo_logs(keep_log, last_logs, rsp, verbose):
+    """It will write logs to temporal file and echo if verbose is True."""
+    with NamedTemporaryFile(prefix='shub_deploy_', suffix='.log',
+                            delete=(not keep_log)) as log_file:
+        for line in rsp.iter_lines():
+            if verbose:
+                click.echo(line)
+            last_logs.append(line)
+            log_file.write(line + '\n')
+        echo_short_log_if_deployed(last_logs, log_file, verbose)
+        if not log_file.delete:
+            click.echo("Deploy log location: %s" % log_file.name)
+
+
+def echo_short_log_if_deployed(last_logs, log_file, verbose):
+    if _is_deploy_successful(last_logs):
+        if not verbose:
+            click.echo(last_logs[-1])
+    else:
+        log_file.delete = False
+        if not verbose:
+            click.echo("Deploy log last %s lines:" % len(last_logs))
+            for line in last_logs:
+                click.echo(line)
 
 
 def _is_deploy_successful(last_logs):
