@@ -52,7 +52,7 @@ def test_deploy_without_project():
 
 def test_deploy_default_project(apipipe, scrapyproject):
     p = shub('deploy')
-    assert apipipe.poll(5)
+    assert apipipe.poll(15)
     req = apipipe.recv()
     assert req['path'] == '/api/scrapyd/addversion.json'
     apipipe.send((200, None, {'status': 'ok'}))
