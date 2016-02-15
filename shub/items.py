@@ -12,6 +12,10 @@ the job ID, separated by forward slashes, e.g.:
 
     shub items 12345/2/15
 
+You can also provide the Dash job URL instead:
+
+    shub items https://dash.scrapinghub.com/p/12345/job/2/15
+
 You can omit the project ID if you have a default target defined in your
 scrapinghub.yml:
 
