@@ -18,9 +18,15 @@ Requirements
 Installation
 ------------
 
-Install with::
+If you have ``pip`` installed on your system, you can install ``shub`` from
+the Python Package Index::
 
     pip install shub
+
+We also supply stand-alone binaries. You can find them in our `latest GitHub
+release`_.
+
+.. _`latest Github release`: https://github.com/scrapinghub/shub/releases/latest
 
 
 Usage
@@ -252,16 +258,26 @@ option to receive live updates::
 
 .. END_SH_DOC
 
-API Endpoints (for Scrapinghub staff only)
-------------------------------------------
+Advanced use cases
+------------------
 
-It is possible to configure different API endpoints::
+It is possible to configure multiple API keys::
 
-    # ~/.scrapinghub.yml
+    # scrapinghub.yml
+    projects:
+      default: 123
+      otheruser: someoneelse/123
+    apikeys:
+      default: 0bbf4f0f691e0d9378ae00ca7bcf7f0c
+      someoneelse: a1aeecc4cd52744730b1ea6cd3e8412a
+
+as well as different API endpoints::
+
+    # scrapinghub.yml
     projects:
       dev: vagrant/3
     endpoints:
       vagrant: http://vagrant:3333/api/
-    apikeys:  # populated manually or via shub login
+    apikeys:
       default: 0bbf4f0f691e0d9378ae00ca7bcf7f0c
       vagrant: a1aeecc4cd52744730b1ea6cd3e8412a
