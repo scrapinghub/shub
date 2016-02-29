@@ -1,0 +1,5 @@
+click
+docker-py
+requests
+shub
+six
