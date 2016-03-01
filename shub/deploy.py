@@ -178,8 +178,6 @@ def _deploy_wizard(conf, target='default'):
         raise NotFoundException("No Scrapy project found in this location.")
     closest_sh_yml = os.path.join(os.path.dirname(closest_scrapycfg),
                                   'scrapinghub.yml')
-    if os.path.isfile(closest_sh_yml):
-        return
     # Get default endpoint and API key (meanwhile making sure the user is
     # logged in)
     endpoint, apikey = conf.get_endpoint(0), conf.get_apikey(0)
@@ -194,7 +192,11 @@ def _deploy_wizard(conf, target='default'):
     if click.confirm("Save as default", default=True):
         try:
             with update_yaml_dict(closest_sh_yml) as conf_yml:
-                conf_yml['projects'] = {'default': project}
+                default_entry = {'default': project}
+                if 'projects' in conf_yml:
+                    conf_yml['projects'].update(default_entry)
+                else:
+                    conf_yml['projects'] = default_entry
         except Exception:
             click.echo(
                 "There was an error while trying to write to scrapinghub.yml. "

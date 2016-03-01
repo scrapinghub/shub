@@ -3,14 +3,12 @@
 
 import unittest
 import os
-import textwrap
 
 from click.testing import CliRunner
 from mock import patch
 
 from shub import deploy
-from shub.exceptions import (BadParameterException, InvalidAuthException,
-                             NotFoundException)
+from shub.exceptions import InvalidAuthException, NotFoundException
 
 from .utils import AssertInvokeRaisesMixin, mock_conf
 
@@ -95,19 +93,15 @@ class DeployTest(AssertInvokeRaisesMixin, unittest.TestCase):
             self.assertFalse(os.path.exists('scrapinghub.yml'))
             # Create scrapinghub.yml if wished
             del self.conf.projects['default']
-            result = self.runner.invoke(deploy.cli, input='199\n\n')
+            self.runner.invoke(deploy.cli, input='199\n\n')
             self.assertEqual(self.conf.projects['default'], 199)
             self.assertTrue(os.path.exists('scrapinghub.yml'))
-            # Don't prompt when there's any target defined in sh.yml
+            # Also run wizard when there's a scrapinghub.yml but no default
+            # target
             del self.conf.projects['default']
-            with open('scrapinghub.yml', 'w') as f:
-                f.write(textwrap.dedent(
-                    """
-                    projects:
-                      some: 123
-                    """
-                ))
-            self.assertInvokeRaises(BadParameterException, deploy.cli)
+            self.conf.projects['prod'] = 299
+            self.runner.invoke(deploy.cli, input='399\n\n')
+            self.assertEqual(self.conf.projects['default'], 399)
 
 
 if __name__ == '__main__':

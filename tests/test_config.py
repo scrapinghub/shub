@@ -133,6 +133,11 @@ class ShubConfigTest(unittest.TestCase):
                     project = 555
                     url = external_endpoint
                     username = externalkey
+
+                    [deploy:invalid_external]
+                    project = non-numeric
+                    url = external_endpoint
+                    username = externalkey
                     """
                 ))
             conf = ShubConfig()
@@ -155,44 +160,49 @@ class ShubConfigTest(unittest.TestCase):
             'external': 'externalkey',
         }
 
-        # Default with project
-        conf = _get_conf(
+        def _test_conf(scrapycfg_default_target):
+            conf = _get_conf(scrapycfg_default_target)
+            self.assertEqual(conf.projects, expected_projects)
+            self.assertEqual(conf.endpoints, expected_endpoints)
+            self.assertEqual(conf.apikeys, expected_apikeys)
+
+        # Default with invalid project
+        _test_conf(
+            """
+            [deploy]
+            project = non-numeric
+            """
+        )
+
+        # Default with valid project
+        expected_projects['default'] = '111'
+        _test_conf(
             """
             [deploy]
             project = 111
             """
         )
-        expected_projects['default'] = '111'
-        self.assertEqual(conf.projects, expected_projects)
-        self.assertEqual(conf.endpoints, expected_endpoints)
-        self.assertEqual(conf.apikeys, expected_apikeys)
 
         # Default with URL
-        conf = _get_conf(
+        del expected_projects['default']
+        expected_endpoints['default'] = 'http://default_url'
+        _test_conf(
             """
             [deploy]
             url = http://default_url
             """
         )
-        del expected_projects['default']
-        expected_endpoints['default'] = 'http://default_url'
-        self.assertEqual(conf.projects, expected_projects)
-        self.assertEqual(conf.endpoints, expected_endpoints)
-        self.assertEqual(conf.apikeys, expected_apikeys)
 
         # Default with key
-        conf = _get_conf(
+        expected_endpoints['default'] = ShubConfig.DEFAULT_ENDPOINT
+        expected_apikeys['default'] = 'key'
+        expected_apikeys['otherurl'] = 'key'
+        _test_conf(
             """
             [deploy]
             username = key
             """
         )
-        expected_endpoints['default'] = ShubConfig.DEFAULT_ENDPOINT
-        expected_apikeys['default'] = 'key'
-        expected_apikeys['otherurl'] = 'key'
-        self.assertEqual(conf.projects, expected_projects)
-        self.assertEqual(conf.endpoints, expected_endpoints)
-        self.assertEqual(conf.apikeys, expected_apikeys)
 
         shutil.rmtree(tmpdir)
 

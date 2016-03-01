@@ -408,9 +408,18 @@ def get_scrapycfg_targets(cfgfiles=None):
             t = baset.copy()
             t.update(cfg.items(x))
             targets[x[7:]] = t
-    for t in targets.values():
+    for tname, t in targets.items():
+        try:
+            int(t.get('project', 0))
+        except ValueError:
+            # Don't import non-numeric project IDs, and also throw away the
+            # URL and credentials associated with these projects (since the
+            # project ID does not belong to SH, neither do the endpoint or the
+            # auth information)
+            del targets[tname]
         if t.get('url', "").endswith('scrapyd/'):
             t['url'] = t['url'][:-8]
+    targets.setdefault('default', {})
     return targets
 
 
