@@ -9,7 +9,7 @@ from subprocess import Popen, PIPE
 import pytest
 from . import fakeserver
 
-SHUB = abspath(join(dirname(__file__), '../../dist/shub'))
+SHUB = abspath(join(dirname(__file__), '../../dist_bin/shub'))
 
 
 @pytest.fixture(scope='module')
