@@ -50,7 +50,14 @@ def make_deploy_request(url, data, files, auth, verbose, keep_log):
         if rsp.status_code == 403:
             raise InvalidAuthException
 
-        msg = "Deploy failed ({}):\n{}".format(rsp.status_code, rsp.text)
+        try:
+            error = rsp.json()['message']
+            if 'Traceback' in error:
+                error = ('\n---------- REMOTE TRACEBACK ----------\n' + error +
+                         '\n---------- END OF REMOTE TRACEBACK ----------')
+        except (ValueError, TypeError, KeyError):
+            error = rsp.text
+        msg = "Deploy failed ({}):\n{}".format(rsp.status_code, error)
         raise RemoteErrorException(msg)
     except requests.RequestException as exc:
         raise RemoteErrorException("Deploy failed: {}".format(exc))
