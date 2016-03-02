@@ -29,6 +29,8 @@ VALID_YAML_CFG = """
     apikeys:
         default: key
         otheruser: otherkey
+    stacks:
+        shproj: "hworker:v1.0.0"
 """
 
 
@@ -225,6 +227,10 @@ class ShubConfigTest(unittest.TestCase):
             self.conf.get_target('shproj', auth_required=True),
             self.conf.get_target('shproj', auth_required=False),
         )
+
+    def test_get_stack(self):
+        assert self.conf.get_stack('shproj') == 'hworker:v1.0.0'
+        assert self.conf.get_target('shproj').stack == 'hworker:v1.0.0'
 
     def test_get_undefined(self):
         self.assertEqual(

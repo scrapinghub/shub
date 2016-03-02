@@ -28,6 +28,7 @@ class ShubConfig(object):
         }
         self.apikeys = {}
         self.version = 'AUTO'
+        self.stacks = {}
 
     def load(self, stream):
         """Load Scrapinghub configuration from stream."""
@@ -35,7 +36,7 @@ class ShubConfig(object):
             yaml_cfg = yaml.safe_load(stream)
             if not yaml_cfg:
                 return
-            for option in ('projects', 'endpoints', 'apikeys'):
+            for option in ('projects', 'endpoints', 'apikeys', 'stacks'):
                 getattr(self, option).update(yaml_cfg.get(option, {}))
             self.version = yaml_cfg.get('version', self.version)
         except (yaml.YAMLError, AttributeError):
@@ -91,6 +92,7 @@ class ShubConfig(object):
             yml['endpoints'] = self.endpoints
             yml['apikeys'] = self.apikeys
             yml['version'] = self.version
+            yml['stacks'] = self.stacks
             # Don't write defaults
             if self.endpoints['default'] == ShubConfig.DEFAULT_ENDPOINT:
                 del yml['endpoints']['default']
@@ -164,13 +166,42 @@ class ShubConfig(object):
         elif self.version:
             return str(self.version)
 
+    def get_stack(self, target):
+        return self.stacks.get(target)
+
     def get_target(self, target, auth_required=True):
         """Return (project_id, endpoint, apikey) for given target."""
-        return (
-            self.get_project_id(target),
-            self.get_endpoint(target),
-            self.get_apikey(target, required=auth_required),
+        return Target(
+            name=target,
+            project_id=self.get_project_id(target),
+            endpoint=self.get_endpoint(target),
+            apikey=self.get_apikey(target, required=auth_required),
+            stack=self.get_stack(target),
         )
+
+
+class Target(object):
+
+    def __init__(self, name, project_id, endpoint, apikey, stack):
+        self.name = name
+        self.project_id = project_id
+        self.endpoint = endpoint
+        self.apikey = apikey
+        self.stack = stack
+
+    def __getitem__(self, pos):
+        return (self.project_id, self.endpoint, self.apikey)[pos]
+
+    def __eq__(self, other):
+        if isinstance(other, tuple):
+            return tuple(self) == other
+        return self.name == other.name and \
+            self.project_id == other.project_id and \
+            self.endpoint == other.endpoint and \
+            self.apikey == other.apikey and \
+            self.stack == other.stack
+
+
 
 
 MIGRATION_BANNER = """
