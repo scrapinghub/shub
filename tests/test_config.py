@@ -31,6 +31,7 @@ VALID_YAML_CFG = """
         otheruser: otherkey
     stacks:
         shproj: "hworker:v1.0.0"
+    requirements_file: scrapinghub-requirements.txt
 """
 
 
@@ -231,6 +232,11 @@ class ShubConfigTest(unittest.TestCase):
     def test_get_stack(self):
         assert self.conf.get_stack('shproj') == 'hworker:v1.0.0'
         assert self.conf.get_target('shproj').stack == 'hworker:v1.0.0'
+
+    def test_requirements(self):
+        assert self.conf.requirements_file == 'scrapinghub-requirements.txt'
+        assert self.conf.get_target('shproj').requirements_file == \
+            'scrapinghub-requirements.txt'
 
     def test_get_undefined(self):
         self.assertEqual(

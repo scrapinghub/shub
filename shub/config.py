@@ -29,6 +29,7 @@ class ShubConfig(object):
         self.apikeys = {}
         self.version = 'AUTO'
         self.stacks = {}
+        self.requirements_file = None
 
     def load(self, stream):
         """Load Scrapinghub configuration from stream."""
@@ -39,6 +40,8 @@ class ShubConfig(object):
             for option in ('projects', 'endpoints', 'apikeys', 'stacks'):
                 getattr(self, option).update(yaml_cfg.get(option, {}))
             self.version = yaml_cfg.get('version', self.version)
+            if 'requirements_file' in yaml_cfg:
+                self.requirements_file = yaml_cfg.get('requirements_file')
         except (yaml.YAMLError, AttributeError):
             # AttributeError: stream is valid YAML but not dictionary-like
             raise ConfigParseException
@@ -93,6 +96,8 @@ class ShubConfig(object):
             yml['apikeys'] = self.apikeys
             yml['version'] = self.version
             yml['stacks'] = self.stacks
+            if self.requirements_file:
+                yml['requirements_file'] = self.requirements_file
             # Don't write defaults
             if self.endpoints['default'] == ShubConfig.DEFAULT_ENDPOINT:
                 del yml['endpoints']['default']
@@ -177,17 +182,20 @@ class ShubConfig(object):
             endpoint=self.get_endpoint(target),
             apikey=self.get_apikey(target, required=auth_required),
             stack=self.get_stack(target),
+            requirements_file=self.requirements_file,
         )
 
 
 class Target(object):
 
-    def __init__(self, name, project_id, endpoint, apikey, stack):
+    def __init__(self, name, project_id, endpoint, apikey, stack,
+                 requirements_file):
         self.name = name
         self.project_id = project_id
         self.endpoint = endpoint
         self.apikey = apikey
         self.stack = stack
+        self.requirements_file = requirements_file
 
     def __getitem__(self, pos):
         return (self.project_id, self.endpoint, self.apikey)[pos]
