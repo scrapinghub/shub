@@ -1,8 +1,10 @@
 from __future__ import absolute_import
 import os
 from six.moves.urllib.parse import urljoin
+from tempfile import mkdtemp
 import click
 import requests
+from shutil import rmtree
 
 from shub.config import get_target
 from shub.fetch_eggs import fetch_eggs
@@ -19,22 +21,25 @@ project in dash.
 
 
 @click.command(help=HELP, short_help=SHORT_HELP)
-@click.argument("target", required=False, default='default')
-@click.argument("new_project", required=True)
+@click.option("--source_project", prompt="From which projects should I download eggs?")
+@click.option("--new_project", prompt="To which project should I upload eggs?")
 @click.option("-m", "--copy-main", default=False, is_flag=True, help="copy main Scrapy project egg")
-def cli(target, new_project, copy_main):
-    project, endpoint, apikey = get_target(target)
+def cli(source_project, new_project, copy_main):
+    project, endpoint, apikey = get_target(source_project)
+    new_project, new_endpoint, new_apikey = get_target(new_project)
+    copy_eggs(project, endpoint, apikey, new_project, new_endpoint, new_apikey, copy_main)
 
-    copy_eggs(project, endpoint, apikey, int(new_project), copy_main)
 
-
-def copy_eggs(project, endpoint, apikey, new_project, copy_main):
+def copy_eggs(project, endpoint, apikey, new_project, new_endpoint, new_apikey, copy_main):
 
     egg_versions = get_eggs_versions(project, endpoint, apikey)
-    destfile = 'eggs-%s.zip' % project
+    temp_dir = mkdtemp()
+    destfile = os.path.join(temp_dir, 'eggs-%s.zip' % project)
     fetch_eggs(project, endpoint, apikey, destfile)
-    decompress_egg_files()
-    destdir = "eggs-{}".format(project)
+
+    # this will decompress egg containing other eggs, not eggs from source project
+    decompress_egg_files(directory=temp_dir)
+    destdir = os.path.join(temp_dir, "eggs-{}".format(project))
     for egg_name in os.listdir(destdir):
         if egg_name == "__main__.egg" and not copy_main:
             continue
@@ -42,15 +47,17 @@ def copy_eggs(project, endpoint, apikey, new_project, copy_main):
         version = egg_versions[name]
         egg_path = os.path.join(destdir, egg_name)
         egg_info = (egg_name, egg_path)
-        _deploy_dependency_egg(new_project, endpoint, apikey, name=name, version=version,
+        _deploy_dependency_egg(new_project, new_endpoint, new_apikey, name=name, version=version,
                                egg_info=egg_info)
 
+    # remove temporary directory
+    rmtree(temp_dir)
 
 
 def get_eggs_versions(project, endpoint, apikey):
     click.echo('Getting eggs list from project {}...'.format(project))
     list_endpoint = urljoin(endpoint, "eggs/list.json")
-    response = requests.get(urljoin(list_endpoint, "?project={}".format(project)),
+    response = requests.get(list_endpoint, params={"project": project},
                             auth=(apikey, ''))
     response.raise_for_status()
     obj = response.json()

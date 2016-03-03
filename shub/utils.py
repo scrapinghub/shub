@@ -212,7 +212,7 @@ def run_python(args):
         return output.decode(STDOUT_ENCODING).strip()
 
 
-def decompress_egg_files():
+def decompress_egg_files(directory=None):
     try:
         EXTS = pip.utils.ARCHIVE_EXTENSIONS
     except AttributeError:
@@ -221,9 +221,12 @@ def decompress_egg_files():
         unpack_file = pip.utils.unpack_file
     except AttributeError:
         unpack_file = pip.util.unpack_file
-    eggs = [f for ext in EXTS for f in glob('*%s' % ext)]
+    pathname = "*"
+    if directory is not None:
+        pathname = os.path.join(directory, pathname)
+    eggs = [f for ext in EXTS for f in glob(pathname + "%s" % ext)]
     if not eggs:
-        files = glob('*')
+        files = glob(pathname)
         err = ('No egg files with a supported file extension were found. '
                'Files: %s' % ', '.join(files))
         raise NotFoundException(err)
@@ -259,13 +262,9 @@ def build_and_deploy_egg(project, endpoint, apikey):
 
 
 def _deploy_dependency_egg(project, endpoint, apikey, name=None, version=None, egg_info=None):
-    if name is None:
-        name = _get_dependency_name()
-    if version is None:
-        version = pwd_version()
-
-    if egg_info is None:
-        egg_info = _get_egg_info(name)
+    name = name or _get_dependency_name()
+    version = version or pwd_version()
+    egg_info = egg_info or _get_egg_info(name)
     egg_name, egg_path = egg_info
     url = urljoin(endpoint, 'eggs/add.json')
     data = {'project': project, 'name': name, 'version': version}
