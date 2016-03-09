@@ -1,9 +1,10 @@
-import contextlib
-import netrc
 import os
+import netrc
+import contextlib
+import warnings
 
-import click
 import six
+import click
 import ruamel.yaml as yaml
 
 from shub.exceptions import (BadParameterException, BadConfigException,
@@ -176,6 +177,15 @@ class ShubConfig(object):
 
     def get_target(self, target, auth_required=True):
         """Return (project_id, endpoint, apikey) for given target."""
+        warnings.warn("get_target is deprecated, use get_target_conf instead")
+        targetconf = self.get_targetconf(target, auth_required=auth_required)
+        return (
+            targetconf.project_id,
+            targetconf.endpoint,
+            targetconf.apikey
+        )
+
+    def get_targetconf(self, target, auth_required=True):
         return Target(
             name=target,
             project_id=self.get_project_id(target),
@@ -196,20 +206,6 @@ class Target(object):
         self.apikey = apikey
         self.stack = stack
         self.requirements_file = requirements_file
-
-    def __getitem__(self, pos):
-        return (self.project_id, self.endpoint, self.apikey)[pos]
-
-    def __eq__(self, other):
-        if isinstance(other, tuple):
-            return tuple(self) == other
-        return self.name == other.name and \
-            self.project_id == other.project_id and \
-            self.endpoint == other.endpoint and \
-            self.apikey == other.apikey and \
-            self.stack == other.stack
-
-
 
 
 MIGRATION_BANNER = """

@@ -97,12 +97,12 @@ def cli(target, version, debug, egg, build_egg, verbose, keep_log):
             conf = load_shub_config()
             if target == 'default' and target not in conf.projects:
                 _deploy_wizard(conf)
-            target_conf = conf.get_target(target)
-            project = target_conf.project_id
-            endpoint = target_conf.endpoint
-            apikey = target_conf.apikey
-            stack = target_conf.stack
-            requirements_file = target_conf.requirements_file
+            targetconf = conf.get_targetconf(target)
+            project = targetconf.project_id
+            endpoint = targetconf.endpoint
+            apikey = targetconf.apikey
+            stack = targetconf.stack
+            requirements_file = targetconf.requirements_file
             version = version or conf.get_version()
             auth = (apikey, '')
 
