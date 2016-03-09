@@ -72,13 +72,18 @@ def write_and_echo_logs(keep_log, last_logs, rsp, verbose):
                 click.echo(line)
             last_logs.append(line)
             log_file.write(line + '\n')
-        echo_short_log_if_deployed(last_logs, log_file, verbose)
+
+        deployed = _is_deploy_successful(last_logs)
+        echo_short_log_if_deployed(deployed, last_logs, log_file, verbose)
         if not log_file.delete:
             click.echo("Deploy log location: %s" % log_file.name)
+        if not deployed:
+            raise RemoteErrorException(
+                "Deploy failed: {}".format(last_logs[-1]))
 
 
-def echo_short_log_if_deployed(last_logs, log_file, verbose):
-    if _is_deploy_successful(last_logs):
+def echo_short_log_if_deployed(deployed, last_logs, log_file, verbose):
+    if deployed:
         if not verbose:
             click.echo(last_logs[-1])
     else:

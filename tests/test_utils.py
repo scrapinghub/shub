@@ -13,6 +13,7 @@ from collections import deque
 
 from shub import utils
 from shub.exceptions import BadParameterException, NotFoundException
+from shub.exceptions import RemoteErrorException
 
 from .utils import mock_conf
 
@@ -342,28 +343,39 @@ class UtilsTest(unittest.TestCase):
         self.assertEqual(pipargs[0], 'download')
         self.assertIn('--no-binary=:all:', pipargs)
 
-    @patch('shub.utils._is_deploy_successful')
-    def test_echo_short_log_if_deployed(self, mock_dep_success):
+    def test_echo_short_log_if_deployed(self):
         log_file = Mock(delete=None)
         last_logs = ["last log line"]
 
-        mock_dep_success.return_value = True
+        deployed = True
         for verbose in [True, False]:
-            utils.echo_short_log_if_deployed(last_logs, log_file, verbose)
+            utils.echo_short_log_if_deployed(
+                deployed, last_logs, log_file, verbose)
             self.assertEqual(None, log_file.delete)
 
-        mock_dep_success.return_value = None
+        deployed = False
         for verbose in [True, False]:
-            utils.echo_short_log_if_deployed(last_logs, log_file, verbose)
+            utils.echo_short_log_if_deployed(
+                deployed, last_logs, log_file, verbose)
             self.assertEqual(False, log_file.delete)
 
     def test_write_and_echo_logs(self):
         last_logs = []
         rsp = Mock()
         rsp.iter_lines = Mock(return_value=iter(["line1", "line2"]))
+        self.assertRaises(RemoteErrorException,
+            utils.write_and_echo_logs,
+            keep_log=True, last_logs=last_logs,
+            rsp=rsp, verbose=True)
+        self.assertEqual(last_logs, ["line1", "line2"])
+        last_logs = []
+
+        rsp.iter_lines = Mock(return_value=iter(
+            ["line1", '{"status":"ok","fieldK":"fieldV"}']))
         utils.write_and_echo_logs(keep_log=True, last_logs=last_logs,
                                   rsp=rsp, verbose=True)
-        self.assertEqual(last_logs, ["line1", "line2"])
+        self.assertEqual(last_logs, [
+            "line1", '{"status":"ok","fieldK":"fieldV"}'])
 
 
 if __name__ == '__main__':
