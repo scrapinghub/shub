@@ -2,6 +2,7 @@ import os
 import netrc
 import contextlib
 import warnings
+from collections import namedtuple
 
 import six
 import click
@@ -196,16 +197,8 @@ class ShubConfig(object):
         )
 
 
-class Target(object):
-
-    def __init__(self, name, project_id, endpoint, apikey, stack,
-                 requirements_file):
-        self.name = name
-        self.project_id = project_id
-        self.endpoint = endpoint
-        self.apikey = apikey
-        self.stack = stack
-        self.requirements_file = requirements_file
+Target = namedtuple('Target',
+                    'name project_id endpoint apikey stack requirements_file')
 
 
 MIGRATION_BANNER = """
