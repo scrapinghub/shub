@@ -81,8 +81,7 @@ def get_docker_client():
     if os.environ.get('DOCKER_TLS_VERIFY', False):
         tls_cert_path = os.environ.get('DOCKER_CERT_PATH')
         if not tls_cert_path:
-            raise shub_exceptions.NotFoundException(
-                'Docker cert path is not provided via env')
+            tls_cert_path = os.path.join(os.path.expanduser('~'), '.docker')
         apply_path_fun = lambda name: os.path.join(tls_cert_path, name)
         tls_config = docker.tls.TLSConfig(
             client_cert=(apply_path_fun('cert.pem'),
