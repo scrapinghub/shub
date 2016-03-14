@@ -79,8 +79,9 @@ def _prepare_deploy_params(project, version, image_name,
     scripts = _extract_scripts_from_project()
     params = {'project': project,
               'version': version,
-              'image_url': image_name,
-              'spiders': spiders}
+              'image_url': image_name}
+    if spiders:
+        params['spiders'] = spiders
     if scripts:
         params['scripts'] = scripts
     if sync:
