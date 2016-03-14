@@ -57,7 +57,10 @@ def missing_modules(*modules):
         try:
             importlib.import_module(module_name)
         except ImportError:
-            missing.append(module_name)
+            if module_name == 'docker':
+                missing.append('docker-py')
+            else:
+                missing.append(module_name)
     return missing
 
 
