@@ -1,9 +1,11 @@
-import contextlib
-import netrc
 import os
+import netrc
+import contextlib
+import warnings
+from collections import namedtuple
 
-import click
 import six
+import click
 import ruamel.yaml as yaml
 
 from shub.exceptions import (BadParameterException, BadConfigException,
@@ -28,6 +30,8 @@ class ShubConfig(object):
         }
         self.apikeys = {}
         self.version = 'AUTO'
+        self.stacks = {}
+        self.requirements_file = None
 
     def load(self, stream):
         """Load Scrapinghub configuration from stream."""
@@ -35,9 +39,11 @@ class ShubConfig(object):
             yaml_cfg = yaml.safe_load(stream)
             if not yaml_cfg:
                 return
-            for option in ('projects', 'endpoints', 'apikeys'):
+            for option in ('projects', 'endpoints', 'apikeys', 'stacks'):
                 getattr(self, option).update(yaml_cfg.get(option, {}))
             self.version = yaml_cfg.get('version', self.version)
+            if 'requirements_file' in yaml_cfg:
+                self.requirements_file = yaml_cfg.get('requirements_file')
         except (yaml.YAMLError, AttributeError):
             # AttributeError: stream is valid YAML but not dictionary-like
             raise ConfigParseException
@@ -91,6 +97,9 @@ class ShubConfig(object):
             yml['endpoints'] = self.endpoints
             yml['apikeys'] = self.apikeys
             yml['version'] = self.version
+            yml['stacks'] = self.stacks
+            if self.requirements_file:
+                yml['requirements_file'] = self.requirements_file
             # Don't write defaults
             if self.endpoints['default'] == ShubConfig.DEFAULT_ENDPOINT:
                 del yml['endpoints']['default']
@@ -164,13 +173,32 @@ class ShubConfig(object):
         elif self.version:
             return str(self.version)
 
+    def get_stack(self, target):
+        return self.stacks.get(target)
+
     def get_target(self, target, auth_required=True):
         """Return (project_id, endpoint, apikey) for given target."""
+        warnings.warn("get_target is deprecated, use get_target_conf instead")
+        targetconf = self.get_targetconf(target, auth_required=auth_required)
         return (
-            self.get_project_id(target),
-            self.get_endpoint(target),
-            self.get_apikey(target, required=auth_required),
+            targetconf.project_id,
+            targetconf.endpoint,
+            targetconf.apikey
         )
+
+    def get_targetconf(self, target, auth_required=True):
+        return Target(
+            name=target,
+            project_id=self.get_project_id(target),
+            endpoint=self.get_endpoint(target),
+            apikey=self.get_apikey(target, required=auth_required),
+            stack=self.get_stack(target),
+            requirements_file=self.requirements_file,
+        )
+
+
+Target = namedtuple('Target',
+                    'name project_id endpoint apikey stack requirements_file')
 
 
 MIGRATION_BANNER = """

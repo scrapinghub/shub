@@ -97,7 +97,12 @@ def cli(target, version, debug, egg, build_egg, verbose, keep_log):
             conf = load_shub_config()
             if target == 'default' and target not in conf.projects:
                 _deploy_wizard(conf)
-            project, endpoint, apikey = conf.get_target(target)
+            targetconf = conf.get_targetconf(target)
+            project = targetconf.project_id
+            endpoint = targetconf.endpoint
+            apikey = targetconf.apikey
+            stack = targetconf.stack
+            requirements_file = targetconf.requirements_file
             version = version or conf.get_version()
             auth = (apikey, '')
 
@@ -109,7 +114,7 @@ def cli(target, version, debug, egg, build_egg, verbose, keep_log):
                 egg, tmpdir = _build_egg()
 
             _upload_egg(endpoint, egg, project, version, auth,
-                        verbose, keep_log)
+                        verbose, keep_log, stack, requirements_file)
             click.echo("Run your spiders at: "
                        "https://dash.scrapinghub.com/p/%s/" % project)
     finally:
@@ -124,9 +129,15 @@ def _url(endpoint, action):
     return urljoin(endpoint, action)
 
 
-def _upload_egg(endpoint, eggpath, project, version, auth, verbose, keep_log):
+def _upload_egg(endpoint, eggpath, project, version, auth, verbose, keep_log,
+                stack=None, requirements_file=None):
     data = {'project': project, 'version': version}
+    if stack:
+        data['stack'] = stack
     files = {'egg': ('project.egg', open(eggpath, 'rb'))}
+    if requirements_file:
+        files['requirements'] = ('requirements.txt',
+                                 open(requirements_file, 'rb'))
     url = _url(endpoint, 'scrapyd/addversion.json')
     click.echo('Deploying to Scrapy Cloud project "%s"' % project)
     return make_deploy_request(url, data, files, auth, verbose, keep_log)
