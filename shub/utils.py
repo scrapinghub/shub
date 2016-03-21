@@ -339,9 +339,10 @@ def get_job_specs(job):
             param_hint='job_id',
         )
     # XXX: Lazy import due to circular dependency
-    from shub.config import get_target
-    project_id, endpoint, apikey = get_target(match.group(2) or 'default')
-    return "{}/{}".format(project_id, match.group(3)), apikey
+    from shub.config import get_target_conf
+    targetconf = get_target_conf(match.group(2) or 'default')
+    return ("{}/{}".format(targetconf.project_id, match.group(3)),
+            targetconf.apikey)
 
 
 def get_job(job):

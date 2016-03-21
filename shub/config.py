@@ -1,6 +1,8 @@
 import contextlib
 import netrc
 import os
+import warnings
+from collections import namedtuple
 
 import click
 import six
@@ -28,6 +30,8 @@ class ShubConfig(object):
         }
         self.apikeys = {}
         self.version = 'AUTO'
+        self.stacks = {}
+        self.requirements_file = None
 
     def load(self, stream):
         """Load Scrapinghub configuration from stream."""
@@ -35,9 +39,11 @@ class ShubConfig(object):
             yaml_cfg = yaml.safe_load(stream)
             if not yaml_cfg:
                 return
-            for option in ('projects', 'endpoints', 'apikeys'):
+            for option in ('projects', 'endpoints', 'apikeys', 'stacks'):
                 getattr(self, option).update(yaml_cfg.get(option, {}))
             self.version = yaml_cfg.get('version', self.version)
+            if 'requirements_file' in yaml_cfg:
+                self.requirements_file = yaml_cfg['requirements_file']
         except (yaml.YAMLError, AttributeError):
             # AttributeError: stream is valid YAML but not dictionary-like
             raise ConfigParseException
@@ -60,10 +66,13 @@ class ShubConfig(object):
                         t['username'] == self.apikeys.get('default'))
         if 'project' in t:
             if tname == 'default' or (default_endpoint and default_user):
-                prefix = ''
+                self.projects[tname] = t['project']
+            elif default_endpoint and not default_user:
+                self.projects[tname] = {
+                    'id': t['project'], 'apikey': tname,
+                }
             else:
-                prefix = tname + '/'
-            self.projects[tname] = prefix + t['project']
+                self.projects[tname] = tname + '/' + t['project']
         if not default_endpoint:
             self.endpoints[tname] = t['url']
         if not default_user or (not default_endpoint and 'username' in t):
@@ -85,74 +94,80 @@ class ShubConfig(object):
             # Write "123" instead of "'123'"
             for target, project in yml['projects'].iteritems():
                 try:
-                    yml['projects'][target] = int(project)
+                    if isinstance(project, dict):
+                        project['id'] = int(project['id'])
+                    else:
+                        yml['projects'][target] = int(project)
                 except Exception:
                     pass
             yml['endpoints'] = self.endpoints
             yml['apikeys'] = self.apikeys
             yml['version'] = self.version
+            yml['stacks'] = self.stacks
+            if self.requirements_file:
+                yml['requirements_file'] = self.requirements_file
             # Don't write defaults
             if self.endpoints['default'] == ShubConfig.DEFAULT_ENDPOINT:
                 del yml['endpoints']['default']
             if self.version == 'AUTO':
                 del yml['version']
 
-    def _parse_project(self, target):
-        """Parse project of given target into (project_id, endpoint)."""
-        project = self.projects.get(target, target)
-        try:
-            endpoint, project_id = project.split('/')
-        except (ValueError, AttributeError):
-            endpoint, project_id = ('default', project)
-        try:
-            project_id = int(project_id)
-        except ValueError:
-            if target == 'default':
-                raise BadParameterException(
-                    "Please specify target or configure a default target in "
-                    "scrapinghub.yml.",
-                    param_hint='target',
-                )
-            elif target in self.projects:
+    @property
+    def normalized_projects(self):
+        """
+        Return a copy of ``self.projects`` where all values are dictionaries
+        that have at least the keys ``id``, ``endpoint``, and ``apikey``.
+        """
+        projects = self.projects.copy()
+        for target, proj in projects.items():
+            if not isinstance(proj, dict):
+                proj = {'id': proj}
+                projects[target] = proj
+            elif 'id' not in proj:
+                raise BadConfigException("Please define an ID for project "
+                                         "\"%s\"" % target)
+            try:
+                proj['endpoint'], proj['id'] = proj['id'].split('/')
+            except (ValueError, AttributeError):
+                proj.setdefault('endpoint', 'default')
+            proj.setdefault('apikey', proj['endpoint'])
+            try:
+                proj['id'] = int(proj['id'])
+            except ValueError:
                 raise BadConfigException(
                     "\"%s\" is not a valid Scrapinghub project ID. Please "
-                    "check your scrapinghub.yml" % project_id,
+                    "check your scrapinghub.yml" % proj['id']
                 )
-            raise BadParameterException(
-                "Could not find target \"%s\". Please define it in your "
-                "scrapinghub.yml or supply a numerical project ID."
-                "" % project_id,
-                param_hint='target',
-            )
-        return project_id, endpoint
+        return projects
 
-    def get_project_id(self, target):
-        """Return project ID for given target."""
-        return self._parse_project(target)[0]
-
-    def get_endpoint(self, target):
-        """Return endpoint for given target."""
-        endpoint = self._parse_project(target)[1]
+    def get_project(self, project):
+        """
+        Given a project alias or a canonical project ID, return the
+        corresponding normalized configuration dictionary from
+        ``self.projects``.
+        """
+        if project in self.projects:
+            return self.normalized_projects[project]
         try:
-            return self.endpoints[endpoint]
-        except KeyError:
-            if endpoint in self.apikeys:
-                return self.endpoints['default']
-            raise NotFoundException("Could not find endpoint %s. Please define"
-                                    " it in your scrapinghub.yml." % endpoint)
-
-    def get_apikey(self, target, required=True):
-        """Return API key for endpoint associated with given target"""
-        endpoint = self._parse_project(target)[1]
+            endpoint, proj_id = project.split('/')
+        except (ValueError, AttributeError):
+            endpoint, proj_id = 'default', project
         try:
-            return str(self.apikeys[endpoint])
-        except KeyError:
-            if not required:
-                return None
-            msg = None
-            if endpoint != 'default':
-                msg = "Could not find API key for endpoint %s." % endpoint
-            raise MissingAuthException(msg)
+            proj_id = int(proj_id)
+        except ValueError:
+            if project == 'default':
+                msg = ("Please specify target or configure a default target "
+                       "in scrapinghub.yml.")
+            else:
+                msg = ("Could not find target \"%s\". Please define it in "
+                       "your scrapinghub.yml or supply a numerical project ID."
+                       "" % project)
+            raise BadParameterException(msg, param_hint='target')
+        for proj in self.normalized_projects.values():
+            if proj['id'] == proj_id and proj['endpoint'] == endpoint:
+                return proj
+        else:
+            return {'id': proj_id, 'endpoint': endpoint, 'apikey': endpoint}
 
     def get_version(self):
         if not self.version or self.version == 'AUTO':
@@ -164,13 +179,54 @@ class ShubConfig(object):
         elif self.version:
             return str(self.version)
 
+    def get_target_conf(self, target, auth_required=True):
+        proj = self.get_project(target)
+        if proj['endpoint'] not in self.endpoints:
+            raise NotFoundException("Could not find endpoint %s. Please "
+                                    "define it in your scrapinghub.yml."
+                                    "" % proj['endpoint'])
+        try:
+            apikey = str(self.apikeys[proj['apikey']])
+        except KeyError:
+            if auth_required:
+                msg = None
+                if proj['endpoint'] != 'default':
+                    msg = ("Could not find API key for endpoint %s."
+                           "" % proj['endpoint'])
+                raise MissingAuthException(msg)
+            apikey = None
+        return Target(
+            project_id=proj['id'],
+            endpoint=self.endpoints[proj['endpoint']],
+            apikey=apikey,
+            stack=(self.stacks.get(proj['stack'], proj['stack'])
+                   if 'stack' in proj else None),
+            requirements_file=self.requirements_file,
+            version=self.get_version(),
+        )
+
     def get_target(self, target, auth_required=True):
         """Return (project_id, endpoint, apikey) for given target."""
+        warnings.warn("get_target is deprecated, use get_target_conf instead")
+        targetconf = self.get_target_conf(target, auth_required=auth_required)
         return (
-            self.get_project_id(target),
-            self.get_endpoint(target),
-            self.get_apikey(target, required=auth_required),
+            targetconf.project_id,
+            targetconf.endpoint,
+            targetconf.apikey
         )
+
+    def get_project_id(self, target):
+        return self.get_target_conf(target, auth_required=False).project_id
+
+    def get_endpoint(self, target):
+        return self.get_target_conf(target, auth_required=False).endpoint
+
+    def get_apikey(self, target, required=True):
+        return self.get_target_conf(target, auth_required=required).apikey
+
+
+Target = namedtuple('Target', ['project_id', 'endpoint', 'apikey', 'stack',
+                               'requirements_file', 'version'])
 
 
 MIGRATION_BANNER = """
@@ -315,6 +371,12 @@ def get_target(target, auth_required=True):
     """Load shub configuration and return target."""
     conf = load_shub_config()
     return conf.get_target(target, auth_required=auth_required)
+
+
+def get_target_conf(target, auth_required=True):
+    """Load shub configuration and return target."""
+    conf = load_shub_config()
+    return conf.get_target_conf(target, auth_required=auth_required)
 
 
 def get_version():

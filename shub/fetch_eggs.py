@@ -5,7 +5,7 @@ from six.moves.urllib.parse import urljoin
 import click
 import requests
 
-from shub.config import get_target
+from shub.config import get_target_conf
 from shub.exceptions import InvalidAuthException, RemoteErrorException
 
 
@@ -23,9 +23,10 @@ SHORT_HELP = "Download project eggs from Scrapy Cloud"
 @click.command(help=HELP, short_help=SHORT_HELP)
 @click.argument("target", required=False, default='default')
 def cli(target):
-    project, endpoint, apikey = get_target(target)
-    destfile = 'eggs-%s.zip' % project
-    fetch_eggs(project, endpoint, apikey, destfile)
+    targetconf = get_target_conf(target)
+    destfile = 'eggs-%s.zip' % targetconf.project_id
+    fetch_eggs(targetconf.project_id, targetconf.endpoint, targetconf.apikey,
+               destfile)
 
 
 def fetch_eggs(project, endpoint, apikey, destfile):

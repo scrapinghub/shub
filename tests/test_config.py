@@ -10,7 +10,8 @@ import mock
 
 from click.testing import CliRunner
 
-from shub.config import (get_target, get_version, load_shub_config, ShubConfig,
+from shub.config import (get_target, get_target_conf, get_version,
+                         load_shub_config, ShubConfig, Target,
                          update_yaml_dict)
 from shub.exceptions import (BadParameterException, BadConfigException,
                              ConfigParseException, MissingAuthException,
@@ -21,15 +22,47 @@ VALID_YAML_CFG = """
     projects:
         shproj: 123
         externalproj: external/123
-        notmeproj: otheruser/123
-        invalid: 50a
-        invalid2: 123/external
+        notmeproj:
+            id: 234
+            apikey: otheruser
+        advanced_prod:
+            id: 456
+            stack: hworker:v1.0.0
+        advanced_dev:
+            id: 457
+            stack: dev
     endpoints:
         external: ext_endpoint
     apikeys:
         default: key
         otheruser: otherkey
+    stacks:
+        dev: scrapy:v1.1
+    requirements_file: requirements.txt
+    version: 1.0
 """
+
+
+def _project_dict(proj_id, endpoint='default', extra=None):
+    projd = {
+        'id': proj_id,
+        'endpoint': endpoint,
+        'apikey': endpoint,
+    }
+    projd.update(extra or {})
+    return projd
+
+
+def _target(id, endpoint=None, apikey=None, stack=None,
+            requirements_file='requirements.txt', version='1.0'):
+    return Target(
+        project_id=id,
+        endpoint=endpoint or ShubConfig.DEFAULT_ENDPOINT,
+        apikey=apikey,
+        stack=stack,
+        requirements_file=requirements_file,
+        version=version,
+    )
 
 
 class ShubConfigTest(unittest.TestCase):
@@ -51,15 +84,27 @@ class ShubConfigTest(unittest.TestCase):
         projects = {
             'shproj': 123,
             'externalproj': 'external/123',
-            'notmeproj': 'otheruser/123',
-            'invalid': '50a',
-            'invalid2': '123/external',
+            'notmeproj': {
+                'id': 234,
+                'apikey': 'otheruser',
+            },
+            'advanced_prod': {
+                'id': 456,
+                'stack': 'hworker:v1.0.0',
+            },
+            'advanced_dev': {
+                'id': 457,
+                'stack': 'dev'
+            },
         }
         self.assertEqual(projects, self.conf.projects)
         endpoints = {'external': 'ext_endpoint'}
         self.assertDictContainsSubset(endpoints, self.conf.endpoints)
         apikeys = {'default': 'key', 'otheruser': 'otherkey'}
         self.assertEqual(apikeys, self.conf.apikeys)
+        stacks = {'dev': 'scrapy:v1.1'}
+        self.assertEqual(stacks, self.conf.stacks)
+        self.assertEqual('requirements.txt', self.conf.requirements_file)
 
     def test_load_partial(self):
         yml = """
@@ -146,7 +191,10 @@ class ShubConfigTest(unittest.TestCase):
 
         expected_projects = {
             'prod': '222',
-            'otheruser': 'otheruser/333',
+            'otheruser': {
+                'id': '333',
+                'apikey': 'otheruser',
+            },
             'otherurl': 'otherurl/444',
             'external': 'external/555',
         }
@@ -214,74 +262,100 @@ class ShubConfigTest(unittest.TestCase):
             self.assertEqual(yaml.load(f), yaml.load(VALID_YAML_CFG))
         shutil.rmtree(tmpdir)
 
-    def test_get_target(self):
+    def test_normalized_projects(self):
+        expected_projects = {
+            'shproj': _project_dict(123),
+            'externalproj': _project_dict(123, 'external'),
+            'notmeproj': _project_dict(234, extra={'apikey': 'otheruser'}),
+            'advanced_prod': _project_dict(
+                456, extra={'stack': 'hworker:v1.0.0'}),
+            'advanced_dev': _project_dict(457, extra={'stack': 'dev'}),
+        }
+        self.assertEqual(self.conf.normalized_projects, expected_projects)
+
+    def test_get_project(self):
+        self.assertEqual(self.conf.get_project(123),
+                         self.conf.get_project('shproj'))
+        self.assertEqual(self.conf.get_project(456),
+                         self.conf.get_project('advanced_prod'))
+        self.assertEqual(self.conf.get_project(456),
+                         self.conf.get_project('456'))
+        self.assertEqual(self.conf.get_project('externalproj'),
+                         self.conf.get_project('external/123'))
+
+    def test_get_target_conf(self):
+        self.assertEqual(
+            self.conf.get_target_conf('shproj', auth_required=False),
+            _target(123, apikey='key')
+        )
+        self.assertEqual(
+            self.conf.get_target_conf('shproj', auth_required=True),
+            self.conf.get_target_conf('shproj', auth_required=False),
+        )
         with self.assertRaises(MissingAuthException):
-            self.conf.get_target('externalproj')
+            self.conf.get_target_conf('externalproj')
         self.assertEqual(
-            self.conf.get_target('externalproj', auth_required=False),
-            (123, 'ext_endpoint', None)
+            self.conf.get_target_conf('externalproj', auth_required=False),
+            _target(123, 'ext_endpoint')
         )
         self.assertEqual(
-            self.conf.get_target('shproj', auth_required=True),
-            self.conf.get_target('shproj', auth_required=False),
+            self.conf.get_target_conf('notmeproj'),
+            _target(234, apikey='otherkey'),
         )
+        self.assertEqual(
+            self.conf.get_target_conf('advanced_prod'),
+            _target(456, apikey='key', stack='hworker:v1.0.0'),
+        )
+        self.assertEqual(
+            self.conf.get_target_conf('advanced_dev'),
+            _target(457, apikey='key', stack='scrapy:v1.1'),
+        )
+
+    def test_get_target_conf_calls_get_project(self):
+        t = _target(456, apikey='key', stack='hworker:v1.0.0')
+        self.assertEqual(self.conf.get_target_conf('advanced_prod'), t)
+        self.assertEqual(self.conf.get_target_conf(456), t)
+        self.assertEqual(self.conf.get_target_conf('456'), t)
+        self.assertEqual(self.conf.get_target_conf('default/456'), t)
 
     def test_get_undefined(self):
         self.assertEqual(
-            self.conf.get_target('99'),
-            (99, self.conf.endpoints['default'], 'key'),
+            self.conf.get_target_conf('99'),
+            _target(99, apikey='key'),
         )
         self.assertEqual(
-            self.conf.get_target('external/99', auth_required=False),
-            (99, 'ext_endpoint', None),
+            self.conf.get_target_conf('external/99', auth_required=False),
+            _target(99, 'ext_endpoint', None),
         )
+        with self.assertRaises(NotFoundException):
+            self.conf.get_target_conf('nonexisting_ep/33')
 
     def test_get_invalid(self):
         # Missing target and no default defined
         with self.assertRaises(BadParameterException):
-            self.conf.get_target('default')
+            self.conf.get_target_conf('default')
         # Bad project ID on command line
         with self.assertRaises(BadParameterException):
-            self.conf.get_target('99a')
+            self.conf.get_target_conf('99a')
         # Bad project ID in scrapinghub.yml
+        conf = self._get_conf_with_yml(
+            """
+            projects:
+                invalid: 50a
+                invalid2: 123/external
+            """)
         with self.assertRaises(BadConfigException):
-            self.conf.get_target('invalid')
+            conf.get_target_conf('invalid')
         with self.assertRaises(BadConfigException):
-            self.conf.get_target('invalid2')
+            conf.get_target_conf('invalid2')
 
-    def test_get_project_id(self):
-        self.assertEqual(self.conf.get_project_id('shproj'), 123)
-        self.assertEqual(self.conf.get_project_id('externalproj'), 123)
-        self.assertEqual(self.conf.get_project_id('notmeproj'), 123)
-
-    def test_get_endpoint(self):
-        self.assertEqual(
-            self.conf.get_endpoint('shproj'),
-            ShubConfig.DEFAULT_ENDPOINT,
-        )
-        self.assertEqual(
-            self.conf.get_endpoint('externalproj'),
-            'ext_endpoint',
-        )
-        self.assertEqual(
-            self.conf.get_endpoint('notmeproj'),
-            ShubConfig.DEFAULT_ENDPOINT,
-        )
-        with self.assertRaises(NotFoundException):
-            self.conf.get_endpoint('nonexisting_ep/33')
-
-    def test_get_apikey(self):
-        self.assertEqual(self.conf.get_apikey('shproj'), 'key')
-        self.assertEqual(self.conf.get_apikey('notmeproj'), 'otherkey')
-        with self.assertRaises(MissingAuthException):
-            self.conf.get_apikey('externalproj', required=True)
-        self.assertEqual(
-            self.conf.get_apikey('externalproj', required=False),
-            None,
-        )
+    def test_apikey_always_str(self):
         # API keys should always be strings, even if they contain only digits
         self.conf.apikeys['default'] = 123
-        self.assertEqual(self.conf.get_apikey('shproj'), '123')
+        self.assertEqual(
+            self.conf.get_target_conf('shproj'),
+            _target(123, apikey='123'),
+        )
 
     @mock.patch('shub.config.pwd_version', return_value='ver_AUTO')
     @mock.patch('shub.config.pwd_git_version', return_value='ver_GIT')
@@ -510,7 +584,10 @@ class ConfigHelpersTest(unittest.TestCase):
     @mock.patch('shub.config.load_shub_config')
     def test_get_target_version(self, mock_lsh):
         get_target('mytarget', auth_required=False)
+        get_target_conf('mytargetconf', auth_required=False)
         get_version()
         mock_lsh.return_value.get_target.assert_called_once_with(
             'mytarget', auth_required=False)
+        mock_lsh.return_value.get_target_conf.assert_called_once_with(
+            'mytargetconf', auth_required=False)
         mock_lsh.return_value.get_version.assert_called_once_with()

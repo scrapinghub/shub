@@ -6,7 +6,7 @@ from subprocess import Popen, PIPE
 import click
 
 from shub import utils
-from shub.config import get_target
+from shub.config import get_target_conf
 from shub.exceptions import BadParameterException, NotFoundException
 from shub.utils import decompress_egg_files, download_from_pypi
 
@@ -47,12 +47,13 @@ def cli(target, from_url=None, git_branch=None, from_pypi=None):
 
 
 def main(target, from_url=None, git_branch=None, from_pypi=None):
-    project, endpoint, apikey = get_target(target)
+    targetconf = get_target_conf(target)
 
     if from_pypi:
         _fetch_from_pypi(from_pypi)
         decompress_egg_files()
-        utils.build_and_deploy_eggs(project, endpoint, apikey)
+        utils.build_and_deploy_eggs(targetconf.project_id, targetconf.endpoint,
+                                    targetconf.apikey)
         return
 
     if from_url:
@@ -62,7 +63,8 @@ def main(target, from_url=None, git_branch=None, from_pypi=None):
         error = "No setup.py -- are you running from a valid Python project?"
         raise NotFoundException(error)
 
-    utils.build_and_deploy_egg(project, endpoint, apikey)
+    utils.build_and_deploy_egg(targetconf.project_id, targetconf.endpoint,
+                               targetconf.apikey)
 
 
 def _checkout(repo, git_branch=None):
