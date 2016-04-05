@@ -36,7 +36,7 @@ Does a simple POST request to Dash API with given parameters
 @click.option("--username", help="docker registry name")
 @click.option("--password", help="docker registry password")
 @click.option("--email", help="docker registry email")
-@click.option("--sync", is_flag=True, help="enable synchronous mode")
+@click.option("--sync/--async", default=True, help="enable synchronous mode")
 def cli(target, debug, version, username, password, email, sync):
     deploy_cmd(target, debug, version, username, password, email, sync)
 
