@@ -50,7 +50,7 @@ def deploy_cmd(target, debug, version, username, password, email, sync):
 
     params = _prepare_deploy_params(
         project, version, image_name,
-        username, password, email, sync)
+        username, password, email)
     if debug:
         click.echo('Deploy with params: {}'.format(params))
     req = requests.post(
@@ -91,7 +91,7 @@ def _check_status_url(status_url):
 
 
 def _prepare_deploy_params(project, version, image_name,
-                           username, password, email, sync):
+                           username, password, email):
     spiders = _extract_spiders_from_project()
     scripts = _extract_scripts_from_project()
     params = {'project': project,
@@ -101,8 +101,6 @@ def _prepare_deploy_params(project, version, image_name,
         params['spiders'] = spiders
     if scripts:
         params['scripts'] = scripts
-    if sync:
-        params['sync'] = True
     if not username:
         params['pull_insecure_registry'] = True
     else:
