@@ -2,6 +2,7 @@ import os
 import re
 import ast
 import json
+import time
 import click
 import requests
 import textwrap
@@ -14,6 +15,8 @@ from kumo_release import utils
 
 VALIDSPIDERNAME = re.compile('^[a-z0-9][-._a-z0-9]+$', re.I)
 STORE_N_LAST_STATUS_URLS = 5
+SYNC_DEPLOY_REFRESH_TIMEOUT = 1
+SYNC_DEPLOY_WAIT_STATUSES = ['pending', 'started', 'retry', 'progress']
 SHORT_HELP = 'Deploy a release image to Scrapy cloud'
 
 HELP = """
@@ -67,10 +70,24 @@ def deploy_cmd(target, debug, version, username, password, email, sync):
         "You can check deploy results later with "
         "'kumo-release check --id {}'.".format(status_id))
 
+    click.echo("Deploy results:")
+    actual_state = _check_status_url(status_url)
+    click.echo(" {}".format(actual_state))
+
+    if sync:
+        status = actual_state['status']
+        while status in SYNC_DEPLOY_WAIT_STATUSES:
+            time.sleep(SYNC_DEPLOY_REFRESH_TIMEOUT)
+            actual_state = _check_status_url(status_url)
+            if actual_state['status'] != status:
+                click.echo(" {}".format(actual_state))
+                status = actual_state['status']
+
+
+def _check_status_url(status_url):
     status_req = requests.get(status_url, timeout=300)
     status_req.raise_for_status()
-    result = status_req.json()
-    click.echo("Deploy results: {}".format(result))
+    return status_req.json()
 
 
 def _prepare_deploy_params(project, version, image_name,
