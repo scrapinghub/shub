@@ -42,7 +42,7 @@ Dockerfile as you want.
 
 System deps for Dockerfile:
 By default there're several system deps to be included to the Dockerfile ({}),
-you can extend it via --add-deps option, or redefine at all with --deps option.
+you can extend it via --add-deps option, or redefine at all with --base-deps option.
 
 Python deps for Dockerfile:
 The correct way to install python deps is using requirements.txt. If there's
@@ -75,13 +75,13 @@ def list_recommended_python_reqs(ctx, param, value):
               help="project name to get settings module from scrapy.cfg")
 @click.option("--base-image", default="python:2.7",
               help="base docker image name")
-@click.option("--deps", default=','.join(BASE_SYSTEM_DEPS),
-              help="a comma-separated list with system deps")
+@click.option("--base-deps", default=','.join(BASE_SYSTEM_DEPS),
+              help="a comma-separated list with base system deps")
 @click.option("--add-deps",
               help="a comma-separated list with additional system deps")
 @click.option("--requirements", default="requirements.txt",
               help="path to requirements.txt")
-def cli(project, base_image, deps, add_deps, requirements):
+def cli(project, base_image, base_deps, add_deps, requirements):
     project_dir = utils.get_project_dir()
     scrapy_config = shub_utils.get_config()
     if not scrapy_config.has_option('settings', project):
@@ -90,7 +90,7 @@ def cli(project, base_image, deps, add_deps, requirements):
     settings_module = scrapy_config.get('settings', project)
     values = {
         'base_image':   base_image,
-        'system_deps':  _format_system_deps(deps, add_deps),
+        'system_deps':  _format_system_deps(base_deps, add_deps),
         'system_env':   _format_system_env(settings_module),
         'requirements': _format_requirements(project_dir, requirements),
     }
@@ -115,9 +115,9 @@ def cli(project, base_image, deps, add_deps, requirements):
         click.echo("Please respond with 'yes'('y') or 'no'(n)")
 
 
-def _format_system_deps(deps, add_deps):
+def _format_system_deps(base_deps, add_deps):
     """Prepare a list with system dependencies install cmds"""
-    system_deps = deps.split(',') if deps != '-' else []
+    system_deps = base_deps.split(',') if base_deps != '-' else []
     if add_deps:
         system_add_deps = add_deps.split(',')
         system_deps = list(set(system_deps + system_add_deps))
