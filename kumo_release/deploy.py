@@ -25,6 +25,8 @@ CHECK_RETRY_EXCEPTIONS = [
     requests.exceptions.HTTPError,
 ]
 CHECK_RETRY_ATTEMPTS = 5
+CHECK_RETRY_EXP_MULTIPLIER = 1000
+CHECK_RETRY_EXP_MAX = 10000
 
 HELP = """
 A command to deploy your release image to Scrapy Cloud.
@@ -97,8 +99,8 @@ def _retry_on_requests_error(exception):
 
 @retry(retry_on_exception=_retry_on_requests_error,
        stop_max_attempt_number=CHECK_RETRY_ATTEMPTS,
-       wait_exponential_multiplier=1000,
-       wait_exponential_max=10000)
+       wait_exponential_multiplier=CHECK_RETRY_EXP_MULTIPLIER,
+       wait_exponential_max=CHECK_RETRY_EXP_MAX)
 def _check_status_url(status_url):
     status_req = requests.get(status_url, timeout=300)
     status_req.raise_for_status()
