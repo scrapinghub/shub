@@ -36,12 +36,12 @@ Does a simple POST request to Dash API with given parameters
 @click.option("--username", help="docker registry name")
 @click.option("--password", help="docker registry password")
 @click.option("--email", help="docker registry email")
-@click.option("--sync/--async", default=True, help="enable synchronous mode")
-def cli(target, debug, version, username, password, email, sync):
-    deploy_cmd(target, debug, version, username, password, email, sync)
+@click.option("--async", is_flag=True, help="enable asynchronous mode")
+def cli(target, debug, version, username, password, email, async):
+    deploy_cmd(target, debug, version, username, password, email, async)
 
 
-def deploy_cmd(target, debug, version, username, password, email, sync):
+def deploy_cmd(target, debug, version, username, password, email, async):
     config = utils.load_release_config()
     project, endpoint, apikey = config.get_target(target)
     image = config.get_image(target)
@@ -74,7 +74,7 @@ def deploy_cmd(target, debug, version, username, password, email, sync):
     actual_state = _check_status_url(status_url)
     click.echo(" {}".format(actual_state))
 
-    if sync:
+    if not async:
         status = actual_state['status']
         while status in SYNC_DEPLOY_WAIT_STATUSES:
             time.sleep(SYNC_DEPLOY_REFRESH_TIMEOUT)
