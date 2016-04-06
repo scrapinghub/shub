@@ -8,6 +8,7 @@ import requests
 import textwrap
 import subprocess
 from urlparse import urljoin
+from retrying import retry
 
 from shub.deploy import list_targets
 from kumo_release import utils
@@ -18,6 +19,12 @@ STORE_N_LAST_STATUS_URLS = 5
 SYNC_DEPLOY_REFRESH_TIMEOUT = 1
 SYNC_DEPLOY_WAIT_STATUSES = ['pending', 'started', 'retry', 'progress']
 SHORT_HELP = 'Deploy a release image to Scrapy cloud'
+CHECK_RETRY_EXCEPTIONS = [
+    requests.exceptions.Timeout,
+    requests.exceptions.ConnectionError,
+    requests.exceptions.HTTPError,
+]
+CHECK_RETRY_ATTEMPTS = 5
 
 HELP = """
 A command to deploy your release image to Scrapy Cloud.
@@ -84,6 +91,14 @@ def deploy_cmd(target, debug, version, username, password, email, async):
                 status = actual_state['status']
 
 
+def _retry_on_requests_error(exception):
+    return isinstance(exception, CHECK_RETRY_EXCEPTIONS)
+
+
+@retry(retry_on_exception=_retry_on_requests_error,
+       stop_max_attempt_number=CHECK_RETRY_ATTEMPTS,
+       wait_exponential_multiplier=1000,
+       wait_exponential_max=10000)
 def _check_status_url(status_url):
     status_req = requests.get(status_url, timeout=300)
     status_req.raise_for_status()
