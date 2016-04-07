@@ -19,14 +19,16 @@ STORE_N_LAST_STATUS_URLS = 5
 SYNC_DEPLOY_REFRESH_TIMEOUT = 1
 SYNC_DEPLOY_WAIT_STATUSES = ['pending', 'started', 'retry', 'progress']
 SHORT_HELP = 'Deploy a release image to Scrapy cloud'
-CHECK_RETRY_EXCEPTIONS = [
+CHECK_RETRY_EXCEPTIONS = (
     requests.exceptions.Timeout,
     requests.exceptions.ConnectionError,
     requests.exceptions.HTTPError,
-]
-CHECK_RETRY_ATTEMPTS = 5
+)
+# Exponential retry timeouts: min(2^n * multiplier, max)
+# [2s, 4s, 8s, 16s, 30s] = 60s
+CHECK_RETRY_ATTEMPTS = 6
 CHECK_RETRY_EXP_MULTIPLIER = 1000
-CHECK_RETRY_EXP_MAX = 10000
+CHECK_RETRY_EXP_MAX = 30000
 
 HELP = """
 A command to deploy your release image to Scrapy Cloud.
