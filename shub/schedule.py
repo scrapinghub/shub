@@ -6,7 +6,7 @@ from scrapinghub import Connection, APIError
 from six.moves.urllib.parse import urljoin
 
 from shub.exceptions import RemoteErrorException
-from shub.config import get_target
+from shub.config import get_target_conf
 
 
 HELP = """
@@ -50,10 +50,11 @@ def cli(spider, argument, set):
         target, spider = spider.rsplit('/', 1)
     except ValueError:
         target = 'default'
-    project, endpoint, apikey = get_target(target)
-    job_key = schedule_spider(project, endpoint, apikey, spider, argument, set)
+    targetconf = get_target_conf(target)
+    job_key = schedule_spider(targetconf.project_id, targetconf.endpoint,
+                              targetconf.apikey, spider, argument, set)
     watch_url = urljoin(
-        endpoint,
+        targetconf.endpoint,
         '../p/{}/job/{}/{}'.format(*job_key.split('/')),
     )
     short_key = job_key.split('/', 1)[1] if target == 'default' else job_key

@@ -3,7 +3,7 @@ import os
 import tempfile
 import shutil
 
-from shub.config import get_target
+from shub.config import get_target_conf
 from shub.utils import (build_and_deploy_eggs, decompress_egg_files,
                         download_from_pypi)
 
@@ -35,12 +35,13 @@ def cli(target, requirements_file):
 
 
 def main(target, requirements_file):
-    project, endpoint, apikey = get_target(target)
+    targetconf = get_target_conf(target)
     requirements_full_path = os.path.abspath(requirements_file)
     eggs_tmp_dir = _mk_and_cd_eggs_tmpdir()
     _download_egg_files(eggs_tmp_dir, requirements_full_path)
     decompress_egg_files()
-    build_and_deploy_eggs(project, endpoint, apikey)
+    build_and_deploy_eggs(targetconf.project_id, targetconf.endpoint,
+                          targetconf.apikey)
 
 
 def _mk_and_cd_eggs_tmpdir():
