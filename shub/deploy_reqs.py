@@ -18,7 +18,7 @@ scrapinghub.yml (see shub deploy).
 By default, requirements will be read from requirements.txt. You may supply a
 different file name with the -r option:
 
-    shub deploy-eggs -r myreqs.txt
+    shub deploy-reqs -r myreqs.txt
 
 The requirements file must be in a format parsable by pip.
 """
