@@ -197,6 +197,32 @@ Or a package on PyPI::
     {"status": "ok", "egg": {"version": "loginform-1.0", "name": "loginform"}}
     Deployed eggs list at: https://dash.scrapinghub.com/p/12345/eggs
 
+For projects that use Kumo, instead of uploading eggs of your requirements, you
+can specify a requirements file to be used::
+
+    # project_directory/scrapinghub.yml
+
+    projects:
+      default: 12345
+      prod: 33333
+
+    requirements_file: deploy_reqs.txt
+
+Note that this requirements file is an *extension* of the Kumo stack, and
+therefore should not contain packages that are already part of the stack, such
+as ``scrapy``.
+
+You can specify the Kumo stack to be used by extending the ``projects`` section
+of your configuration::
+
+    # project_directory/scrapinghub.yml
+
+    projects:
+      default:
+        id: 12345
+        stack: kumo-stack-portia
+      prod: 33333  # will use the original stack
+
 
 Scheduling jobs and fetching job data
 -------------------------------------
