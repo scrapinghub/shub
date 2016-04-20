@@ -1,5 +1,6 @@
 click
 docker-py
 requests
+retrying
 shub
 six

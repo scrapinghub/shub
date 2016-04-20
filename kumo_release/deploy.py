@@ -2,11 +2,13 @@ import os
 import re
 import ast
 import json
+import time
 import click
 import requests
 import textwrap
 import subprocess
 from urlparse import urljoin
+from retrying import retry
 
 from shub.deploy import list_targets
 from kumo_release import utils
@@ -14,7 +16,19 @@ from kumo_release import utils
 
 VALIDSPIDERNAME = re.compile('^[a-z0-9][-._a-z0-9]+$', re.I)
 STORE_N_LAST_STATUS_URLS = 5
+SYNC_DEPLOY_REFRESH_TIMEOUT = 1
+SYNC_DEPLOY_WAIT_STATUSES = ['pending', 'started', 'retry', 'progress']
 SHORT_HELP = 'Deploy a release image to Scrapy cloud'
+CHECK_RETRY_EXCEPTIONS = (
+    requests.exceptions.Timeout,
+    requests.exceptions.ConnectionError,
+    requests.exceptions.HTTPError,
+)
+# Exponential retry timeouts: min(2^n * multiplier, max)
+# [2s, 4s, 8s, 16s, 30s] = 60s
+CHECK_RETRY_ATTEMPTS = 6
+CHECK_RETRY_EXP_MULTIPLIER = 1000
+CHECK_RETRY_EXP_MAX = 30000
 
 HELP = """
 A command to deploy your release image to Scrapy Cloud.
@@ -33,12 +47,12 @@ Does a simple POST request to Dash API with given parameters
 @click.option("--username", help="docker registry name")
 @click.option("--password", help="docker registry password")
 @click.option("--email", help="docker registry email")
-@click.option("--sync", is_flag=True, help="enable synchronous mode")
-def cli(target, debug, version, username, password, email, sync):
-    deploy_cmd(target, debug, version, username, password, email, sync)
+@click.option("--async", is_flag=True, help="enable asynchronous mode")
+def cli(target, debug, version, username, password, email, async):
+    deploy_cmd(target, debug, version, username, password, email, async)
 
 
-def deploy_cmd(target, debug, version, username, password, email, sync):
+def deploy_cmd(target, debug, version, username, password, email, async):
     config = utils.load_release_config()
     project, endpoint, apikey = config.get_target(target)
     image = config.get_image(target)
@@ -47,7 +61,7 @@ def deploy_cmd(target, debug, version, username, password, email, sync):
 
     params = _prepare_deploy_params(
         project, version, image_name,
-        username, password, email, sync)
+        username, password, email)
     if debug:
         click.echo('Deploy with params: {}'.format(params))
     req = requests.post(
@@ -67,14 +81,36 @@ def deploy_cmd(target, debug, version, username, password, email, sync):
         "You can check deploy results later with "
         "'kumo-release check --id {}'.".format(status_id))
 
+    click.echo("Deploy results:")
+    actual_state = _check_status_url(status_url)
+    click.echo(" {}".format(actual_state))
+
+    if not async:
+        status = actual_state['status']
+        while status in SYNC_DEPLOY_WAIT_STATUSES:
+            time.sleep(SYNC_DEPLOY_REFRESH_TIMEOUT)
+            actual_state = _check_status_url(status_url)
+            if actual_state['status'] != status:
+                click.echo(" {}".format(actual_state))
+                status = actual_state['status']
+
+
+def _retry_on_requests_error(exception):
+    return isinstance(exception, CHECK_RETRY_EXCEPTIONS)
+
+
+@retry(retry_on_exception=_retry_on_requests_error,
+       stop_max_attempt_number=CHECK_RETRY_ATTEMPTS,
+       wait_exponential_multiplier=CHECK_RETRY_EXP_MULTIPLIER,
+       wait_exponential_max=CHECK_RETRY_EXP_MAX)
+def _check_status_url(status_url):
     status_req = requests.get(status_url, timeout=300)
     status_req.raise_for_status()
-    result = status_req.json()
-    click.echo("Deploy results: {}".format(result))
+    return status_req.json()
 
 
 def _prepare_deploy_params(project, version, image_name,
-                           username, password, email, sync):
+                           username, password, email):
     spiders = _extract_spiders_from_project()
     scripts = _extract_scripts_from_project()
     params = {'project': project,
@@ -84,8 +120,6 @@ def _prepare_deploy_params(project, version, image_name,
         params['spiders'] = spiders
     if scripts:
         params['scripts'] = scripts
-    if sync:
-        params['sync'] = True
     if not username:
         params['pull_insecure_registry'] = True
     else:
