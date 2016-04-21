@@ -311,6 +311,20 @@ class ShubConfigTest(unittest.TestCase):
             _target(457, apikey='key', stack='scrapy:v1.1'),
         )
 
+    def test_get_target_conf_custom_defaults(self):
+        self.conf.load("""
+            stacks:
+              default: custom_default
+        """)
+        self.assertEqual(
+            self.conf.get_target_conf('shproj'),
+            _target(123, apikey='key', stack='custom_default')
+        )
+        self.assertEqual(
+            self.conf.get_target_conf('advanced_prod'),
+            _target(456, apikey='key', stack='hworker:v1.0.0'),
+        )
+
     def test_get_target_conf_calls_get_project(self):
         t = _target(456, apikey='key', stack='hworker:v1.0.0')
         self.assertEqual(self.conf.get_target_conf('advanced_prod'), t)
