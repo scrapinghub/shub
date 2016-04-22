@@ -200,7 +200,7 @@ class ShubConfig(object):
             endpoint=self.endpoints[proj['endpoint']],
             apikey=apikey,
             stack=(self.stacks.get(proj['stack'], proj['stack'])
-                   if 'stack' in proj else None),
+                   if 'stack' in proj else self.stacks.get('default')),
             requirements_file=self.requirements_file,
             version=self.get_version(),
         )
