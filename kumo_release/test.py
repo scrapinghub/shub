@@ -61,7 +61,8 @@ def _check_start_crawl_entry(image_name, docker_client, debug):
         docker_client, image_name, ['which', 'start-crawl'], debug)
     if status != 0 or not logs:
         raise shub_exceptions.NotFoundException(
-            "start-crawl command is not found in the image")
+            "start-crawl command is not found in the image.\n"
+            + SH_EP_SCRAPY_WARNING)
 
 
 def _run_docker_command(client, image_name, command, debug):
