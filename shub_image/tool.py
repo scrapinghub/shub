@@ -1,7 +1,7 @@
 import click
 import importlib
-import kumo_release
-from kumo_release.utils import missing_modules
+import shub_image
+from shub_image.utils import missing_modules
 
 
 def missingmod_cmd(modules):
@@ -17,7 +17,7 @@ def missingmod_cmd(modules):
 
 
 @click.group(help="Scrapinghub release tool")
-@click.version_option(kumo_release.__version__)
+@click.version_option(shub_image.__version__)
 def cli():
     pass
 
@@ -37,6 +37,6 @@ for command, modules in module_deps.items():
     if m:
         cli.add_command(missingmod_cmd(m), command)
     else:
-        module_path = "kumo_release." + command
+        module_path = "shub_image." + command
         command_module = importlib.import_module(module_path)
         cli.add_command(command_module.cli, command)

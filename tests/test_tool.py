@@ -1,6 +1,6 @@
 from click.testing import CliRunner
 from unittest import TestCase
-from kumo_release.tool import cli
+from shub_image.tool import cli
 
 
 class TestToolCli(TestCase):

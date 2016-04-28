@@ -9,17 +9,17 @@ from unittest import TestCase, main
 from shub import config as shub_config
 from shub import exceptions as shub_exceptions
 
-from kumo_release.utils import missing_modules
-from kumo_release.utils import get_project_dir
-from kumo_release.utils import get_docker_client
-from kumo_release.utils import format_image_name
+from shub_image.utils import missing_modules
+from shub_image.utils import get_project_dir
+from shub_image.utils import get_docker_client
+from shub_image.utils import format_image_name
 
-from kumo_release.utils import ReleaseConfig
-from kumo_release.utils import load_release_config
+from shub_image.utils import ReleaseConfig
+from shub_image.utils import load_release_config
 
-from kumo_release.utils import store_status_url
-from kumo_release.utils import load_status_url
-from kumo_release.utils import STATUS_FILE_LOCATION
+from shub_image.utils import store_status_url
+from shub_image.utils import load_status_url
+from shub_image.utils import STATUS_FILE_LOCATION
 
 from .utils import FakeProjectDirectory, add_scrapy_fake_config
 

@@ -1,9 +1,9 @@
 import click
 
 from shub.deploy import list_targets
-from kumo_release import build
-from kumo_release import push
-from kumo_release import deploy
+from shub_image import build
+from shub_image import push
+from shub_image import deploy
 
 
 SHORT_HELP = "Shortcut command for build-push-deploy chain"

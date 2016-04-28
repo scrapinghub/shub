@@ -4,10 +4,10 @@ from click.testing import CliRunner
 from unittest import TestCase
 from subprocess import CalledProcessError
 
-from kumo_release.deploy import cli
-from kumo_release.deploy import _prepare_deploy_params
-from kumo_release.deploy import _extract_spiders_from_project
-from kumo_release.deploy import _extract_scripts_from_project
+from shub_image.deploy import cli
+from shub_image.deploy import _prepare_deploy_params
+from shub_image.deploy import _extract_spiders_from_project
+from shub_image.deploy import _extract_scripts_from_project
 
 from .utils import FakeProjectDirectory
 from .utils import add_sh_fake_config

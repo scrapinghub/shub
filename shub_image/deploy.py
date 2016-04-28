@@ -11,7 +11,7 @@ from urlparse import urljoin
 from retrying import retry
 
 from shub.deploy import list_targets
-from kumo_release import utils
+from shub_image import utils
 
 
 VALIDSPIDERNAME = re.compile('^[a-z0-9][-._a-z0-9]+$', re.I)
@@ -79,7 +79,7 @@ def deploy_cmd(target, debug, version, username, password, email, async):
         status_url, limit=STORE_N_LAST_STATUS_URLS)
     click.echo(
         "You can check deploy results later with "
-        "'kumo-release check --id {}'.".format(status_id))
+        "'shub-image check --id {}'.".format(status_id))
 
     click.echo("Deploy results:")
     actual_state = _check_status_url(status_url)

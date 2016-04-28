@@ -3,8 +3,8 @@ import mock
 from click.testing import CliRunner
 from unittest import TestCase
 from shub import exceptions as shub_exceptions
-from kumo_release.check import cli
-from kumo_release import utils
+from shub_image.check import cli
+from shub_image import utils
 
 from .utils import FakeProjectDirectory
 

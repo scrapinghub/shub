@@ -1,9 +1,9 @@
 from setuptools import setup
 
 setup(
-    name='kumo-release-tool',
+    name='shub-image',
     version='0.1.1',
-    packages=['kumo_release'],
+    packages=['shub_image'],
     description='Scrapinghub release tool',
     long_description=open('README.rst').read(),
     author='Scrapinghub',
@@ -12,7 +12,7 @@ setup(
     maintainer_email='info@scrapinghub.com',
     license='BSD',
     entry_points={
-        'console_scripts': ['kumo-release = kumo_release.tool:cli']
+        'console_scripts': ['shub-image = shub_image.tool:cli']
     },
     include_package_data=True,
     zip_safe=False,

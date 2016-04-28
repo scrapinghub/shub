@@ -5,7 +5,7 @@ import click
 
 from shub import exceptions as shub_exceptions
 from shub.deploy import list_targets
-from kumo_release import utils
+from shub_image import utils
 
 
 SHORT_HELP = 'Build release image.'
@@ -42,7 +42,7 @@ def build_cmd(target, debug, version):
     image_name = utils.format_image_name(image, version)
     if not os.path.exists(os.path.join(project_dir, 'Dockerfile')):
         raise shub_exceptions.BadParameterException(
-            'Dockerfile is not found, please use kumo-release init cmd')
+            'Dockerfile is not found, please use shub-image init cmd')
     is_built = False
     for line in client.build(path=project_dir, tag=image_name):
         data = json.loads(line)

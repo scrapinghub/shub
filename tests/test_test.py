@@ -4,12 +4,12 @@ import mock
 from click.testing import CliRunner
 from unittest import TestCase
 from shub import exceptions as shub_exceptions
-from kumo_release.test import cli
+from shub_image.test import cli
 
-from kumo_release.test import _run_docker_command
-from kumo_release.test import _check_image_exists
-from kumo_release.test import _check_start_crawl_entry
-from kumo_release.test import _check_sh_entrypoint
+from shub_image.test import _run_docker_command
+from shub_image.test import _check_image_exists
+from shub_image.test import _check_start_crawl_entry
+from shub_image.test import _check_sh_entrypoint
 
 from .utils import FakeProjectDirectory
 from .utils import add_sh_fake_config
@@ -33,7 +33,7 @@ def _mock_docker_errors_module():
 
 class TestTestCli(TestCase):
 
-    @mock.patch('kumo_release.utils.get_docker_client')
+    @mock.patch('shub_image.utils.get_docker_client')
     def test_cli(self, mocked_method):
         """ This test mocks docker library to test the function itself """
         client = mock.Mock()

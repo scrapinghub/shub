@@ -5,7 +5,7 @@ from string import Template
 
 from shub import exceptions as shub_exceptions
 from shub import utils as shub_utils
-from kumo_release import utils
+from shub_image import utils
 
 
 DOCKER_APP_DIR = '/app'
@@ -52,7 +52,7 @@ project_dir with the recommended deps(use --list-recommended-reqs to list it).
 
 You should also include scrapinghub-entrypoint-scrapy package to your py-reqs
 (git+https://github.com/scrapinghub/scrapinghub-entrypoint-scrapy.git), it's
-a necessary condition to run your project with Kumo (use kumo-release test to
+a necessary condition to run your project with Kumo (use shub-image test to
 check if your image fits our expectations).
 """.format(BASE_SYSTEM_DEPS)
 

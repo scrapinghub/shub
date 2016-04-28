@@ -2,7 +2,7 @@ import os
 import mock
 from click.testing import CliRunner
 from unittest import TestCase
-from kumo_release.build import cli
+from shub_image.build import cli
 from shub import exceptions as shub_exceptions
 
 from .utils import FakeProjectDirectory
@@ -10,7 +10,7 @@ from .utils import add_sh_fake_config
 from .utils import add_fake_dockerfile
 from .utils import add_scrapy_fake_config
 
-@mock.patch('kumo_release.utils.get_docker_client')
+@mock.patch('shub_image.utils.get_docker_client')
 class TestBuildCli(TestCase):
 
     def test_cli(self, mocked_method):

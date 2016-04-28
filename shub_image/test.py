@@ -2,7 +2,7 @@ import click
 from shub.deploy import list_targets
 
 from shub import exceptions as shub_exceptions
-from kumo_release import utils
+from shub_image import utils
 
 SHORT_HELP = "Test a built image with Kumo contract"
 HELP = """ TODO """

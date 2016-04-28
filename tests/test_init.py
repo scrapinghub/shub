@@ -3,11 +3,11 @@ from click.testing import CliRunner
 from unittest import TestCase
 from shub import exceptions as shub_exceptions
 
-from kumo_release.init import cli
-from kumo_release.init import _format_system_deps
-from kumo_release.init import _format_system_env
-from kumo_release.init import _format_requirements
-from kumo_release.init import _wrap
+from shub_image.init import cli
+from shub_image.init import _format_system_deps
+from shub_image.init import _format_system_env
+from shub_image.init import _format_requirements
+from shub_image.init import _wrap
 
 from .utils import FakeProjectDirectory
 from .utils import add_fake_requirements

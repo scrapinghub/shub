@@ -2,7 +2,7 @@ import os
 import click
 import requests
 
-from kumo_release.utils import load_status_url
+from shub_image.utils import load_status_url
 
 SHORT_HELP = "Check a deploy task's status url saved in a temporary file."
 
