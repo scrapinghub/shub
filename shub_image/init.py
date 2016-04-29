@@ -29,8 +29,7 @@ BASE_PYTHON_DEPS = [
     'raven==5.0.0', 'requests==2.5.3', 'scrapely==0.12.0',
     'scrapinghub==1.7.0', 'scrapylib==1.6.0', 'setproctitle==1.0.1',
     'slybot==0.12.1', 'w3lib==1.13.0',
-    'git+https://github.com/scrapinghub/scrapinghub-entrypoint-scrapy.git'
-    '@0.4#egg=scrapinghub-entrypoint-scrapy'
+    'scrapinghub-entrypoint-scrapy==0.6.0'
 ]
 
 SHORT_HELP = "Form Dockerfile for a given Scrapy project and save it."
@@ -50,10 +49,9 @@ no requirements.txt in the project_dir folder and no provided value for it
 via --requirements option, we'll create new requirements.txt in the
 project_dir with the recommended deps(use --list-recommended-reqs to list it).
 
-You should also include scrapinghub-entrypoint-scrapy package to your py-reqs
-(git+https://github.com/scrapinghub/scrapinghub-entrypoint-scrapy.git), it's
-a necessary condition to run your project with Kumo (use shub-image test to
-check if your image fits our expectations).
+You should also include scrapinghub-entrypoint-scrapy package to your py-reqs,
+it's a necessary condition to run your project with Kumo (use shub-image test
+to check if your image fits our expectations).
 """.format(BASE_SYSTEM_DEPS)
 
 
