@@ -4,12 +4,12 @@ from shub.deploy import list_targets
 from shub import exceptions as shub_exceptions
 from shub_image import utils
 
-SHORT_HELP = "Test a built image with Kumo contract"
+SHORT_HELP = "Test a built image with Scrapy Cloud contract"
 HELP = """ TODO """
 
 SH_EP_SCRAPY_WARNING = \
-    'You should add scrapinghub-entrypoint-scrapy dependency ' \
-    'to your requirements.txt or to Dockerfile to run the image with Kumo\n' \
+    'You should add scrapinghub-entrypoint-scrapy dependency to your' \
+    ' requirements.txt or to Dockerfile to run the image with Scrapy Cloud\n' \
     '  (git+https://github.com/scrapinghub/scrapinghub-entrypoint-scrapy.git)'
 
 
