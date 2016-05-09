@@ -6,7 +6,7 @@ import click
 import requests
 from shutil import rmtree
 
-from shub.config import get_target
+from shub.config import get_target_conf
 from shub.fetch_eggs import fetch_eggs
 from shub.utils import decompress_egg_files, _deploy_dependency_egg
 
@@ -23,9 +23,11 @@ you to easily clone requirements from an old project into a new one."""
 @click.option("--new_project", prompt="To which project should I upload eggs?")
 @click.option("-m", "--copy-main", default=False, is_flag=True, help="copy main Scrapy project egg")
 def cli(source_project, new_project, copy_main):
-    project, endpoint, apikey = get_target(source_project)
-    new_project, new_endpoint, new_apikey = get_target(new_project)
-    copy_eggs(project, endpoint, apikey, new_project, new_endpoint, new_apikey, copy_main)
+    source = get_target_conf(source_project)
+    target = get_target_conf(new_project)
+    copy_eggs(source.project_id, source.endpoint, source.apikey,
+              target.project_id, target.endpoint, target.apikey,
+              copy_main)
 
 
 def copy_eggs(project, endpoint, apikey, new_project, new_endpoint, new_apikey, copy_main):
