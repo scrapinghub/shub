@@ -42,7 +42,17 @@ def copy_eggs(project, endpoint, apikey, new_project, new_endpoint, new_apikey, 
         if egg_name == "__main__.egg" and not copy_main:
             continue
         name = egg_name.partition(".egg")[0]
-        version = egg_versions[name]
+        try:
+            version = egg_versions[name]
+        except KeyError:
+            click.secho(
+                "WARNING: The following egg belongs to a Dash Addon: %s. "
+                "Please manually enable the corresponding Addon in the target "
+                "project." % name,
+                fg='yellow',
+                bold=True,
+            )
+            continue
         egg_path = os.path.join(destdir, egg_name)
         egg_info = (egg_name, egg_path)
         _deploy_dependency_egg(new_project, new_endpoint, new_apikey, name=name, version=version,
