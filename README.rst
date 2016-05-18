@@ -220,7 +220,7 @@ of your configuration::
     projects:
       default:
         id: 12345
-        stack: scrapinghub-stack-portia
+        stack: portia
       prod: 33333  # will use the original stack
 
 
