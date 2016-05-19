@@ -172,7 +172,7 @@ class ShubConfigTest(unittest.TestCase):
 
                     [deploy:otherurl]
                     project = 444
-                    url = http://dash.scrapinghub.com/api/scrapyd/
+                    url = http://app.scrapinghub.com/api/scrapyd/
 
                     [deploy:external]
                     project = 555
@@ -201,7 +201,7 @@ class ShubConfigTest(unittest.TestCase):
         expected_endpoints = {
             'default': ShubConfig.DEFAULT_ENDPOINT,
             'external': 'external_endpoint',
-            'otherurl': 'http://dash.scrapinghub.com/api/'
+            'otherurl': 'http://app.scrapinghub.com/api/'
         }
         expected_apikeys = {
             'otheruser': 'otherkey',

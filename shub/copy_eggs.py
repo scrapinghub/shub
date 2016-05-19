@@ -15,9 +15,7 @@ SHORT_HELP = "Sync eggs from one project with other project"
 HELP = SHORT_HELP + """
 
 Fetch all eggs from one project and upload them to other project. This allows
-you to easily clone requirements from old project if you set up some new
-project in dash.
-"""
+you to easily clone requirements from an old project into a new one."""
 
 
 @click.command(help=HELP, short_help=SHORT_HELP)

@@ -21,7 +21,7 @@ NETRC_PATH = os.path.expanduser('~/_netrc' if os.name == 'nt' else '~/.netrc')
 
 class ShubConfig(object):
 
-    DEFAULT_ENDPOINT = 'https://dash.scrapinghub.com/api/'
+    DEFAULT_ENDPOINT = 'https://app.scrapinghub.com/api/'
 
     def __init__(self):
         self.projects = {}

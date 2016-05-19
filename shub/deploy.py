@@ -112,7 +112,7 @@ def cli(target, version, debug, egg, build_egg, verbose, keep_log):
                         version, auth, verbose, keep_log, targetconf.stack,
                         targetconf.requirements_file)
             click.echo("Run your spiders at: "
-                       "https://dash.scrapinghub.com/p/%s/"
+                       "https://app.scrapinghub.com/p/%s/"
                        "" % targetconf.project_id)
     finally:
         if tmpdir:

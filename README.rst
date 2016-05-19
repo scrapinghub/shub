@@ -133,7 +133,7 @@ your ``scrapinghub.yml``, you can leave out the parameter completely::
     Packing version 3af023e-master
     Deploying to Scrapy Cloud project "12345"
     {"status": "ok", "project": 12345, "version": "3af023e-master", "spiders": 1}
-    Run your spiders at: https://dash.scrapinghub.com/p/12345/
+    Run your spiders at: https://app.scrapinghub.com/p/12345/
 
 ::
 
@@ -141,7 +141,7 @@ your ``scrapinghub.yml``, you can leave out the parameter completely::
     Packing version 1.0.0
     Deploying to Scrapy Cloud project "33333"
     {"status": "ok", "project": 33333, "version": "1.0.0", "spiders": 1}
-    Run your spiders at: https://dash.scrapinghub.com/p/33333/
+    Run your spiders at: https://app.scrapinghub.com/p/33333/
 
 Run ``shub deploy -l`` to see a list of all available targets. You can also
 deploy your project from a Python egg, or build one without deploying::
@@ -150,7 +150,7 @@ deploy your project from a Python egg, or build one without deploying::
     Using egg: egg_name
     Deploying to Scrapy Cloud project "12345"
     {"status": "ok", "project": 12345, "version": "1.0.0", "spiders": 1}
-    Run your spiders at: https://dash.scrapinghub.com/p/12345/
+    Run your spiders at: https://app.scrapinghub.com/p/12345/
 
 ::
 
@@ -170,7 +170,7 @@ by supplying a repository URL::
     Building egg in: /tmp/egg-tmp-clone
     Deploying dependency to Scrapy Cloud project "12345"
     {"status": "ok", "egg": {"version": "v0.2.1-master", "name": "dateparser"}}
-    Deployed eggs list at: https://dash.scrapinghub.com/p/12345/eggs
+    Deployed eggs list at: https://app.scrapinghub.com/p/12345/eggs
 
 Or even a specific branch if using git::
 
@@ -180,7 +180,7 @@ Or even a specific branch if using git::
     Building egg in: /tmp/egg-tmp-clone
     Deploying dependency to Scrapy Cloud project "12345"
     {"status": "ok", "egg": {"version": "v0.1.0-30-g48841f2-py3-port", "name": "dateparser"}}
-    Deployed eggs list at: https://dash.scrapinghub.com/p/12345/eggs
+    Deployed eggs list at: https://app.scrapinghub.com/p/12345/eggs
 
 Or a package on PyPI::
 
@@ -195,7 +195,7 @@ Or a package on PyPI::
     Building egg in: /tmp/shub/loginform-1.0
     Deploying dependency to Scrapy Cloud project "12345"
     {"status": "ok", "egg": {"version": "loginform-1.0", "name": "loginform"}}
-    Deployed eggs list at: https://dash.scrapinghub.com/p/12345/eggs
+    Deployed eggs list at: https://app.scrapinghub.com/p/12345/eggs
 
 For projects that use Scrapy Cloud 2.0, instead of uploading eggs of your requirements, you
 can specify a requirements file to be used::
@@ -247,7 +247,7 @@ and ``-s`` options::
     or print items as they are being scraped:
         shub items -f 2/15
     or watch it running in Scrapinghub's web interface:
-        https://dash.scrapinghub.com/p/12345/job/2/15
+        https://app.scrapinghub.com/p/12345/job/2/15
 
 ::
 
@@ -258,7 +258,7 @@ and ``-s`` options::
     or print items as they are being scraped:
         shub items -f 2/15
     or watch it running in Scrapinghub's web interface:
-        https://dash.scrapinghub.com/p/33333/job/2/15
+        https://app.scrapinghub.com/p/33333/job/2/15
 
 ``shub`` provides commands to retrieve log entries, scraped items, or requests
 from jobs. If the job is still running, you can provide the ``-f`` (follow)
