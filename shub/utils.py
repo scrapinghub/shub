@@ -327,12 +327,12 @@ def get_job_specs(job):
     * 2/2/2 -> 2/2/2
     * external/2/2 -> 20/2/2
 
-    It also accepts job URLs from Scrapy Cloud Dashboard.
+    It also accepts job URLs from Scrapinghub.
     """
     match = re.match(r'^((\w+)/)?(\d+/\d+)$', job)
     if not match:
-        dash_job_url_re = r'^https?://[^/]+/p/((\d+)/)job/(\d+/\d+).*'
-        match = re.match(dash_job_url_re, job)
+        job_url_re = r'^https?://[^/]+/p/((\d+)/)job/(\d+/\d+).*'
+        match = re.match(job_url_re, job)
     if not match:
         raise BadParameterException(
             "Job ID {} is invalid. Format should be spiderid/jobid (inside a "

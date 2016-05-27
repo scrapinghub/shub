@@ -12,7 +12,7 @@ the job ID, separated by forward slashes, e.g.:
 
     shub items 12345/2/15
 
-You can also provide the Dash job URL instead:
+You can also provide the Scrapinghub job URL instead:
 
     shub items https://app.scrapinghub.com/p/12345/job/2/15
 
