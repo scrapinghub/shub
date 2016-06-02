@@ -28,8 +28,8 @@ module_deps = {
     "list": ["docker"],
     "test": ["docker"],
     "push": ["docker"],
-    "deploy": ["scrapy"],
-    "upload": ["scrapy", "docker"],
+    "deploy": ["docker"],
+    "upload": ["docker"],
     "check": [],
 }
 
