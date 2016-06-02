@@ -1,7 +1,10 @@
 import os
+import re
+import json
 import click
 import importlib
 
+from base64 import b64encode
 import ruamel.yaml as yaml
 
 from shub import config as shub_config
@@ -11,6 +14,7 @@ from shub import exceptions as shub_exceptions
 
 DEFAULT_DOCKER_VERSION = '1.17'
 STATUS_FILE_LOCATION = '.releases'
+_VALIDSPIDERNAME = re.compile('^[a-z0-9][-._a-z0-9]+$', re.I)
 
 
 class ReleaseConfig(shub_config.ShubConfig):
@@ -170,3 +174,24 @@ def _update_status_file(data, path):
     """ Save status file with updated data """
     with open(path, 'w') as status_file:
         yaml.dump(data, status_file, default_flow_style=False)
+
+
+def valid_spiders(buf):
+    """Filter out garbage and only let valid spider names in
+    >>> _valid_spiders('Update rootfs\\nsony.com\\n\\nsoa-uk\\n182-blink.com')
+    ['182-blink.com', 'soa-uk', 'sony.com']
+    >>> _valid_spiders('-spiders\\nA77aque')
+    ['A77aque']
+    """
+    return sorted(filter(_VALIDSPIDERNAME.match, buf.splitlines()))
+
+
+def datauri(content, mime_type='application/json',
+            charset='utf8', base64=True):
+    if isinstance(content, dict) and mime_type == 'application/json':
+        content = json.dumps(content)
+    if isinstance(content, unicode):
+        content = content.encode(charset)
+    if base64:
+        content = 'base64,{}'.format(b64encode(content))
+    return 'data:{};{};{}'.format(mime_type, charset, content)

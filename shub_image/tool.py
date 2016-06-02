@@ -25,6 +25,7 @@ def cli():
 module_deps = {
     "init": [],
     "build": ["docker"],
+    "list": ["docker"],
     "test": ["docker"],
     "push": ["docker"],
     "deploy": ["scrapy"],
