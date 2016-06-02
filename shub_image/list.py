@@ -38,16 +38,16 @@ shub utils itself).
 @click.option("-d", "--debug", help="debug mode", is_flag=True)
 @click.option("--version", help="release version")
 def cli(target, debug, version):
-    list_cmd(target, debug, version)
+    list_cmd_full(target, debug, version)
 
 
-def list_cmd(target, debug, version):
+def list_cmd_full(target, debug, version):
     config = utils.load_release_config()
     image = config.get_image(target)
     version = version or config.get_version()
     image_name = utils.format_image_name(image, version)
 
-    project, settings = None, {}
+    project = None
     # Get project settings from Dash if there's a project
     try:
         project, endpoint, apikey = config.get_target(target)
@@ -57,7 +57,14 @@ def list_cmd(target, debug, version):
         click.echo(
             "Not found project for target {}, "
             "not getting project settings from Dash.".format(target))
-    else:
+    list_cmd(image_name, project, endpoint, apikey, debug)
+
+
+def list_cmd(image_name, project, endpoint, apikey, debug):
+    """Short version of list cmd to use with deploy cmd."""
+
+    settings = {}
+    if project:
         settings = _get_project_settings(project, endpoint, apikey, debug)
 
     # Run a local docker container to run list-spiders cmd

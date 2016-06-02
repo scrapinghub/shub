@@ -12,6 +12,7 @@ from retrying import retry
 
 from shub.deploy import list_targets
 from shub_image import utils
+from shub_image.list import list_cmd
 
 
 VALIDSPIDERNAME = re.compile('^[a-z0-9][-._a-z0-9]+$', re.I)
@@ -60,8 +61,9 @@ def deploy_cmd(target, debug, version, username, password, email, async):
     image_name = utils.format_image_name(image, version)
 
     params = _prepare_deploy_params(
-        project, version, image_name,
-        username, password, email)
+        project, version, image_name, endpoint, apikey,
+        username, password, email, debug)
+
     if debug:
         click.echo('Deploy with params: {}'.format(params))
     req = requests.post(
@@ -109,9 +111,9 @@ def _check_status_url(status_url):
     return status_req.json()
 
 
-def _prepare_deploy_params(project, version, image_name,
-                           username, password, email):
-    spiders = _extract_spiders_from_project()
+def _prepare_deploy_params(project, version, image_name, endpoint, apikey,
+                           username, password, email, debug):
+    spiders = list_cmd(image_name, project, endpoint, apikey, debug)
     scripts = _extract_scripts_from_project()
     params = {'project': project,
               'version': version,
@@ -128,18 +130,6 @@ def _prepare_deploy_params(project, version, image_name,
              'password': password,
              'email': email}, sort_keys=True)
     return params
-
-
-def _extract_spiders_from_project():
-    spiders = []
-    try:
-        raw_output = subprocess.check_output(["scrapy", "list"])
-        spiders = sorted(filter(
-            VALIDSPIDERNAME.match, raw_output.splitlines()))
-    except subprocess.CalledProcessError as exc:
-        click.echo(
-            "Can't extract spiders from project:\n{}".format(exc.output))
-    return ','.join(spiders)
 
 
 def _extract_scripts_from_project(setup_filename='setup.py'):
