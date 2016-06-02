@@ -47,28 +47,29 @@ def list_cmd(target, debug, version):
     version = version or config.get_version()
     image_name = utils.format_image_name(image, version)
 
-    project, settings = 'none', {}
+    project, settings = None, {}
     # Get project settings from Dash if there's a project
     try:
         project, endpoint, apikey = config.get_target(target)
     except shub_exceptions.BadParameterException as exc:
-        if 'Could not find target' in exc.message:
-            click.echo(
-                "Not found project for target {}, "
-                "not getting project settings from Dash.".format(target))
-        else:
+        if 'Could not find target' not in exc.message:
             raise
+        click.echo(
+            "Not found project for target {}, "
+            "not getting project settings from Dash.".format(target))
     else:
         settings = _get_project_settings(project, endpoint, apikey, debug)
 
     # Run a local docker container to run list-spiders cmd
     status_code, logs = _run_list_cmd(project, image_name, settings)
     if status_code != 0:
+        click.echo(logs)
         raise shub_exceptions.ShubException('List exit code: %s' % status_code)
 
     spiders = utils.valid_spiders(logs)
     for spider in spiders:
         click.echo(spider)
+    return spiders
 
 
 def _get_project_settings(project, endpoint, apikey, debug):
@@ -91,13 +92,15 @@ def _run_list_cmd(project, image_name, project_settings):
     """Run `scrapy list` command inside the image container."""
 
     client = utils.get_docker_client()
+    # FIXME we should pass some value for SCRAPY_PROJECT_ID anyway
+    # to handle `scrapy list` cmd properly via sh_scrapy entrypoint
+    project = str(project) if project else 'NONE'
     job_settings = utils.datauri(project_settings)
     container = client.create_container(
         image=image_name,
         command=['list-spiders'],
-        environment={'SCRAPY_PROJECT_ID': str(project),
-                     'JOB_SETTINGS': job_settings}
-    )
+        environment={'SCRAPY_PROJECT_ID': project,
+                     'JOB_SETTINGS': job_settings})
     if 'Id' not in container:
         raise shub_exceptions.ShubException(
             "Create container error:\n %s" % container)
