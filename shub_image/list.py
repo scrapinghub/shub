@@ -47,8 +47,10 @@ def list_cmd_full(target, debug, version):
     version = version or config.get_version()
     image_name = utils.format_image_name(image, version)
 
+    # FIXME there can be a case when there's no project specified
+    # for the target, in this case we should notify about it and
+    # skip getting settings from Dash.
     project = None
-    # Get project settings from Dash if there's a project
     try:
         project, endpoint, apikey = config.get_target(target)
     except shub_exceptions.BadParameterException as exc:
@@ -71,7 +73,8 @@ def list_cmd(image_name, project, endpoint, apikey, debug):
     status_code, logs = _run_list_cmd(project, image_name, settings)
     if status_code != 0:
         click.echo(logs)
-        raise shub_exceptions.ShubException('List exit code: %s' % status_code)
+        raise shub_exceptions.ShubException(
+            'Container with list cmd exited with code %s' % status_code)
 
     spiders = utils.valid_spiders(logs)
     for spider in spiders:

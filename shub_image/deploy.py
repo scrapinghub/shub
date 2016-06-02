@@ -113,6 +113,7 @@ def _check_status_url(status_url):
 
 def _prepare_deploy_params(project, version, image_name, endpoint, apikey,
                            username, password, email, debug):
+    # Reusing shub_image.list logic to get spiders list
     spiders = list_cmd(image_name, project, endpoint, apikey, debug)
     scripts = _extract_scripts_from_project()
     params = {'project': project,
