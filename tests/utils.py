@@ -27,8 +27,9 @@ def add_sh_fake_config(tmpdir):
     sh_config_path = os.path.join(tmpdir, 'scrapinghub.yml')
     with open(sh_config_path, 'w') as sh_config_file:
         sh_config_file.write('\n'.join([
-            "projects:", "  dev: 12345",
-            "images:", "  dev: registry/user/project",
+            "projects:", "  dev: 12345", "images:",
+            "  dev: registry/user/project",
+            "  xyz: registry/xyz/project",
             "endpoints:", "  dev: https://dash-fake",
             "apikeys:", "  default: abcdef",
             "version: GIT"]))

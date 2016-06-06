@@ -50,7 +50,7 @@ def list_cmd_full(target, debug, version):
     # FIXME there can be a case when there's no project specified
     # for the target, in this case we should notify about it and
     # skip getting settings from Dash.
-    project = None
+    project, endpoint, apikey = None, None, None
     try:
         project, endpoint, apikey = config.get_target(target)
     except shub_exceptions.BadParameterException as exc:

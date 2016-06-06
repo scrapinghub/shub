@@ -2,7 +2,6 @@ import os
 import mock
 from click.testing import CliRunner
 from unittest import TestCase
-from subprocess import CalledProcessError
 
 from shub_image.deploy import cli
 from shub_image.deploy import _prepare_deploy_params
@@ -12,6 +11,7 @@ from .utils import FakeProjectDirectory
 from .utils import add_sh_fake_config
 from .utils import add_fake_setup_py
 from .utils import add_scrapy_fake_config
+
 
 class TestDeployCli(TestCase):
 
