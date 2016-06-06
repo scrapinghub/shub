@@ -12,7 +12,7 @@ from retrying import retry
 
 from shub.deploy import list_targets
 from shub_image import utils
-from shub_image.list import list_cmd
+from shub_image import list as list_mod
 
 
 VALIDSPIDERNAME = re.compile('^[a-z0-9][-._a-z0-9]+$', re.I)
@@ -114,13 +114,13 @@ def _check_status_url(status_url):
 def _prepare_deploy_params(project, version, image_name, endpoint, apikey,
                            username, password, email, debug):
     # Reusing shub_image.list logic to get spiders list
-    spiders = list_cmd(image_name, project, endpoint, apikey, debug)
+    spiders = list_mod.list_cmd(image_name, project, endpoint, apikey, debug)
     scripts = _extract_scripts_from_project()
     params = {'project': project,
               'version': version,
               'image_url': image_name}
     if spiders:
-        params['spiders'] = spiders
+        params['spiders'] = ','.join(spiders)
     if scripts:
         params['scripts'] = scripts
     if not username:
