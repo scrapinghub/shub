@@ -72,7 +72,8 @@ class TestListCli(TestCase):
         with FakeProjectDirectory() as tmpdir:
             add_sh_fake_config(tmpdir)
             runner = CliRunner()
-            result = runner.invoke(cli, ["dev", "-d", "--version", "test"])
+            result = runner.invoke(cli, [
+                "dev", "-d", "-s", "--version", "test"])
             assert result.exit_code == 0
             assert result.output.endswith('abc\ndef\ndsd\n')
         get_mocked.assert_called_with(

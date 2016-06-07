@@ -36,30 +36,30 @@ shub utils itself).
               is_flag=True, is_eager=True, expose_value=False,
               callback=list_targets)
 @click.option("-d", "--debug", help="debug mode", is_flag=True)
+@click.option("-s", "--silent", help="silent mode", is_flag=True)
 @click.option("--version", help="release version")
-def cli(target, debug, version):
-    list_cmd_full(target, debug, version)
+def cli(target, debug, silent, version):
+    list_cmd_full(target, debug, silent, version)
 
 
-def list_cmd_full(target, debug, version):
+def list_cmd_full(target, debug, silent, version):
     config = utils.load_release_config()
     image = config.get_image(target)
     version = version or config.get_version()
     image_name = utils.format_image_name(image, version)
-
-    # FIXME there can be a case when there's no project specified
-    # for the target, in this case we should notify about it and
-    # skip getting settings from Dash.
     project, endpoint, apikey = None, None, None
     try:
         project, endpoint, apikey = config.get_target(target)
     except shub_exceptions.BadParameterException as exc:
         if 'Could not find target' not in exc.message:
             raise
-        click.echo(
-            "Not found project for target {}, "
-            "not getting project settings from Dash.".format(target))
-    list_cmd(image_name, project, endpoint, apikey, debug)
+        if not silent:
+            click.echo(
+                "Not found project for target {}, "
+                "not getting project settings from Dash.".format(target))
+    spiders = list_cmd(image_name, project, endpoint, apikey, debug)
+    for spider in spiders:
+        click.echo(spider)
 
 
 def list_cmd(image_name, project, endpoint, apikey, debug):
@@ -77,8 +77,6 @@ def list_cmd(image_name, project, endpoint, apikey, debug):
             'Container with list cmd exited with code %s' % status_code)
 
     spiders = utils.valid_spiders(logs)
-    for spider in spiders:
-        click.echo(spider)
     return spiders
 
 
@@ -104,7 +102,7 @@ def _run_list_cmd(project, image_name, project_settings):
     client = utils.get_docker_client()
     # FIXME we should pass some value for SCRAPY_PROJECT_ID anyway
     # to handle `scrapy list` cmd properly via sh_scrapy entrypoint
-    project = str(project) if project else 'NONE'
+    project = str(project) if project else ''
     job_settings = utils.datauri(project_settings)
     container = client.create_container(
         image=image_name,
