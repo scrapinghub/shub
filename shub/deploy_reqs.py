@@ -28,7 +28,7 @@ SHORT_HELP = "Build and deploy eggs from requirements.txt"
 
 @click.command(help=HELP, short_help=SHORT_HELP)
 @click.argument("target", required=False, default="default")
-@click.option("-r", "--requirements-file", default='requirements.txt',
+@click.option("-r", "--requirements-file", default=None,
               type=click.STRING)
 def cli(target, requirements_file):
     main(target, requirements_file)
@@ -36,7 +36,7 @@ def cli(target, requirements_file):
 
 def main(target, requirements_file):
     targetconf = get_target_conf(target)
-    requirements_full_path = os.path.abspath(requirements_file)
+    requirements_full_path = os.path.abspath(requirements_file or targetconf.requirement_files)
     eggs_tmp_dir = _mk_and_cd_eggs_tmpdir()
     _download_egg_files(eggs_tmp_dir, requirements_full_path)
     decompress_egg_files()
