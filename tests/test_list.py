@@ -94,7 +94,7 @@ class TestListCmd(TestCase):
         assert _run_list_cmd(1234, 'image', {})[0] == 0
         client_mock.create_container.assert_called_with(
             command=['list-spiders'], environment={
-                'JOB_SETTINGS': 'data:application/json;utf8;base64,e30=',
+                'JOB_SETTINGS': '{}',
                 'SCRAPY_PROJECT_ID': '1234'}, image='image')
         client_mock.start.assert_called_with({'Id': '1234'})
         client_mock.wait.assert_called_with(container="1234")

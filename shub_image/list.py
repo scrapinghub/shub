@@ -1,5 +1,6 @@
 import os
 import re
+import json
 import click
 import requests
 from urlparse import urljoin
@@ -103,7 +104,7 @@ def _run_list_cmd(project, image_name, project_settings):
     # FIXME we should pass some value for SCRAPY_PROJECT_ID anyway
     # to handle `scrapy list` cmd properly via sh_scrapy entrypoint
     project = str(project) if project else ''
-    job_settings = utils.datauri(project_settings)
+    job_settings = json.dumps(project_settings)
     container = client.create_container(
         image=image_name,
         command=['list-spiders'],

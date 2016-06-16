@@ -4,7 +4,6 @@ import json
 import click
 import importlib
 
-from base64 import b64encode
 import ruamel.yaml as yaml
 
 from shub import config as shub_config
@@ -190,14 +189,3 @@ def valid_spiders(buf):
     ['A77aque']
     """
     return sorted(filter(_VALIDSPIDERNAME.match, buf.splitlines()))
-
-
-def datauri(content, mime_type='application/json',
-            charset='utf8', base64=True):
-    if isinstance(content, dict) and mime_type == 'application/json':
-        content = json.dumps(content)
-    if isinstance(content, unicode):
-        content = content.encode(charset)
-    if base64:
-        content = 'base64,{}'.format(b64encode(content))
-    return 'data:{};{};{}'.format(mime_type, charset, content)
