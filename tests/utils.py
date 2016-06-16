@@ -4,6 +4,29 @@ import tempfile
 from contextlib import contextmanager
 
 
+SH_CONFIG_FILE = """
+projects:
+  dev: 12345
+images:
+  dev: registry/user/project
+  xyz: registry/xyz/project
+endpoints:
+  dev: https://dash-fake
+apikeys:
+  default: abcdef
+version: GIT
+"""
+
+SH_SETUP_FILE = """
+from setuptools import setup
+setup(
+    name = 'project', version = '1.0',
+    entry_points = {'scrapy': ['settings = test.settings']},
+    scripts = ['bin/scriptA.py', 'scriptB.py']
+)
+"""
+
+
 @contextmanager
 def FakeProjectDirectory():
     tmpdir = tempfile.mkdtemp()
@@ -26,13 +49,7 @@ def add_sh_fake_config(tmpdir):
     # add fake SH config
     sh_config_path = os.path.join(tmpdir, 'scrapinghub.yml')
     with open(sh_config_path, 'w') as sh_config_file:
-        sh_config_file.write('\n'.join([
-            "projects:", "  dev: 12345", "images:",
-            "  dev: registry/user/project",
-            "  xyz: registry/xyz/project",
-            "endpoints:", "  dev: https://dash-fake",
-            "apikeys:", "  default: abcdef",
-            "version: GIT"]))
+        sh_config_file.write(SH_CONFIG_FILE)
 
 
 def add_fake_requirements(tmpdir):
@@ -53,9 +70,4 @@ def add_fake_setup_py(tmpdir):
     """Add fake setup.py for extract scripts tests"""
     setup_path = os.path.join(tmpdir, 'setup.py')
     with open(setup_path, 'w') as setup_file:
-        setup_file.write('\n'.join([
-            "from setuptools import setup",
-            "setup(name = 'project', version = '1.0',",
-            "entry_points = {'scrapy': ['settings = test.settings']},",
-            "scripts = ['bin/scriptA.py', 'scriptB.py'])"
-        ]))
+        setup_file.write(SH_SETUP_FILE)
