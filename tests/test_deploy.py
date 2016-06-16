@@ -58,7 +58,7 @@ class TestDeployTools(TestCase):
             add_fake_setup_py(tmpdir)
             assert _prepare_deploy_params(
                 123, 'test-vers', 'registry/user/project',
-                'endpoint', 'apikey', None, None, None, False) == {
+                'endpoint', 'apikey', None, None, None) == {
                     'image_url': 'registry/user/project',
                     'project': 123,
                     'pull_insecure_registry': True,
@@ -75,7 +75,7 @@ class TestDeployTools(TestCase):
                              ' "pass", "username": "user"}')
             assert _prepare_deploy_params(
                 123, 'test-vers', 'registry/user/project',
-                'endpoint', 'apikey', 'user', 'pass', 'email@mail', False) == {
+                'endpoint', 'apikey', 'user', 'pass', 'email@mail') == {
                     'image_url': 'registry/user/project',
                     'project': 123,
                     'pull_auth_config': expected_auth,

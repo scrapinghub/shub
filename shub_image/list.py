@@ -38,11 +38,13 @@ shub utils itself).
 @click.option("-d", "--debug", help="debug mode", is_flag=True)
 @click.option("-s", "--silent", help="silent mode", is_flag=True)
 @click.option("--version", help="release version")
-def cli(target, debug, silent, version):
-    list_cmd_full(target, debug, silent, version)
+@click.pass_context
+def cli(ctx, target, debug, silent, version):
+    ctx.obj = {'debug': debug}
+    list_cmd_full(target, silent, version)
 
 
-def list_cmd_full(target, debug, silent, version):
+def list_cmd_full(target, silent, version):
     config = utils.load_release_config()
     image = config.get_image(target)
     version = version or config.get_version()
@@ -57,17 +59,17 @@ def list_cmd_full(target, debug, silent, version):
             click.echo(
                 "Not found project for target {}, "
                 "not getting project settings from Dash.".format(target))
-    spiders = list_cmd(image_name, project, endpoint, apikey, debug)
+    spiders = list_cmd(image_name, project, endpoint, apikey)
     for spider in spiders:
         click.echo(spider)
 
 
-def list_cmd(image_name, project, endpoint, apikey, debug):
+def list_cmd(image_name, project, endpoint, apikey):
     """Short version of list cmd to use with deploy cmd."""
 
     settings = {}
     if project:
-        settings = _get_project_settings(project, endpoint, apikey, debug)
+        settings = _get_project_settings(project, endpoint, apikey)
 
     # Run a local docker container to run list-spiders cmd
     status_code, logs = _run_list_cmd(project, image_name, settings)
@@ -80,9 +82,8 @@ def list_cmd(image_name, project, endpoint, apikey, debug):
     return spiders
 
 
-def _get_project_settings(project, endpoint, apikey, debug):
-    if debug:
-        click.echo('Getting settings for {} project:'.format(project))
+def _get_project_settings(project, endpoint, apikey):
+    utils.debug_log('Getting settings for {} project:'.format(project))
     req = requests.get(
         urljoin(endpoint, '/api/settings/get.json'),
         params={'project': project},
@@ -91,8 +92,7 @@ def _get_project_settings(project, endpoint, apikey, debug):
         allow_redirects=False
     )
     req.raise_for_status()
-    if debug:
-        click.echo("Response: {}".format(req.json()))
+    utils.debug_log("Response: {}".format(req.json()))
     return {k: v for k, v in req.json().items() if k in SETTING_TYPES}
 
 

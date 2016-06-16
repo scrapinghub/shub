@@ -49,11 +49,13 @@ Does a simple POST request to Dash API with given parameters
 @click.option("--password", help="docker registry password")
 @click.option("--email", help="docker registry email")
 @click.option("--async", is_flag=True, help="enable asynchronous mode")
-def cli(target, debug, version, username, password, email, async):
-    deploy_cmd(target, debug, version, username, password, email, async)
+@click.pass_context
+def cli(ctx, target, debug, version, username, password, email, async):
+    ctx.obj = {'debug': debug}
+    deploy_cmd(target, version, username, password, email, async)
 
 
-def deploy_cmd(target, debug, version, username, password, email, async):
+def deploy_cmd(target, version, username, password, email, async):
     config = utils.load_release_config()
     project, endpoint, apikey = config.get_target(target)
     image = config.get_image(target)
@@ -62,10 +64,9 @@ def deploy_cmd(target, debug, version, username, password, email, async):
 
     params = _prepare_deploy_params(
         project, version, image_name, endpoint, apikey,
-        username, password, email, debug)
+        username, password, email)
 
-    if debug:
-        click.echo('Deploy with params: {}'.format(params))
+    utils.debug_log('Deploy with params: {}'.format(params))
     req = requests.post(
         urljoin(endpoint, '/api/releases/deploy.json'),
         data=params,
@@ -112,9 +113,9 @@ def _check_status_url(status_url):
 
 
 def _prepare_deploy_params(project, version, image_name, endpoint, apikey,
-                           username, password, email, debug):
+                           username, password, email):
     # Reusing shub_image.list logic to get spiders list
-    spiders = list_mod.list_cmd(image_name, project, endpoint, apikey, debug)
+    spiders = list_mod.list_cmd(image_name, project, endpoint, apikey)
     scripts = _extract_scripts_from_project()
     params = {'project': project,
               'version': version,

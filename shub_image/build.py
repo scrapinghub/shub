@@ -30,11 +30,13 @@ shub utils itself).
               callback=list_targets)
 @click.option("-d", "--debug", help="debug mode", is_flag=True)
 @click.option("--version", help="release version")
-def cli(target, debug, version):
-    build_cmd(target, debug, version)
+@click.pass_context
+def cli(ctx, target, debug, version):
+    ctx.obj = {'debug': debug}
+    build_cmd(target, version)
 
 
-def build_cmd(target, debug, version):
+def build_cmd(target, version):
     client = utils.get_docker_client()
     project_dir = utils.get_project_dir()
     config = utils.load_release_config()
@@ -47,8 +49,7 @@ def build_cmd(target, debug, version):
     for line in client.build(path=project_dir, tag=image_name):
         data = json.loads(line)
         if 'stream' in data:
-            if debug:
-                click.echo("{}".format(data['stream'][:-1]))
+            utils.debug_log("{}".format(data['stream'][:-1]))
             is_built = re.search(
                 r'Successfully built ([0-9a-f]+)', data['stream'])
         elif 'error' in data:

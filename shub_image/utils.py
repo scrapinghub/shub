@@ -17,6 +17,12 @@ STATUS_FILE_LOCATION = '.releases'
 _VALIDSPIDERNAME = re.compile('^[a-z0-9][-._a-z0-9]+$', re.I)
 
 
+def debug_log(msg):
+    ctx = click.get_current_context()
+    if ctx.obj and ctx.obj.get('debug'):
+        click.echo(msg)
+
+
 class ReleaseConfig(shub_config.ShubConfig):
 
     def __init__(self, *args, **kwargs):
