@@ -15,11 +15,12 @@ Requirements
 Install
 =======
 
-This tool is not in PyPI yet, so best way is to clone this repo and install it::
+::
 
-    pip install -e .
+    pip install shub-image
 
 Documentation
 =============
 
-You can find the documentation `here <http://shub-image.readthedocs.io/en/latest/>`_.
+You can find the documentation `here <https://shub-image.readthedocs.io/en/latest/>`_.
+
