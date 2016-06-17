@@ -31,10 +31,10 @@ otherwise you have to enter your credentials (at least username/password).
 @click.option("--password", help="docker registry password")
 @click.option("--email", help="docker registry email")
 def cli(target, debug, version, username, password, email):
-    push_cmd(target, debug, version, username, password, email)
+    push_cmd(target, version, username, password, email)
 
 
-def push_cmd(target, debug, version, username, password, email):
+def push_cmd(target, version, username, password, email):
     client = utils.get_docker_client()
     config = utils.load_release_config()
     image = config.get_image(target)
@@ -45,9 +45,9 @@ def push_cmd(target, debug, version, username, password, email):
     for line in client.push(image_name, stream=True,
                             insecure_registry=not bool(username)):
         data = json.loads(line)
-        if 'status' in data and debug:
-            click.echo("Logs:{} {}".format(data['status'],
-                                           data.get('progress')))
+        if 'status' in data:
+            utils.debug_log("Logs:{} {}".format(data['status'],
+                            data.get('progress')))
         if 'error' in data:
             click.echo("Error {}: {}".format(data['error'],
                                              data['errorDetail']))

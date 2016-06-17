@@ -2,11 +2,9 @@ import os
 import mock
 from click.testing import CliRunner
 from unittest import TestCase
-from subprocess import CalledProcessError
 
 from shub_image.deploy import cli
 from shub_image.deploy import _prepare_deploy_params
-from shub_image.deploy import _extract_spiders_from_project
 from shub_image.deploy import _extract_scripts_from_project
 
 from .utils import FakeProjectDirectory
@@ -14,13 +12,14 @@ from .utils import add_sh_fake_config
 from .utils import add_fake_setup_py
 from .utils import add_scrapy_fake_config
 
+
 class TestDeployCli(TestCase):
 
     @mock.patch('requests.get')
     @mock.patch('requests.post')
-    @mock.patch('subprocess.check_output')
-    def test_cli(self, subp_mocked, post_mocked, get_mocked):
-        subp_mocked.return_value = 'abc\na1f\njust row\nSome text\nspi-der'
+    @mock.patch('shub_image.list.list_cmd')
+    def test_cli(self, list_mocked, post_mocked, get_mocked):
+        list_mocked.return_value = ['a1f', 'abc', 'spi-der']
         post_req = mock.Mock()
         post_req.headers = {'location': 'https://status-url'}
         post_mocked.return_value = post_req
@@ -46,27 +45,20 @@ class TestDeployCli(TestCase):
 
 class TestDeployTools(TestCase):
 
-    @mock.patch('subprocess.check_output')
-    def test_extract_spiders_from_project(self, mocked):
-        mocked.return_value = 'abc\na1f\njust row\nSome text\nspi-der'
-        assert _extract_spiders_from_project() == 'a1f,abc,spi-der'
-        mocked.side_effect = CalledProcessError(-1, ['scrapy', 'list'])
-        assert _extract_spiders_from_project() == ''
-
     def test_extract_scripts_from_project(self):
         assert _extract_scripts_from_project() == ''
         with FakeProjectDirectory() as tmpdir:
             add_fake_setup_py(tmpdir)
             assert _extract_scripts_from_project() == 'scriptA.py,scriptB.py'
 
-    @mock.patch('subprocess.check_output')
+    @mock.patch('shub_image.list.list_cmd')
     def test_prepare_deploy_params(self, mocked):
-        mocked.return_value = 'abc\na1f\njust row\nSome text\nspi-der'
+        mocked.return_value = ['a1f', 'abc', 'spi-der']
         with FakeProjectDirectory() as tmpdir:
             add_fake_setup_py(tmpdir)
             assert _prepare_deploy_params(
                 123, 'test-vers', 'registry/user/project',
-                None, None, None) == {
+                'endpoint', 'apikey', None, None, None) == {
                     'image_url': 'registry/user/project',
                     'project': 123,
                     'pull_insecure_registry': True,
@@ -74,16 +66,16 @@ class TestDeployTools(TestCase):
                     'spiders': 'a1f,abc,spi-der',
                     'version': 'test-vers'}
 
-    @mock.patch('subprocess.check_output')
+    @mock.patch('shub_image.list.list_cmd')
     def test_prepare_deploy_params_more_params(self, mocked):
-        mocked.return_value = 'abc\na1f\njust row\nSome text\nspi-der'
+        mocked.return_value = ['a1f', 'abc', 'spi-der']
         with FakeProjectDirectory() as tmpdir:
             add_fake_setup_py(tmpdir)
             expected_auth = ('{"email": "email@mail", "password":'
                              ' "pass", "username": "user"}')
             assert _prepare_deploy_params(
                 123, 'test-vers', 'registry/user/project',
-                'user', 'pass', 'email@mail') == {
+                'endpoint', 'apikey', 'user', 'pass', 'email@mail') == {
                     'image_url': 'registry/user/project',
                     'project': 123,
                     'pull_auth_config': expected_auth,

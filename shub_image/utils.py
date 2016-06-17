@@ -1,4 +1,6 @@
 import os
+import re
+import json
 import click
 import importlib
 
@@ -11,6 +13,13 @@ from shub import exceptions as shub_exceptions
 
 DEFAULT_DOCKER_VERSION = '1.17'
 STATUS_FILE_LOCATION = '.releases'
+_VALIDSPIDERNAME = re.compile('^[a-z0-9][-._a-z0-9]+$', re.I)
+
+
+def debug_log(msg):
+    ctx = click.get_current_context(True)
+    if ctx and ctx.params.get('debug'):
+        click.echo(msg)
 
 
 class ReleaseConfig(shub_config.ShubConfig):
@@ -170,3 +179,13 @@ def _update_status_file(data, path):
     """ Save status file with updated data """
     with open(path, 'w') as status_file:
         yaml.dump(data, status_file, default_flow_style=False)
+
+
+def valid_spiders(buf):
+    """Filter out garbage and only let valid spider names in
+    >>> _valid_spiders('Update rootfs\\nsony.com\\n\\nsoa-uk\\n182-blink.com')
+    ['182-blink.com', 'soa-uk', 'sony.com']
+    >>> _valid_spiders('-spiders\\nA77aque')
+    ['A77aque']
+    """
+    return sorted(filter(_VALIDSPIDERNAME.match, buf.splitlines()))

@@ -12,6 +12,7 @@ from retrying import retry
 
 from shub.deploy import list_targets
 from shub_image import utils
+from shub_image import list as list_mod
 
 
 VALIDSPIDERNAME = re.compile('^[a-z0-9][-._a-z0-9]+$', re.I)
@@ -49,10 +50,10 @@ Does a simple POST request to Dash API with given parameters
 @click.option("--email", help="docker registry email")
 @click.option("--async", is_flag=True, help="enable asynchronous mode")
 def cli(target, debug, version, username, password, email, async):
-    deploy_cmd(target, debug, version, username, password, email, async)
+    deploy_cmd(target, version, username, password, email, async)
 
 
-def deploy_cmd(target, debug, version, username, password, email, async):
+def deploy_cmd(target, version, username, password, email, async):
     config = utils.load_release_config()
     project, endpoint, apikey = config.get_target(target)
     image = config.get_image(target)
@@ -60,10 +61,10 @@ def deploy_cmd(target, debug, version, username, password, email, async):
     image_name = utils.format_image_name(image, version)
 
     params = _prepare_deploy_params(
-        project, version, image_name,
+        project, version, image_name, endpoint, apikey,
         username, password, email)
-    if debug:
-        click.echo('Deploy with params: {}'.format(params))
+
+    utils.debug_log('Deploy with params: {}'.format(params))
     req = requests.post(
         urljoin(endpoint, '/api/releases/deploy.json'),
         data=params,
@@ -109,15 +110,16 @@ def _check_status_url(status_url):
     return status_req.json()
 
 
-def _prepare_deploy_params(project, version, image_name,
+def _prepare_deploy_params(project, version, image_name, endpoint, apikey,
                            username, password, email):
-    spiders = _extract_spiders_from_project()
+    # Reusing shub_image.list logic to get spiders list
+    spiders = list_mod.list_cmd(image_name, project, endpoint, apikey)
     scripts = _extract_scripts_from_project()
     params = {'project': project,
               'version': version,
               'image_url': image_name}
     if spiders:
-        params['spiders'] = spiders
+        params['spiders'] = ','.join(spiders)
     if scripts:
         params['scripts'] = scripts
     if not username:
@@ -128,18 +130,6 @@ def _prepare_deploy_params(project, version, image_name,
              'password': password,
              'email': email}, sort_keys=True)
     return params
-
-
-def _extract_spiders_from_project():
-    spiders = []
-    try:
-        raw_output = subprocess.check_output(["scrapy", "list"])
-        spiders = sorted(filter(
-            VALIDSPIDERNAME.match, raw_output.splitlines()))
-    except subprocess.CalledProcessError as exc:
-        click.echo(
-            "Can't extract spiders from project:\n{}".format(exc.output))
-    return ','.join(spiders)
 
 
 def _extract_scripts_from_project(setup_filename='setup.py'):
