@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='shub-image',
-    version='0.2.0',
+    version='0.2.1',
     packages=['shub_image'],
     description='Scrapinghub release tool',
     long_description=open('README.rst').read(),
