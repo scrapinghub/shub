@@ -66,39 +66,39 @@ class TestTestTools(TestCase):
         # patching built-in import to use fake docker.errors
         import_mock = _mock_docker_errors_module()
         with mock.patch('__builtin__.__import__', side_effect=import_mock):
-            assert _check_image_exists('img', self.client, True) == None
+            assert _check_image_exists('img', self.client) == None
             self.client.inspect_image.side_effect = MockedNotFound()
             self.assertRaises(shub_exceptions.NotFoundException,
-                _check_image_exists, 'image', self.client, True)
+                _check_image_exists, 'image', self.client)
 
     def test_check_sh_entrypoint(self):
-        assert _check_sh_entrypoint('image', self.client, True) == None
+        assert _check_sh_entrypoint('image', self.client) == None
         self.client.create_container.assert_called_with(
             image='image',
             command=['pip', 'show', 'scrapinghub-entrypoint-scrapy'])
         self.client.wait.return_value = 1
         self.assertRaises(shub_exceptions.NotFoundException,
-            _check_sh_entrypoint, 'image', self.client, True)
+            _check_sh_entrypoint, 'image', self.client)
         self.client.wait.return_value = 0
         self.client.logs.return_value = ''
         self.assertRaises(shub_exceptions.NotFoundException,
-            _check_sh_entrypoint, 'image', self.client, True)
+            _check_sh_entrypoint, 'image', self.client)
 
     def test_start_crawl(self):
-        assert _check_start_crawl_entry('image', self.client, True) == None
+        assert _check_start_crawl_entry('image', self.client) == None
         self.client.create_container.assert_called_with(
             image='image', command=['which', 'start-crawl'])
         self.client.wait.return_value = 1
         self.assertRaises(shub_exceptions.NotFoundException,
-            _check_start_crawl_entry, 'image', self.client, True)
+            _check_start_crawl_entry, 'image', self.client)
         self.client.wait.return_value = 0
         self.client.logs.return_value = ''
         self.assertRaises(shub_exceptions.NotFoundException,
-            _check_start_crawl_entry, 'image', self.client, True)
+            _check_start_crawl_entry, 'image', self.client)
 
     def test_run_docker_command(self):
         assert _run_docker_command(
-            self.client, 'image-name', ['some', 'cmd'], True) == \
+            self.client, 'image-name', ['some', 'cmd']) == \
                 (0, 'some-logs')
         self.client.create_container.assert_called_with(
             image='image-name', command=['some', 'cmd'])

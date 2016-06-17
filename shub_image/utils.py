@@ -17,8 +17,8 @@ _VALIDSPIDERNAME = re.compile('^[a-z0-9][-._a-z0-9]+$', re.I)
 
 
 def debug_log(msg):
-    ctx = click.get_current_context()
-    if ctx.obj and ctx.obj.get('debug'):
+    ctx = click.get_current_context(True)
+    if hasattr(ctx, 'obj') and ctx.obj.get('debug'):
         click.echo(msg)
 
 
