@@ -39,9 +39,7 @@ shub utils itself).
 @click.option("-d", "--debug", help="debug mode", is_flag=True)
 @click.option("-s", "--silent", help="silent mode", is_flag=True)
 @click.option("--version", help="release version")
-@click.pass_context
-def cli(ctx, target, debug, silent, version):
-    ctx.obj = {'debug': debug}
+def cli(target, debug, silent, version):
     list_cmd_full(target, silent, version)
 
 

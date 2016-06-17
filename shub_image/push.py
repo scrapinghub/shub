@@ -30,9 +30,7 @@ otherwise you have to enter your credentials (at least username/password).
 @click.option("--username", help="docker registry name")
 @click.option("--password", help="docker registry password")
 @click.option("--email", help="docker registry email")
-@click.pass_context
-def cli(ctx, target, debug, version, username, password, email):
-    ctx.obj = {'debug': debug}
+def cli(target, debug, version, username, password, email):
     push_cmd(target, version, username, password, email)
 
 

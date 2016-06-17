@@ -30,9 +30,7 @@ shub utils itself).
               callback=list_targets)
 @click.option("-d", "--debug", help="debug mode", is_flag=True)
 @click.option("--version", help="release version")
-@click.pass_context
-def cli(ctx, target, debug, version):
-    ctx.obj = {'debug': debug}
+def cli(target, debug, version):
     build_cmd(target, version)
 
 
