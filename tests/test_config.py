@@ -1,6 +1,5 @@
 import os
 import shutil
-import StringIO
 import tempfile
 import textwrap
 import unittest
@@ -9,6 +8,7 @@ import ruamel.yaml as yaml
 import mock
 
 from click.testing import CliRunner
+from six import StringIO
 
 from shub.config import (get_target, get_target_conf, get_version,
                          load_shub_config, ShubConfig, Target,
@@ -69,7 +69,7 @@ class ShubConfigTest(unittest.TestCase):
 
     def _get_conf_with_yml(self, yml):
         conf = ShubConfig()
-        conf.load(StringIO.StringIO(textwrap.dedent(yml)))
+        conf.load(StringIO(textwrap.dedent(yml)))
         return conf
 
     def setUp(self):

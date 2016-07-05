@@ -11,18 +11,19 @@ import time
 import warnings
 
 from collections import deque
-from ConfigParser import SafeConfigParser
 from distutils.spawn import find_executable
 from distutils.version import LooseVersion, StrictVersion
 from glob import glob
 from importlib import import_module
 from tempfile import NamedTemporaryFile
+from six.moves.configparser import SafeConfigParser
 from six.moves.urllib.parse import urljoin
 from subprocess import Popen, PIPE, CalledProcessError
 
 import click
 import pip
 import requests
+import six
 
 from hubstorage import HubstorageClient
 
@@ -71,7 +72,7 @@ def write_and_echo_logs(keep_log, last_logs, rsp, verbose):
             if verbose:
                 click.echo(line)
             last_logs.append(line)
-            log_file.write(line + '\n')
+            log_file.write(line + b'\n')
 
         deployed = _is_deploy_successful(last_logs)
         echo_short_log_if_deployed(deployed, last_logs, log_file, verbose)
@@ -427,7 +428,7 @@ def get_scrapycfg_targets(cfgfiles=None):
             t = baset.copy()
             t.update(cfg.items(x))
             targets[x[7:]] = t
-    for tname, t in targets.items():
+    for tname, t in list(six.iteritems(targets)):
         try:
             int(t.get('project', 0))
         except ValueError:
