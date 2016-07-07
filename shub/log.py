@@ -38,9 +38,11 @@ SHORT_HELP = "Fetch log from Scrapy Cloud"
 
 class LogIterFunc(object):
     def __init__(self, job, tail):
-        logstats = job.logs.stats()
-        lines = logstats['totals']['input_values']
-        lastline = max(lines - tail, -1)
+        lastline = -1
+        if tail is not None:
+            logstats = job.logs.stats()
+            lines = logstats['totals']['input_values']
+            lastline = max(lines - tail, -1)
         if lastline == -1:
             lastline = None
         self._startafter = None if lastline is None else '{}/{}'.format(job.key, lastline)
@@ -57,7 +59,7 @@ class LogIterFunc(object):
 @click.option('-f', '--follow', help='output new log entries as they are '
               'produced', is_flag=True)
 @click.option('-n', '--tail',
-              help='Output last N lines. Default: %(default)s', default=50)
+              help='Output last N lines', type=int)
 def cli(job_id, follow, tail):
     job = get_job(job_id)
     for item in job_resource_iter(job, LogIterFunc(job, tail), follow=follow,
