@@ -2,13 +2,20 @@ platform: x86
 
 version: '{branch}-{build}'
 
+environment:
+  matrix:
+    - PYTHON: "C:\\Python27"
+      TOX_ENV: py27
+    - PYTHON: "C:\\Python35"
+      TOX_ENV: py35
+
 branches:
   only:
     - master
     - /^v\d+\.\d+\.\d+[\w\-]*$/
 
 install:
-  - "SET PATH=C:\\Python27;C:\\Python27\\Scripts;%PATH%"
+  - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
   - "SET TOX_TESTENV_PASSENV=HOME USERPROFILE HOMEPATH HOMEDRIVE"
   - "pip install -U tox twine wheel"
 
@@ -16,20 +23,20 @@ install:
 build: false
 
 test_script:
-  - tox -e py27,freeze
+  - "tox -e %TOX_ENV%,freeze"
 
 artifacts:
   - path: dist_bin\shub.exe
-  - path: dist_bin\shub-$(APPVEYOR_REPO_TAG_NAME)-windows-$(PLATFORM).zip
+  - path: dist_bin\shub-$(APPVEYOR_REPO_TAG_NAME)-windows-$(PLATFORM)-%TOX_ENV%.zip
 
 after_test:
-  - 7z a dist_bin\shub-%APPVEYOR_REPO_TAG_NAME%-windows-%PLATFORM%.zip %APPVEYOR_BUILD_FOLDER%\dist_bin\shub.exe
+  - 7z a dist_bin\shub-%APPVEYOR_REPO_TAG_NAME%-windows-%PLATFORM%-%TOX_ENV%.zip %APPVEYOR_BUILD_FOLDER%\dist_bin\shub.exe
 
 deploy:
   provider: GitHub
   auth_token:
     secure: mNA38grRkwGjw4zSUX1qA67eE6CRPjk97hRngZf19FuopBwbpPjOALBIlYZWKlDv
-  artifact: dist_bin\shub-$(APPVEYOR_REPO_TAG_NAME)-windows-$(PLATFORM).zip
+  artifact: dist_bin\shub-$(APPVEYOR_REPO_TAG_NAME)-windows-$(PLATFORM)-%TOX_ENV%.zip
   draft: true
   on:
     appveyor_repo_tag: true
