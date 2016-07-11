@@ -92,7 +92,7 @@ class ShubConfig(object):
         with update_yaml_dict(path) as yml:
             yml['projects'] = self.projects
             # Write "123" instead of "'123'"
-            for target, project in yml['projects'].iteritems():
+            for target, project in six.iteritems(yml['projects']):
                 try:
                     if isinstance(project, dict):
                         project['id'] = int(project['id'])
@@ -358,7 +358,7 @@ def update_yaml_dict(conf_path=None):
     # Code inside context manager is executed after this yield
     yield conf
     # Avoid writing "key: {}"
-    for key in conf.keys():
+    for key in list(six.iterkeys(conf)):
         if conf[key] == {}:
             del conf[key]
     with open(conf_path, 'w') as f:

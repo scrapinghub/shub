@@ -1,6 +1,13 @@
 language: python
-python: 2.7
+python: 3.5
 sudo: false
+env:
+  - TOXENV=freeze
+  - TOXENV=py27
+  - TOXENV=py33
+  - TOXENV=py34
+  - TOXENV=py35
+
 matrix:
   include:
     - os: osx
@@ -17,7 +24,7 @@ install:
   - '[ "$TRAVIS_OS_NAME" != osx ] || source ~/virtualenv/python2.7/bin/activate'
   - pip install -U tox twine wheel codecov
 
-script: tox -e py27,freeze
+script: tox
 
 after_success:
   - codecov
