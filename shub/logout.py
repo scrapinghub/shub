@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 import click
 
 from shub.config import load_shub_config, update_yaml_dict

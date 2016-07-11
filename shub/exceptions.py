@@ -5,6 +5,7 @@ Exit codes follow the sysexits.h convention:
 https://www.freebsd.org/cgi/man.cgi?query=sysexits&sektion=3
 """
 
+from __future__ import absolute_import
 from click import BadParameter, ClickException
 
 

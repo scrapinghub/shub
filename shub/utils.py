@@ -1,4 +1,4 @@
-from __future__ import unicode_literals, absolute_import
+from __future__ import absolute_import
 import contextlib
 import datetime
 import errno
@@ -11,7 +11,7 @@ import time
 import warnings
 
 from collections import deque
-from ConfigParser import SafeConfigParser
+from six.moves.configparser import SafeConfigParser
 from distutils.spawn import find_executable
 from distutils.version import LooseVersion, StrictVersion
 from glob import glob
@@ -27,6 +27,7 @@ import requests
 from hubstorage import HubstorageClient
 
 import shub
+from shub.compat import to_native_str
 from shub.exceptions import (BadParameterException, InvalidAuthException,
                              NotFoundException, RemoteErrorException)
 
@@ -71,7 +72,7 @@ def write_and_echo_logs(keep_log, last_logs, rsp, verbose):
             if verbose:
                 click.echo(line)
             last_logs.append(line)
-            log_file.write(line + '\n')
+            log_file.write(line + b'\n')
 
         deployed = _is_deploy_successful(last_logs)
         echo_short_log_if_deployed(deployed, last_logs, log_file, verbose)
@@ -99,7 +100,7 @@ def echo_short_log_if_deployed(deployed, last_logs, log_file, verbose):
 
 def _is_deploy_successful(last_logs):
     try:
-        data = json.loads(last_logs[-1])
+        data = json.loads(to_native_str(last_logs[-1]))
         if 'status' in data and data['status'] == 'ok':
             return True
     except Exception:
@@ -136,12 +137,12 @@ def patch_sys_executable():
         # it so the system-wide Python installation uses its own library path
         # (this is particularly important if the system Python version differs
         # from the Python version that the binary was compiled with)
-        orig_lib_path = os.environ.pop(b'LD_LIBRARY_PATH', None)
+        orig_lib_path = os.environ.pop('LD_LIBRARY_PATH', None)
         sys.executable = py_exe
         yield
         sys.executable = orig_exe
         if orig_lib_path:
-            os.environ[b'LD_LIBRARY_PATH'] = orig_lib_path
+            os.environ['LD_LIBRARY_PATH'] = orig_lib_path
     else:
         yield
 
@@ -427,7 +428,7 @@ def get_scrapycfg_targets(cfgfiles=None):
             t = baset.copy()
             t.update(cfg.items(x))
             targets[x[7:]] = t
-    for tname, t in targets.items():
+    for tname, t in list(targets.items()):
         try:
             int(t.get('project', 0))
         except ValueError:

@@ -1,4 +1,5 @@
 
+from __future__ import absolute_import
 from PyInstaller.utils.hooks import collect_submodules
 
 # Add as hidden imports all submodules from shub. This is because shub

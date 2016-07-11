@@ -1,5 +1,7 @@
+from __future__ import absolute_import
 import mock
 import unittest
+import time
 
 from click.testing import CliRunner
 
@@ -16,6 +18,7 @@ class JobResourceTest(unittest.TestCase):
         jobid = '1/2/3'
         with mock.patch.object(cmd_mod, 'get_job', autospec=True) as mock_gj:
             # Patch job.items.iter_json() to return our objects
+            mock_gj.return_value._metadata_updated = time.time()
             mock_resource = getattr(mock_gj.return_value, resource_name)
             mock_resource.iter_json.return_value = objects
             result = self.runner.invoke(cmd_mod.cli, (jobid,))
@@ -46,6 +49,7 @@ class JobResourceTest(unittest.TestCase):
         ]
         jobid = '1/2/3'
         with mock.patch.object(log, 'get_job', autospec=True) as mock_gj:
+            mock_gj.return_value._metadata_updated = time.time()
             mock_gj.return_value.logs.iter_values.return_value = objects
             result = self.runner.invoke(log.cli, (jobid,))
             mock_gj.assert_called_once_with(jobid)
