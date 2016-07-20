@@ -12,6 +12,7 @@ Contents:
    :maxdepth: 2
 
    deploy-custom-image
+   custom-images-contract
 
 Indices and tables
 ==================
