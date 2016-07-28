@@ -29,7 +29,7 @@ setup(
 
 @contextmanager
 def FakeProjectDirectory():
-    tmpdir = tempfile.mkdtemp()
+    tmpdir = os.path.realpath(tempfile.mkdtemp())
     current = os.getcwd()
     os.chdir(tmpdir)
     try:
