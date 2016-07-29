@@ -1,9 +1,9 @@
 import os
 import re
-import json
 import click
 import importlib
 
+from six import string_types
 import ruamel.yaml as yaml
 
 from shub import config as shub_config
@@ -88,6 +88,20 @@ def get_docker_client():
         import docker
     except ImportError:
         raise ImportError('You need docker-py installed for the cmd')
+
+    class CustomDockerClient(docker.Client):
+
+        # XXX: workaround for https://github.com/docker/docker-py/issues/1059
+        def _stream_helper(self, response, decode=False):
+            it = super(CustomDockerClient, self)._stream_helper(response, decode=decode)
+            for data in it:
+                if not isinstance(data, string_types):
+                    yield data
+                for line in data.split('\r\n'):
+                    line = line.strip()
+                    if line:
+                        yield line
+
     docker_host = os.environ.get('DOCKER_HOST')
     tls_config = None
     if os.environ.get('DOCKER_TLS_VERIFY', False):
@@ -102,9 +116,10 @@ def get_docker_client():
             assert_hostname=False)
         docker_host = docker_host.replace('tcp://', 'https://')
     version = os.environ.get('DOCKER_VERSION', DEFAULT_DOCKER_VERSION)
-    return docker.Client(base_url=docker_host,
-                         version=version,
-                         tls=tls_config)
+    return CustomDockerClient(
+        base_url=docker_host,
+        version=version,
+        tls=tls_config)
 
 
 def format_image_name(image_name, image_tag):

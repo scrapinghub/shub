@@ -1,12 +1,12 @@
+import json
 import os
 import sys
+
+import docker
 import mock
-import errno
-import shutil
 import StringIO
 import tempfile
-from unittest import TestCase, main
-from shub import config as shub_config
+from unittest import TestCase
 from shub import exceptions as shub_exceptions
 
 from shub_image.utils import missing_modules
@@ -22,6 +22,7 @@ from shub_image.utils import load_status_url
 from shub_image.utils import STATUS_FILE_LOCATION
 
 from .utils import FakeProjectDirectory, add_scrapy_fake_config
+
 
 class ReleaseUtilsTest(TestCase):
 
@@ -42,14 +43,23 @@ class ReleaseUtilsTest(TestCase):
     def test_get_docker_client(self):
         mocked_docker = mock.Mock()
         sys.modules['docker'] = mocked_docker
+        client_mock = mock.Mock()
+
+        class DockerClientMock(object):
+
+            def __init__(self, *args, **kwargs):
+                client_mock(*args, **kwargs)
+
+        mocked_docker.Client = DockerClientMock
+
         assert get_docker_client()
-        mocked_docker.Client.assert_called_with(
+        client_mock.assert_called_with(
             base_url=None, tls=None, version='1.17')
         # set basic test environment
         os.environ['DOCKER_HOST'] = 'http://127.0.0.1'
         os.environ['DOCKER_VERSION'] = '1.18'
         assert get_docker_client()
-        mocked_docker.Client.assert_called_with(
+        client_mock.assert_called_with(
             base_url='http://127.0.0.1', tls=None, version='1.18')
         # test for tls
         os.environ['DOCKER_TLS_VERIFY'] = '1'
@@ -57,7 +67,7 @@ class ReleaseUtilsTest(TestCase):
         mocked_tls = mock.Mock()
         mocked_docker.tls.TLSConfig.return_value = mocked_tls
         assert get_docker_client()
-        mocked_docker.Client.assert_called_with(
+        client_mock.assert_called_with(
             base_url='http://127.0.0.1',
             tls=mocked_tls,
             version='1.18')
@@ -80,6 +90,22 @@ class ReleaseUtilsTest(TestCase):
             config.get_version.return_value = 'test-version'
             mocked.return_value = config
             assert format_image_name('test', None) == 'test:test-version'
+
+    def test_custom_docker_client_workaround(self):
+        """Test workaround for https://github.com/docker/docker-py/issues/1059."""
+        line = (
+            '{"status":"Pulling from library/python","id":"2.7"}\r\n'
+            '{"status":"Pulling fs layer","progressDetail":{},"id":"5c90d4a2d1a8"}\r\n'
+        )
+
+        # mocked_docker.Client._stream_helper.return_value = (line,)
+        client = get_docker_client()
+        with mock.patch.object(docker.Client, '_stream_helper', return_value=(line,)):
+            result = list(client._stream_helper(mock.Mock(), decode=False))
+        assert len(result) == 2
+        assert json.loads(result[0])['id'] == '2.7'
+        assert json.loads(result[1])['id'] == '5c90d4a2d1a8'
+
 
 class ReleaseConfigTest(TestCase):
 
