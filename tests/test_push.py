@@ -47,6 +47,26 @@ class TestPushCli(TestCase):
                 'registry/user/project:test',
                 insecure_registry=False, stream=True)
 
+    def test_cli_with_login_username_only(self, mocked_method):
+        mocked = mock.MagicMock()
+        mocked.login.return_value = {"Status": "Login Succeeded"}
+        mocked.push.return_value = [
+            '{"stream":"In process"}',
+            '{"status":"Successfully pushed"}']
+        mocked_method.return_value = mocked
+        with FakeProjectDirectory() as tmpdir:
+            add_sh_fake_config(tmpdir)
+            runner = CliRunner()
+            result = runner.invoke(
+                cli, ["dev", "--version", "test", "--username", "apikey"])
+            assert result.exit_code == 0
+            mocked.login.assert_called_with(
+                email=None, password=' ',
+                reauth=False, registry='registry', username='apikey')
+            mocked.push.assert_called_with(
+                'registry/user/project:test',
+                insecure_registry=False, stream=True)
+
     def test_cli_login_fail(self, mocked_method):
         mocked = mock.MagicMock()
         mocked.login.return_value = {"Status": "Login Failed!"}

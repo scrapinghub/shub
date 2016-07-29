@@ -60,6 +60,10 @@ def _execute_push_login(client, image, username, password, email):
     """Login if there're provided credentials for the registry"""
     components = image.split('/')
     registry = components[0] if len(components) == 3 else None
+    if password is None:
+        # Missing password leads to auth request to registry authentication service
+        # without 'account' query parameter which breaks login procedure.
+        password = ' '
     resp = client.login(username=username, password=password,
                         email=email, registry=registry, reauth=False)
     if not (isinstance(resp, dict) and 'username' in resp or
