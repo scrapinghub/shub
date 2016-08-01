@@ -30,14 +30,20 @@ otherwise you have to enter your credentials (at least username/password).
 @click.option("--username", help="docker registry name")
 @click.option("--password", help="docker registry password")
 @click.option("--email", help="docker registry email")
-def cli(target, debug, version, username, password, email):
-    push_cmd(target, version, username, password, email)
+@click.option("--apikey", help="SH apikey to use built-in registry")
+@click.option("--insecure", is_flag=True, help="use insecure registry")
+def cli(target, debug, version, username, password, email, apikey, insecure):
+    push_cmd(target, version, username, password, email, apikey, insecure)
 
 
-def push_cmd(target, version, username, password, email):
+def push_cmd(target, version, username, password, email, apikey, insecure):
     client = utils.get_docker_client()
     config = utils.load_release_config()
     image = config.get_image(target)
+    username, password = utils.get_credentials(
+        username=username, password=password, insecure=insecure,
+        apikey=apikey, target_apikey=config.get_apikey(target))
+
     if username:
         _execute_push_login(client, image, username, password, email)
     image_name = utils.format_image_name(image, version)
@@ -60,10 +66,6 @@ def _execute_push_login(client, image, username, password, email):
     """Login if there're provided credentials for the registry"""
     components = image.split('/')
     registry = components[0] if len(components) == 3 else None
-    if password is None:
-        # Missing password leads to auth request to registry authentication service
-        # without 'account' query parameter which breaks login procedure.
-        password = ' '
     resp = client.login(username=username, password=password,
                         email=email, registry=registry, reauth=False)
     if not (isinstance(resp, dict) and 'username' in resp or

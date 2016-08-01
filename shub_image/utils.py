@@ -136,6 +136,31 @@ def format_image_name(image_name, image_tag):
     return '{}:{}'.format(image_name, image_tag)
 
 
+def get_credentials(username=None, password=None, insecure=False,
+                    apikey=None, target_apikey=None):
+    """ A helper function to get credentials based on cmdline options.
+
+    Returns a tuple with 2 strings: (username, password).
+
+    When working with registries where only username matters:
+    missing password leads to auth request to registry authentication service
+    without 'account' query parameter which breaks login.
+    """
+    if insecure:
+        return None, None
+    elif apikey:
+        return apikey, ' '
+    elif username:
+        if password is None:
+            raise click.BadParameter(
+                'Password is required when passing username.')
+        return username, password
+    elif password:
+        raise click.BadParameter(
+            'Username is required when passing password.')
+    return target_apikey, ' '
+
+
 def store_status_url(status_url, limit):
     """Load status file and update it with a url"""
     data = _load_status_file(STATUS_FILE_LOCATION)

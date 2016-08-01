@@ -1,18 +1,21 @@
-import json
 import os
 import sys
-
-import docker
-import mock
-import StringIO
+import json
 import tempfile
 from unittest import TestCase
+
+import mock
+import click
+import docker
+import pytest
+import StringIO
 from shub import exceptions as shub_exceptions
 
 from shub_image.utils import missing_modules
 from shub_image.utils import get_project_dir
 from shub_image.utils import get_docker_client
 from shub_image.utils import format_image_name
+from shub_image.utils import get_credentials
 
 from shub_image.utils import ReleaseConfig
 from shub_image.utils import load_release_config
@@ -106,6 +109,15 @@ class ReleaseUtilsTest(TestCase):
         assert json.loads(result[0])['id'] == '2.7'
         assert json.loads(result[1])['id'] == '5c90d4a2d1a8'
 
+    def test_get_credentials(self):
+        assert get_credentials(insecure=True) == (None, None)
+        assert get_credentials(apikey='apikey') == ('apikey', ' ')
+        assert get_credentials(
+            username='user', password='pass') == ('user', 'pass')
+        with pytest.raises(click.BadParameter):
+            get_credentials(username='user')
+        assert get_credentials(target_apikey='tapikey') == ('tapikey', ' ')
+
 
 class ReleaseConfigTest(TestCase):
 
@@ -125,7 +137,7 @@ class ReleaseConfigTest(TestCase):
         config.load(stream)
         assert getattr(config, 'projects') == {'dev': 123, 'prod': 321}
         assert getattr(config, 'endpoints') == {
-            'default': 'https://dash.scrapinghub.com/api/',
+            'default': 'https://app.scrapinghub.com/api/',
             'dev': 'http://127.0.0.1/api/scrapyd/'}
         assert config.images == {
             'dev': 'registry/user/project',

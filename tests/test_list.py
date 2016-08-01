@@ -77,7 +77,7 @@ class TestListCli(TestCase):
             assert result.exit_code == 0
             assert result.output.endswith('abc\ndef\ndsd\n')
         get_mocked.assert_called_with(
-            'https://dash.scrapinghub.com/api/settings/get.json',
+            'https://app.scrapinghub.com/api/settings/get.json',
             allow_redirects=False, auth=('abcdef', ''),
             params={'project': 12345}, timeout=300)
 

@@ -299,6 +299,16 @@ Set the password to authenticate in the Docker registry.
 Set the email to authenticate in the Docker registry (if needed).
 
 
+.. function:: --apikey <text>
+
+(beta) Use provided apikey to authenticate in the Scrapy Cloud Docker registry.
+
+
+.. function:: --insecure
+
+Use the Docker registry in insecure mode.
+
+
 .. function:: -d/--debug
 
 Increase the tool's verbosity.
@@ -361,6 +371,16 @@ Set the password to authenticate in the registry.
 .. function:: --email <text>
 
 Set the email to authenticate in the Docker registry (if needed).
+
+
+.. function:: --apikey <text>
+
+(beta) Use provided apikey to authenticate in the Scrapy Cloud Docker registry.
+
+
+.. function:: --insecure
+
+Use the Docker registry in insecure mode.
 
 
 .. function:: --async

@@ -48,18 +48,27 @@ Does a simple POST request to Dash API with given parameters
 @click.option("--username", help="docker registry name")
 @click.option("--password", help="docker registry password")
 @click.option("--email", help="docker registry email")
+@click.option("--apikey", help="SH apikey to use built-in registry")
+@click.option("--insecure", is_flag=True, help="use insecure registry")
 @click.option("--async", is_flag=True, help="enable asynchronous mode")
-def cli(target, debug, version, username, password, email, async):
-    deploy_cmd(target, version, username, password, email, async)
+def cli(target, debug, version, username, password, email,
+        apikey, insecure, async):
+    deploy_cmd(target, version, username, password, email,
+        apikey, insecure, async)
 
 
-def deploy_cmd(target, version, username, password, email, async):
+def deploy_cmd(target, version, username, password, email,
+        apikey, insecure, async):
     config = utils.load_release_config()
-    project, endpoint, apikey = config.get_target(target)
+    project, endpoint, target_apikey = config.get_target(target)
     image = config.get_image(target)
     version = version or config.get_version()
     image_name = utils.format_image_name(image, version)
+    username, password = utils.get_credentials(
+        username=username, password=password, insecure=insecure,
+        apikey=apikey, target_apikey=target_apikey)
 
+    apikey = apikey or target_apikey
     params = _prepare_deploy_params(
         project, version, image_name, endpoint, apikey,
         username, password, email)
