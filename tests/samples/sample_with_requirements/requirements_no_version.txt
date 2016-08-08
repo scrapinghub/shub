@@ -1,0 +1,4 @@
+js2xml
+extruct
+requests
+git+git://github.com/scrapinghub/extruct#egg=extruct

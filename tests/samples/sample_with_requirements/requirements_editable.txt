@@ -1,0 +1,4 @@
+js2xml==0.2.1
+extruct==0.1.0
+-e https://github.com/scrapinghub/extruct/archive/10cbb3a.zip#egg=extruct
+requests==2.6.0

@@ -13,3 +13,4 @@ ruamel.ordereddict==0.4.9  # via ruamel.yaml
 ruamel.yaml==0.10.15
 scrapinghub==1.7.0
 six==1.10.0
+requirements-parser==0.1.0
