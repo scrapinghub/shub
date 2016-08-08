@@ -8,6 +8,9 @@ from subprocess import check_call
 
 import click
 import setuptools  # not used in code but needed in runtime, don't remove!
+
+from shub.validation import validate_and_dump_for_path
+
 _ = setuptools  # NOQA
 from scrapinghub import Connection, APIError
 
@@ -107,6 +110,16 @@ def cli(target, version, debug, egg, build_egg, verbose, keep_log):
             else:
                 click.echo("Packing version %s" % version)
                 egg, tmpdir = _build_egg()
+
+            if targetconf.requirements_file is not None:
+                a = validate_and_dump_for_path(targetconf.requirements_file,
+                                               click.echo)
+                if a.should_stop:
+                    return
+                elif a.should_ask_to_continue:
+                    r = raw_input('project has warning, continue anyway? [y/N]')
+                    if not r.lower() == 'y':
+                        return
 
             _upload_egg(targetconf.endpoint, egg, targetconf.project_id,
                         version, auth, verbose, keep_log, targetconf.stack,

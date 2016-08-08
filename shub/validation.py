@@ -12,6 +12,8 @@ import requirements
 ValidationTuple = namedtuple('ValidationTuple', ['line', 'name', 'message'])
 ValidationResult = namedtuple('ValidationResult',
                               ['is_valid', 'has_warnings', 'errors', 'warnings'])
+ValidationAttempt = namedtuple('ValidationAttempt',
+                               ['should_stop', 'should_ask_to_continue'])
 
 
 def _is_gitgit(req):
@@ -71,3 +73,29 @@ def validate_requirements_path(requirements_path):
         reqstr = f.read()
 
     return validate_requirements(reqstr)
+
+
+def dump_result(result, dump_fct):
+    """
+    Call the dump_fct for every validation result string.
+    """
+    dump_fct('validating requirements:')
+    for r in result.warnings:
+        dump_fct('WARNING: %s %s (l.%s)' % (r.name, r.message, r.line))
+
+    for r in result.errors:
+        dump_fct('ERROR: %s %s (l.%s)' % (r.name, r.message, r.line))
+
+
+def validate_and_dump_for_path(requirements_path, dump_fct):
+    """
+    Validate a requirements file, given it's path.
+    Dump the errors and warning of the validation using the dump_fct.
+
+    Returns a ValidationAttempt.
+    """
+    result = validate_requirements_path(requirements_path)
+    dump_result(result, dump_fct)
+    return ValidationAttempt(should_stop=not result.is_valid,
+                             should_ask_to_continue=result.has_warnings)
+
