@@ -16,7 +16,13 @@ setup(
     },
     include_package_data=True,
     zip_safe=False,
-    install_requires=['click', 'requests', 'six', 'shub', 'docker-py'],
+    install_requires=[
+        'click',
+        'requests',
+        'six',
+        'shub>=0.2.2',
+        'docker-py',
+    ],
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',

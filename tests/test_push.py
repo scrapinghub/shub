@@ -11,8 +11,9 @@ from .utils import add_sh_fake_config
 @mock.patch('shub_image.utils.get_docker_client')
 class TestPushCli(TestCase):
 
-    def test_cli(self, mocked_method):
+    def test_cli_with_apikey_login(self, mocked_method):
         mocked = mock.MagicMock()
+        mocked.login.return_value = {"Status": "Login Succeeded"}
         mocked.push.return_value = [
             '{"stream":"In process"}',
             '{"status":"Successfully pushed"}']
@@ -24,9 +25,9 @@ class TestPushCli(TestCase):
             assert result.exit_code == 0
             mocked.push.assert_called_with(
                 'registry/user/project:test',
-                insecure_registry=True, stream=True)
+                insecure_registry=False, stream=True)
 
-    def test_cli_with_login(self, mocked_method):
+    def test_cli_with_custom_login(self, mocked_method):
         mocked = mock.MagicMock()
         mocked.login.return_value = {"Status": "Login Succeeded"}
         mocked.push.return_value = [
@@ -47,6 +48,24 @@ class TestPushCli(TestCase):
                 'registry/user/project:test',
                 insecure_registry=False, stream=True)
 
+    def test_cli_with_insecure_registry(self, mocked_method):
+        mocked = mock.MagicMock()
+        mocked.login.return_value = {"Status": "Login Succeeded"}
+        mocked.push.return_value = [
+            '{"stream":"In process"}',
+            '{"status":"Successfully pushed"}']
+        mocked_method.return_value = mocked
+        with FakeProjectDirectory() as tmpdir:
+            add_sh_fake_config(tmpdir)
+            runner = CliRunner()
+            result = runner.invoke(
+                cli, ["dev", "--version", "test", "--insecure"])
+            assert result.exit_code == 0
+            assert not mocked.login.called
+            mocked.push.assert_called_with(
+                'registry/user/project:test',
+                insecure_registry=True, stream=True)
+
     def test_cli_with_login_username_only(self, mocked_method):
         mocked = mock.MagicMock()
         mocked.login.return_value = {"Status": "Login Succeeded"}
@@ -58,7 +77,7 @@ class TestPushCli(TestCase):
             add_sh_fake_config(tmpdir)
             runner = CliRunner()
             result = runner.invoke(
-                cli, ["dev", "--version", "test", "--username", "apikey"])
+                cli, ["dev", "--version", "test", "--apikey", "apikey"])
             assert result.exit_code == 0
             mocked.login.assert_called_with(
                 email=None, password=' ',

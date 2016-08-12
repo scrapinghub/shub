@@ -25,8 +25,12 @@ Obviously it accepts all the options for the commands above.
 @click.option("--username", help="docker registry name")
 @click.option("--password", help="docker registry password")
 @click.option("--email", help="docker registry email")
+@click.option("--apikey", help="SH apikey to use built-in registry")
+@click.option("--insecure", is_flag=True, help="use insecure registry")
 @click.option("--async", is_flag=True, help="enable asynchronous mode")
-def cli(target, debug, version, username, password, email, async):
+def cli(target, debug, version, username, password, email,
+        apikey, insecure, async):
     build.build_cmd(target, version)
-    push.push_cmd(target, version, username, password, email)
-    deploy.deploy_cmd(target, version, username, password, email, async)
+    push.push_cmd(target, version, username, password, email, apikey, insecure)
+    deploy.deploy_cmd(target, version, username, password, email,
+                      apikey, insecure, async)

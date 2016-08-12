@@ -13,6 +13,6 @@ ruamel.base==1.0.0        # via ruamel.yaml
 ruamel.ordereddict==0.4.9  # via ruamel.yaml
 ruamel.yaml==0.10.20      # via shub
 scrapinghub==1.7.0        # via shub
-shub==2.0.0
+shub==2.2.0
 six==1.10.0
 websocket-client==0.35.0  # via docker-py
