@@ -3,6 +3,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 import json
 import multiprocessing
+import six
 from threading import Thread
 from argparse import ArgumentParser
 from six.moves.socketserver import TCPServer
@@ -16,13 +17,17 @@ class Handler(SimpleHTTPRequestHandler):
         method = self.command
         path, _, querystr = self.path.partition('?')
         query = urllib.parse.parse_qs(querystr)
-        content_len = int(self.headers.getheader('content-length', 0))
+        content_len = int(self.headers.get('content-length', 0))
         body = self.rfile.read(content_len)
+        if six.PY2:
+            headers = self.headers.getplist()
+        else:
+            headers = self.headers.get_params()
         print(self)
 
         self.server.pipe.send({
             'path': path, 'query': query, 'body': body,
-            'method': self.command, 'headers': self.headers.getplist(),
+            'method': self.command, 'headers': headers,
         })
         if not self.server.pipe.poll(10):
             self.send_error(500, 'Pipe hung')
