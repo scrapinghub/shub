@@ -2,10 +2,12 @@
 # coding=utf-8
 
 
+from __future__ import absolute_import
 import os
 import stat
 import sys
 import unittest
+import time
 
 from mock import Mock, MagicMock, patch
 from click.testing import CliRunner
@@ -171,6 +173,7 @@ class UtilsTest(unittest.TestCase):
 
     def test_job_live(self):
         job = MagicMock()
+        job._metadata_updated = time.time()
         for live_value in ('pending', 'running'):
             job.metadata.__getitem__.return_value = live_value
             self.assertTrue(utils.job_live(job))
@@ -362,20 +365,20 @@ class UtilsTest(unittest.TestCase):
     def test_write_and_echo_logs(self):
         last_logs = []
         rsp = Mock()
-        rsp.iter_lines = Mock(return_value=iter(["line1", "line2"]))
+        rsp.iter_lines = Mock(return_value=iter([b"line1", b"line2"]))
         self.assertRaises(RemoteErrorException,
             utils.write_and_echo_logs,
             keep_log=True, last_logs=last_logs,
             rsp=rsp, verbose=True)
-        self.assertEqual(last_logs, ["line1", "line2"])
+        self.assertEqual(last_logs, [b"line1", b"line2"])
         last_logs = []
 
         rsp.iter_lines = Mock(return_value=iter(
-            ["line1", '{"status":"ok","fieldK":"fieldV"}']))
+            [b"line1", b'{"status":"ok","fieldK":"fieldV"}']))
         utils.write_and_echo_logs(keep_log=True, last_logs=last_logs,
                                   rsp=rsp, verbose=True)
         self.assertEqual(last_logs, [
-            "line1", '{"status":"ok","fieldK":"fieldV"}'])
+            b"line1", b'{"status":"ok","fieldK":"fieldV"}'])
 
 
 if __name__ == '__main__':

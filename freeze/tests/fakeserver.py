@@ -1,10 +1,12 @@
 #!/usr/bin/env python
+from __future__ import absolute_import
+from __future__ import print_function
 import json
 import multiprocessing
 from threading import Thread
 from argparse import ArgumentParser
-from SocketServer import TCPServer
-from SimpleHTTPServer import SimpleHTTPRequestHandler
+from six.moves.socketserver import TCPServer
+from six.moves.SimpleHTTPServer import SimpleHTTPRequestHandler
 from six.moves import urllib
 
 

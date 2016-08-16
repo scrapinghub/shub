@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 import contextlib
 import netrc
 import os
@@ -92,7 +93,7 @@ class ShubConfig(object):
         with update_yaml_dict(path) as yml:
             yml['projects'] = self.projects
             # Write "123" instead of "'123'"
-            for target, project in yml['projects'].iteritems():
+            for target, project in six.iteritems(yml['projects']):
                 try:
                     if isinstance(project, dict):
                         project['id'] = int(project['id'])
@@ -119,7 +120,7 @@ class ShubConfig(object):
         that have at least the keys ``id``, ``endpoint``, and ``apikey``.
         """
         projects = self.projects.copy()
-        for target, proj in projects.items():
+        for target, proj in list(projects.items()):
             if not isinstance(proj, dict):
                 proj = {'id': proj}
                 projects[target] = proj
@@ -358,7 +359,7 @@ def update_yaml_dict(conf_path=None):
     # Code inside context manager is executed after this yield
     yield conf
     # Avoid writing "key: {}"
-    for key in conf.keys():
+    for key in list(conf.keys()):
         if conf[key] == {}:
             del conf[key]
     with open(conf_path, 'w') as f:

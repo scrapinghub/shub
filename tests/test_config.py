@@ -1,6 +1,7 @@
+from __future__ import absolute_import
 import os
 import shutil
-import StringIO
+import six
 import tempfile
 import textwrap
 import unittest
@@ -69,7 +70,7 @@ class ShubConfigTest(unittest.TestCase):
 
     def _get_conf_with_yml(self, yml):
         conf = ShubConfig()
-        conf.load(StringIO.StringIO(textwrap.dedent(yml)))
+        conf.load(six.StringIO(textwrap.dedent(yml)))
         return conf
 
     def setUp(self):

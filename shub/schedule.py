@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 import json
 
 import click
@@ -77,4 +78,4 @@ def schedule_spider(project, endpoint, apikey, spider, arguments=(),
             **dict(x.split('=', 1) for x in arguments)
         )
     except APIError as e:
-        raise RemoteErrorException(e.message)
+        raise RemoteErrorException(str(e))
