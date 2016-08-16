@@ -32,7 +32,7 @@ after_success:
   - codecov
 
 before_deploy:
-  - tar -czf dist_bin/shub-${TRAVIS_TAG}-${TRAVIS_OS_NAME}-x64.tar.gz -C dist_bin shub
+  - if [ $TOX_ENV == freeze ]; then tar -czf dist_bin/shub-${TRAVIS_TAG}-${TRAVIS_OS_NAME}-x64.tar.gz -C dist_bin shub; fi
 
 deploy:
   - provider: pypi
@@ -45,7 +45,7 @@ deploy:
       tags: true
       all_branches: true
       repo: scrapinghub/shub
-      condition: "$TRAVIS_OS_NAME == linux"
+      condition: "$TRAVIS_OS_NAME == linux && $TOX_ENV == py35"
   - provider: releases
     api_key:
       secure: JE86/LwMlkUdLXhNe3bmVQPBo9tSDXDOfIM5q8oEmkKOPymQX/dahqw5T7GCQYZUK5M9a1hVeE4ano9xb6xBX2dxVkzBunPMQMaO/UZWtP5rxsmBMr0YLOERfuWeHBDlgW7gUILZYIa7V/Z0EsnAlpSZk5nJsYW/IlmXXWKNTL0=
