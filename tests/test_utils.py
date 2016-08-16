@@ -26,44 +26,20 @@ class UtilsTest(unittest.TestCase):
         self.runner = CliRunner()
 
     @patch('shub.utils.sys.frozen', new=True, create=True)
-    def test_patch_sys_executable(self):
-        def make_mock_find_exe(py2=True, py=True):
-            def find_exe(exe_name):
-                if exe_name == 'python2' and py2:
-                    return '/my/python2'
-                elif exe_name == 'python' and py:
-                    return '/my/python'
-                raise NotFoundException
-            return find_exe
-
+    @patch('shub.utils.find_exe', return_value='/my/python')
+    def test_patch_sys_executable(self, mock_find_exe):
         original_exe = sys.executable
         with patch('shub.utils.sys.frozen', new=False):
             with utils.patch_sys_executable():
                 self.assertEqual(sys.executable, original_exe)
-
-        with patch('shub.utils.find_exe', new=make_mock_find_exe()), \
-                patch('subprocess.check_output') as mock_gco:
-            mock_gco.return_value = "Python 2.7.11"
+        with utils.patch_sys_executable():
+            self.assertEqual(sys.executable, '/my/python')
+        # Make sure we properly cleaned up after ourselves
+        self.assertEqual(sys.executable, original_exe)
+        mock_find_exe.side_effect = NotFoundException
+        with self.assertRaises(NotFoundException):
             with utils.patch_sys_executable():
-                self.assertEqual(sys.executable, '/my/python2')
-
-        with patch('shub.utils.find_exe', new=make_mock_find_exe(py2=False)), \
-                patch('subprocess.check_output') as mock_gco:
-            mock_gco.return_value = "Python 2.7.11"
-            with utils.patch_sys_executable():
-                self.assertEqual(sys.executable, '/my/python')
-            mock_gco.return_value = "Python 3.5.1"
-            with self.assertRaises(NotFoundException):
-                with utils.patch_sys_executable():
-                    pass
-            # Make sure we properly cleaned up after ourselves
-            self.assertEqual(sys.executable, original_exe)
-
-        with patch('shub.utils.find_exe',
-                   new=make_mock_find_exe(py2=False, py=False)):
-            with self.assertRaises(NotFoundException):
-                with utils.patch_sys_executable():
-                    pass
+                pass
 
     @patch('shub.utils.find_executable')
     def test_find_exe(self, mock_fe):

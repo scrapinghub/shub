@@ -8,6 +8,8 @@ environment:
       TOX_ENV: py27
     - PYTHON: "C:\\Python35"
       TOX_ENV: py35
+    - PYTHON: "C:\\Python35"
+      TOX_ENV: freeze
 
 branches:
   only:
@@ -23,20 +25,20 @@ install:
 build: false
 
 test_script:
-  - "tox -e %TOX_ENV%,freeze"
+  - "tox -e %TOX_ENV%"
 
 artifacts:
   - path: dist_bin\shub.exe
-  - path: dist_bin\shub-$(APPVEYOR_REPO_TAG_NAME)-windows-$(PLATFORM)-%TOX_ENV%.zip
+  - path: dist_bin\shub-$(APPVEYOR_REPO_TAG_NAME)-windows-$(PLATFORM).zip
 
 after_test:
-  - 7z a dist_bin\shub-%APPVEYOR_REPO_TAG_NAME%-windows-%PLATFORM%-%TOX_ENV%.zip %APPVEYOR_BUILD_FOLDER%\dist_bin\shub.exe
+  - if "%TOX_ENV%" == "freeze" (7z a %APPVEYOR_BUILD_FOLDER%\dist_bin\shub-%APPVEYOR_REPO_TAG_NAME%-windows-%PLATFORM%.zip %APPVEYOR_BUILD_FOLDER%\dist_bin\shub.exe) else (echo "Not in freeze environment, skipping zip creation")
 
 deploy:
   provider: GitHub
   auth_token:
     secure: mNA38grRkwGjw4zSUX1qA67eE6CRPjk97hRngZf19FuopBwbpPjOALBIlYZWKlDv
-  artifact: dist_bin\shub-$(APPVEYOR_REPO_TAG_NAME)-windows-$(PLATFORM)-%TOX_ENV%.zip
+  artifact: dist_bin\shub-$(APPVEYOR_REPO_TAG_NAME)-windows-$(PLATFORM).zip
   draft: true
   on:
     appveyor_repo_tag: true

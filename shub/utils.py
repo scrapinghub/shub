@@ -119,20 +119,7 @@ def patch_sys_executable():
     """
     if getattr(sys, 'frozen', False):
         orig_exe = sys.executable
-        for pythonname in ('python2.7', 'python2', 'python'):
-            try:
-                py_exe = find_exe(pythonname)
-                break
-            except NotFoundException:
-                pass
-        else:
-            raise NotFoundException('Please install Python 2.7')
-
-        output = subprocess.check_output([py_exe, '--version'],
-                                         stderr=subprocess.STDOUT)
-        if 'Python 2.7.' not in output:
-            raise NotFoundException('Please install Python 2.7')
-
+        py_exe = find_exe('python')
         # PyInstaller sets this environment variable in its bootloader. Remove
         # it so the system-wide Python installation uses its own library path
         # (this is particularly important if the system Python version differs

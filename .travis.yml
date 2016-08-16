@@ -1,10 +1,11 @@
 language: python
-python: 2.7
+python: 3.5
 sudo: false
 env:
   - TOX_ENV=py27
   - TOX_ENV=py33
   - TOX_ENV=py34
+  - TOX_ENV=py35
   - TOX_ENV=freeze
 
 matrix:
@@ -13,11 +14,7 @@ matrix:
       # Using "generic" because osx in Travis doesn't support python
       language: generic
       env:
-        - TOX_ENV=py27
-    - os: linux
-      python: 3.5
-      env:
-        - TOX_ENV=py35
+        - TOX_ENV=freeze
 
 branches:
   only:
@@ -35,7 +32,7 @@ after_success:
   - codecov
 
 before_deploy:
-  - tar -czf dist_bin/shub-${TRAVIS_TAG}-${TRAVIS_OS_NAME}-x64.tar.gz -C dist_bin shub
+  - if [ $TOX_ENV == freeze ]; then tar -czf dist_bin/shub-${TRAVIS_TAG}-${TRAVIS_OS_NAME}-x64.tar.gz -C dist_bin shub; fi
 
 deploy:
   - provider: pypi
@@ -48,7 +45,7 @@ deploy:
       tags: true
       all_branches: true
       repo: scrapinghub/shub
-      condition: "$TRAVIS_OS_NAME == linux"
+      condition: "$TRAVIS_OS_NAME == linux && $TOX_ENV == py35"
   - provider: releases
     api_key:
       secure: JE86/LwMlkUdLXhNe3bmVQPBo9tSDXDOfIM5q8oEmkKOPymQX/dahqw5T7GCQYZUK5M9a1hVeE4ano9xb6xBX2dxVkzBunPMQMaO/UZWtP5rxsmBMr0YLOERfuWeHBDlgW7gUILZYIa7V/Z0EsnAlpSZk5nJsYW/IlmXXWKNTL0=
@@ -58,3 +55,4 @@ deploy:
     on:
       tags: true
       repo: scrapinghub/shub
+      condition: "$TOX_ENV == freeze"

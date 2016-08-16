@@ -42,7 +42,7 @@ def shub(shub_args):
 
 def test_version():
     stdout, stderr = shub('version').communicate()
-    assert re.match(r'\d+[.]\d+[.]\d+$', stdout.strip())
+    assert re.match(br'\d+[.]\d+[.]\d+$', stdout.strip())
 
 
 def test_deploy_without_project():
@@ -58,4 +58,4 @@ def test_deploy_default_project(apipipe, scrapyproject):
     assert req['path'] == '/api/scrapyd/addversion.json'
     apipipe.send((200, None, {'status': 'ok'}))
     stdout, stderr = p.communicate()
-    assert '{"status": "ok"}' in stdout
+    assert b'{"status": "ok"}' in stdout
