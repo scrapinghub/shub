@@ -46,7 +46,7 @@ def cli(job_id, follow):
     for item in job_resource_iter(job, job.logs.iter_values, follow=follow,
                                   key_func=lambda item: item['_key']):
         click.echo(
-            "{} {} {}".format(
+            u"{} {} {}".format(
                 datetime.utcfromtimestamp(item['time']/1000),
                 logging.getLevelName(int(item['level'])),
                 item['message']

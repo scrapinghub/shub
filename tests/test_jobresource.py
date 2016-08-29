@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import absolute_import
 import mock
 import unittest
@@ -56,6 +57,18 @@ class JobResourceTest(unittest.TestCase):
             self.assertIn('1970-01-01 00:00:00 INFO message 1', result.output)
             self.assertIn('2015-12-23 12:41:11 CRITICAL message 2', result.output)
         self._test_forwards_follow(log)
+
+    def test_log_unicode(self):
+        objects = [
+            {'time': 0, 'level': 20, 'message': u'jarzębina'}
+        ]
+        jobid = '1/2/3'
+        with mock.patch.object(log, 'get_job', autospec=True) as mock_gj:
+            mock_gj.return_value._metadata_updated = time.time()
+            mock_gj.return_value.logs.iter_values.return_value = objects
+            result = self.runner.invoke(log.cli, (jobid,))
+            mock_gj.assert_called_once_with(jobid)
+            self.assertIn(u'1970-01-01 00:00:00 INFO jarzębina', result.output)
 
 
 if __name__ == '__main__':
