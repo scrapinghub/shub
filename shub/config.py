@@ -34,6 +34,30 @@ class ShubConfig(object):
         self.stacks = {}
         self.requirements_file = None
 
+    def _check_endpoints(self):
+        """Check the endpoints. Send warnings if necessary."""
+        for endpoint, url in self.endpoints.items():
+            parsed = six.moves.urllib.parse.urlparse(url)
+            if parsed.netloc == 'staging.scrapinghub.com':
+                self.endpoints[endpoint] = six.moves.urllib.parse.urlunparse(
+                    parsed._replace(netloc='app.scrapinghub.com')
+                )
+                click.echo(
+                    'WARNING: Endpoint "%s" is still using %s which has been '
+                    'obsoleted. Shub has had it updated to app.scrapinghub.com '
+                    'for only this time. Please update the configuration '
+                    'ASAP.' % (
+                        endpoint, parsed.netloc,
+                    ),
+                    err=True
+                )
+            if parsed.scheme == 'http':
+                click.echo(
+                    'WARNING: Endpoint "%s" is still using HTTP. '
+                    'Please change it to HTTPS if possible.' % endpoint,
+                    err=True
+                )
+
     def load(self, stream):
         """Load Scrapinghub configuration from stream."""
         try:
@@ -48,6 +72,7 @@ class ShubConfig(object):
         except (yaml.YAMLError, AttributeError):
             # AttributeError: stream is valid YAML but not dictionary-like
             raise ConfigParseException
+        self._check_endpoints()
 
     def load_file(self, filename):
         """Load Scrapinghub configuration from YAML file. """
@@ -88,6 +113,7 @@ class ShubConfig(object):
         del targets['default']
         for tname, t in six.iteritems(targets):
             self._load_scrapycfg_target(tname, t)
+        self._check_endpoints()
 
     def save(self, path=None):
         with update_yaml_dict(path) as yml:
