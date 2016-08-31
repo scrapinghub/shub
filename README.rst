@@ -12,7 +12,7 @@ without leaving the command line.
 Requirements
 ------------
 
-* Python 2.7
+* Python 2.7+ (including Python 3)
 
 
 Installation
