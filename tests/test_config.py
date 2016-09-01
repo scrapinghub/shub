@@ -40,6 +40,10 @@ VALID_YAML_CFG = """
     stacks:
         dev: scrapy:v1.1
     requirements_file: requirements.txt
+    requirements:
+        eggs:
+          - ./egg1.egg
+          - ./egg2.egg
     version: 1.0
 """
 
@@ -55,7 +59,9 @@ def _project_dict(proj_id, endpoint='default', extra=None):
 
 
 def _target(id, endpoint=None, apikey=None, stack=None,
-            requirements_file='requirements.txt', version='1.0'):
+            requirements_file='requirements.txt', version='1.0', eggs=None):
+    if eggs is None:
+        eggs = ['./egg1.egg', './egg2.egg']
     return Target(
         project_id=id,
         endpoint=endpoint or ShubConfig.DEFAULT_ENDPOINT,
@@ -63,6 +69,7 @@ def _target(id, endpoint=None, apikey=None, stack=None,
         stack=stack,
         requirements_file=requirements_file,
         version=version,
+        eggs=eggs
     )
 
 
@@ -319,11 +326,11 @@ class ShubConfigTest(unittest.TestCase):
         """)
         self.assertEqual(
             self.conf.get_target_conf('shproj'),
-            _target(123, apikey='key', stack='custom_default')
+            _target(123, apikey='key', stack='custom_default', eggs=[])
         )
         self.assertEqual(
             self.conf.get_target_conf('advanced_prod'),
-            _target(456, apikey='key', stack='hworker:v1.0.0'),
+            _target(456, apikey='key', stack='hworker:v1.0.0', eggs=[]),
         )
 
     def test_get_target_conf_calls_get_project(self):

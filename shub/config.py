@@ -33,6 +33,7 @@ class ShubConfig(object):
         self.version = 'AUTO'
         self.stacks = {}
         self.requirements_file = None
+        self.eggs = []
 
     def _check_endpoints(self):
         """Check the endpoints. Send warnings if necessary."""
@@ -69,6 +70,7 @@ class ShubConfig(object):
             self.version = yaml_cfg.get('version', self.version)
             if 'requirements_file' in yaml_cfg:
                 self.requirements_file = yaml_cfg['requirements_file']
+            self.eggs = yaml_cfg.get('requirements', {}).get('eggs', [])
         except (yaml.YAMLError, AttributeError):
             # AttributeError: stream is valid YAML but not dictionary-like
             raise ConfigParseException
@@ -131,6 +133,8 @@ class ShubConfig(object):
             yml['apikeys'] = self.apikeys
             yml['version'] = self.version
             yml['stacks'] = self.stacks
+            if self.eggs:
+                yml['requirements'] = {'eggs': self.eggs}
             if self.requirements_file:
                 yml['requirements_file'] = self.requirements_file
             # Don't write defaults
@@ -230,6 +234,7 @@ class ShubConfig(object):
                    if 'stack' in proj else self.stacks.get('default')),
             requirements_file=self.requirements_file,
             version=self.get_version(),
+            eggs=self.eggs,
         )
 
     def get_target(self, target, auth_required=True):
@@ -253,7 +258,7 @@ class ShubConfig(object):
 
 
 Target = namedtuple('Target', ['project_id', 'endpoint', 'apikey', 'stack',
-                               'requirements_file', 'version'])
+                               'requirements_file', 'version', 'eggs'])
 
 
 MIGRATION_BANNER = """
