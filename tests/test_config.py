@@ -39,11 +39,11 @@ VALID_YAML_CFG = """
         otheruser: otherkey
     stacks:
         dev: scrapy:v1.1
-    requirements_file: requirements.txt
     requirements:
         eggs:
           - ./egg1.egg
           - ./egg2.egg
+        file: requirements.txt
     version: 1.0
 """
 
@@ -262,6 +262,19 @@ class ShubConfigTest(unittest.TestCase):
 
         shutil.rmtree(tmpdir)
 
+    def test_deprecated_reqfile_syntax(self):
+        self.assertEqual(self.conf.requirements_file, 'requirements.txt')
+        self.conf.load("""
+            requirements_file: oldstyle.txt
+            """)
+        self.assertEqual(self.conf.requirements_file, 'oldstyle.txt')
+        self.conf.load("""
+            requirements:
+                file: newstyle.txt
+            requirements_file: oldstyle.txt
+            """)
+        self.assertEqual(self.conf.requirements_file, 'newstyle.txt')
+
     def test_save(self):
         tmpdir = tempfile.mkdtemp()
         tmpfilepath = os.path.join(tmpdir, 'saved_conf.yml')
@@ -269,6 +282,30 @@ class ShubConfigTest(unittest.TestCase):
         with open(tmpfilepath, 'r') as f:
             self.assertEqual(yaml.load(f), yaml.load(VALID_YAML_CFG))
         shutil.rmtree(tmpdir)
+
+    def test_save_partial(self):
+        runner = CliRunner()
+        with runner.isolated_filesystem():
+            conf = self._get_conf_with_yml("""
+                projects:
+                    default: 123
+                """)
+            conf.save('conf.yml')
+            with open('conf.yml', 'r') as f:
+                self.assertEqual(yaml.load(f), {'projects': {'default': 123}})
+
+            conf = self._get_conf_with_yml("""
+                projects:
+                    default: 123
+                requirements:
+                    file: reqs.txt
+                """)
+            conf.save('conf.yml')
+            with open('conf.yml', 'r') as f:
+                self.assertEqual(yaml.load(f), {
+                    'projects': {'default': 123},
+                    'requirements': {'file': 'reqs.txt'}}
+                )
 
     def test_normalized_projects(self):
         expected_projects = {
@@ -326,11 +363,11 @@ class ShubConfigTest(unittest.TestCase):
         """)
         self.assertEqual(
             self.conf.get_target_conf('shproj'),
-            _target(123, apikey='key', stack='custom_default', eggs=[])
+            _target(123, apikey='key', stack='custom_default')
         )
         self.assertEqual(
             self.conf.get_target_conf('advanced_prod'),
-            _target(456, apikey='key', stack='hworker:v1.0.0', eggs=[]),
+            _target(456, apikey='key', stack='hworker:v1.0.0'),
         )
 
     def test_get_target_conf_calls_get_project(self):

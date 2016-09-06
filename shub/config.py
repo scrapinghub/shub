@@ -67,9 +67,11 @@ class ShubConfig(object):
             for option in ('projects', 'endpoints', 'apikeys', 'stacks'):
                 getattr(self, option).update(yaml_cfg.get(option, {}))
             self.version = yaml_cfg.get('version', self.version)
-            if 'requirements_file' in yaml_cfg:
-                self.requirements_file = yaml_cfg['requirements_file']
-            self.eggs = yaml_cfg.get('requirements', {}).get('eggs', [])
+            self.requirements_file = yaml_cfg.get('requirements_file',
+                                                  self.requirements_file)
+            self.requirements_file = yaml_cfg.get('requirements', {}).get(
+                'file', self.requirements_file)
+            self.eggs = yaml_cfg.get('requirements', {}).get('eggs', self.eggs)
         except (yaml.YAMLError, AttributeError):
             # AttributeError: stream is valid YAML but not dictionary-like
             raise ConfigParseException
@@ -133,9 +135,10 @@ class ShubConfig(object):
             yml['version'] = self.version
             yml['stacks'] = self.stacks
             if self.eggs:
-                yml['requirements'] = {'eggs': self.eggs}
+                yml.setdefault('requirements', {})['eggs'] = self.eggs
             if self.requirements_file:
-                yml['requirements_file'] = self.requirements_file
+                yml.setdefault('requirements', {})['file'] = (
+                    self.requirements_file)
             # Don't write defaults
             if self.endpoints['default'] == ShubConfig.DEFAULT_ENDPOINT:
                 del yml['endpoints']['default']
