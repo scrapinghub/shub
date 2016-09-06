@@ -14,7 +14,7 @@ from scrapinghub import Connection, APIError
 
 from shub.config import load_shub_config, update_yaml_dict
 from shub.exceptions import (InvalidAuthException, NotFoundException,
-                             RemoteErrorException)
+                             RemoteErrorException, ShubException)
 from shub.utils import (closest_file, get_config, inside_project,
                         make_deploy_request, patch_sys_executable,
                         retry_on_eintr)
@@ -111,7 +111,7 @@ def cli(target, version, debug, egg, build_egg, verbose, keep_log):
 
             _upload_egg(targetconf.endpoint, egg, targetconf.project_id,
                         version, auth, verbose, keep_log, targetconf.stack,
-                        targetconf.requirements_file)
+                        targetconf.requirements_file, targetconf.eggs)
             click.echo("Run your spiders at: "
                        "https://app.scrapinghub.com/p/%s/"
                        "" % targetconf.project_id)
@@ -128,14 +128,19 @@ def _url(endpoint, action):
 
 
 def _upload_egg(endpoint, eggpath, project, version, auth, verbose, keep_log,
-                stack=None, requirements_file=None):
+                stack=None, requirements_file=None, eggs=None):
+    eggs = eggs or []
     data = {'project': project, 'version': version}
     if stack:
         data['stack'] = stack
-    files = {'egg': ('project.egg', open(eggpath, 'rb'))}
-    if requirements_file:
-        files['requirements'] = ('requirements.txt',
-                                 open(requirements_file, 'rb'))
+
+    try:
+        files = [('eggs', open(path, 'rb')) for path in eggs]
+        if requirements_file:
+            files.append(('requirements', open(requirements_file, 'rb')))
+    except IOError as e:
+        raise ShubException("%s %s" % (e.strerror, e.filename))
+    files.append(('egg', open(eggpath, 'rb')))
     url = _url(endpoint, 'scrapyd/addversion.json')
     click.echo('Deploying to Scrapy Cloud project "%s"' % project)
     return make_deploy_request(url, data, files, auth, verbose, keep_log)

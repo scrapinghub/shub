@@ -2,6 +2,7 @@
 # coding=utf-8
 
 from __future__ import absolute_import
+
 import unittest
 import os
 
@@ -9,7 +10,8 @@ from click.testing import CliRunner
 from mock import patch
 
 from shub import deploy
-from shub.exceptions import InvalidAuthException, NotFoundException
+from shub.exceptions import InvalidAuthException, NotFoundException, \
+    ShubException
 
 from .utils import AssertInvokeRaisesMixin, mock_conf
 
@@ -103,6 +105,83 @@ class DeployTest(AssertInvokeRaisesMixin, unittest.TestCase):
             self.conf.projects['prod'] = 299
             self.runner.invoke(deploy.cli, input='399\n\n')
             self.assertEqual(self.conf.projects['default'], 399)
+
+
+class DeployFilesTest(unittest.TestCase):
+    def setUp(self):
+        self.runner = CliRunner()
+        self.request = patch('shub.deploy.make_deploy_request').start()
+        self.addCleanup(patch.stopall)
+
+    def _deploy(self, main_egg='./main.egg', req='./requirements.txt',
+                eggs=None):
+        if eggs is None:
+            eggs = ['./1.egg', './2.egg']
+
+        deploy._upload_egg(
+            'endpoint',
+            main_egg,
+            '1', 'version', 'auth',
+            False, False,
+            requirements_file=req,
+            eggs=eggs,
+        )
+        files = {}
+        for name, file in self.request.call_args[0][2]:
+            files.setdefault(name, []).append(file.read().decode('utf-8'))
+
+        return files
+
+    def test_correct_files(self):
+        with self.runner.isolated_filesystem():
+            with open('./main.egg', 'w') as f:
+                f.write('main content')
+            with open('./requirements.txt', 'w') as f:
+                f.write('requirements content')
+            with open('./1.egg', 'w') as f:
+                f.write('1.egg content')
+            with open('./2.egg', 'w') as f:
+                f.write('2.egg content')
+            files = self._deploy()
+
+        self.assertEqual(files['egg'][0], 'main content')
+        self.assertEqual(files['requirements'][0], 'requirements content')
+        self.assertEqual(files['eggs'][0], '1.egg content')
+        self.assertEqual(files['eggs'][1], '2.egg content')
+
+    def test_no_egg(self):
+        with self.runner.isolated_filesystem():
+            with open('./main.egg', 'w') as f:
+                f.write('main content')
+            with open('./requirements.txt', 'w') as f:
+                f.write('requirements content')
+            with open('./1.egg', 'w') as f:
+                f.write('1.egg content')
+
+            with self.assertRaises(ShubException) as cm:
+                self._deploy()
+
+            self.assertEqual(
+                cm.exception.message,
+                'No such file or directory ./2.egg',
+            )
+
+    def test_no_requirements(self):
+        with self.runner.isolated_filesystem():
+            with open('./main.egg', 'w') as f:
+                f.write('main content')
+            with open('./1.egg', 'w') as f:
+                f.write('1.egg content')
+            with open('./2.egg', 'w') as f:
+                f.write('2.egg content')
+
+            with self.assertRaises(ShubException) as cm:
+                self._deploy()
+
+            self.assertEqual(
+                cm.exception.message,
+                'No such file or directory ./requirements.txt',
+            )
 
 
 if __name__ == '__main__':
