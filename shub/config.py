@@ -45,9 +45,8 @@ class ShubConfig(object):
                 )
                 click.echo(
                     'WARNING: Endpoint "%s" is still using %s which has been '
-                    'obsoleted. Shub has had it updated to app.scrapinghub.com '
-                    'for only this time. Please update the configuration '
-                    'ASAP.' % (
+                    'obsoleted. shub has updated it to app.scrapinghub.com '
+                    'for this time only. Please update your configuration.' % (
                         endpoint, parsed.netloc,
                     ),
                     err=True
