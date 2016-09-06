@@ -24,7 +24,7 @@ different file name with the -r option:
 The requirements file must be in a format parsable by pip.
 """
 
-SHORT_HELP = "Build and deploy eggs from requirements.txt"
+SHORT_HELP = "[DEPRECATED] Build and deploy eggs from requirements.txt"
 
 
 @click.command(help=HELP, short_help=SHORT_HELP)
@@ -32,6 +32,12 @@ SHORT_HELP = "Build and deploy eggs from requirements.txt"
 @click.option("-r", "--requirements-file", default='requirements.txt',
               type=click.STRING)
 def cli(target, requirements_file):
+    click.secho(
+        "deploy-reqs was deprecated, define a requirements file in your "
+        "scrapinghub.yml instead. See "
+        "http://doc.scrapinghub.com/shub.html#deploying-dependencies",
+        err=True, fg='yellow',
+    )
     main(target, requirements_file)
 
 
