@@ -2,6 +2,8 @@ click
 requests
 ruamel.yaml
 six
+requirements-parser
 
 hubstorage
 scrapinghub
+
