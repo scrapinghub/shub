@@ -116,6 +116,8 @@ def _handle_deploy_errors(request):
         reason = content.get('non_field_errors')
         if reason:
             raise ShubException('\n'.join(reason))
+        else:
+            raise ShubException(request.content)
     raise
 
 
