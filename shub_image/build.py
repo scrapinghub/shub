@@ -41,7 +41,7 @@ def build_cmd(target, version):
     project_dir = utils.get_project_dir()
     config = utils.load_release_config()
     image = config.get_image(target)
-    _create_setup_py_if_needed()
+    _create_setup_py_if_not_exists()
     image_name = utils.format_image_name(image, version)
     if not os.path.exists(os.path.join(project_dir, 'Dockerfile')):
         raise shub_exceptions.BadParameterException(
@@ -62,7 +62,7 @@ def build_cmd(target, version):
     click.echo("The image {} build is completed.".format(image_name))
 
 
-def _create_setup_py_if_needed():
+def _create_setup_py_if_not_exists():
     closest = closest_file('scrapy.cfg')
     os.chdir(os.path.dirname(closest))
     if not os.path.exists('setup.py'):

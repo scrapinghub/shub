@@ -14,7 +14,6 @@ endpoints:
   dev: https://dash-fake
 apikeys:
   default: abcdef
-version: GIT
 """
 
 SH_SETUP_FILE = """

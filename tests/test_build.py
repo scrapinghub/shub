@@ -23,8 +23,27 @@ class TestBuildCli(TestCase):
             add_scrapy_fake_config(tmpdir)
             add_sh_fake_config(tmpdir)
             add_fake_dockerfile(tmpdir)
+            setup_py_path = os.path.join(tmpdir, 'setup.py')
+            assert not os.path.isfile(setup_py_path)
             runner = CliRunner()
-            result = runner.invoke(cli, ["dev", "-d", "--version", "test"])
+            result = runner.invoke(cli, ["dev", "-d"])
+            assert result.exit_code == 0
+            mocked.build.assert_called_with(
+                path=tmpdir, tag='registry/user/project:1.0')
+            assert os.path.isfile(setup_py_path)
+
+    def test_cli_custom_version(self, mocked_method):
+        mocked = mock.MagicMock()
+        mocked.build.return_value = [
+            '{"stream":"all is ok"}',
+            '{"stream":"Successfully built 12345"}']
+        mocked_method.return_value = mocked
+        with FakeProjectDirectory() as tmpdir:
+            add_scrapy_fake_config(tmpdir)
+            add_sh_fake_config(tmpdir)
+            add_fake_dockerfile(tmpdir)
+            runner = CliRunner()
+            result = runner.invoke(cli, ["dev", "--version", "test"])
             assert result.exit_code == 0
             mocked.build.assert_called_with(
                 path=tmpdir, tag='registry/user/project:test')
