@@ -11,6 +11,7 @@ from urlparse import urljoin
 from retrying import retry
 
 from shub.deploy import list_targets
+from shub.exceptions import ShubException
 from shub_image import utils
 from shub_image import list as list_mod
 
@@ -81,7 +82,11 @@ def deploy_cmd(target, version, username, password, email,
         timeout=300,
         allow_redirects=False
     )
-    req.raise_for_status()
+    try:
+        req.raise_for_status()
+    except requests.exceptions.HTTPError:
+        _handle_deploy_errors(req)
+
     click.echo("Deploy task results: {}".format(req))
     status_url = req.headers['location']
 
@@ -103,6 +108,15 @@ def deploy_cmd(target, version, username, password, email,
             if actual_state['status'] != status:
                 click.echo(" {}".format(actual_state))
                 status = actual_state['status']
+
+
+def _handle_deploy_errors(request):
+    content = request.json()
+    if request.status_code == 400 and content:
+        reason = content.get('non_field_errors')
+        if reason:
+            raise ShubException('\n'.join(reason))
+    raise
 
 
 def _retry_on_requests_error(exception):
