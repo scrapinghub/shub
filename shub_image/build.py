@@ -5,6 +5,8 @@ import click
 
 from shub import exceptions as shub_exceptions
 from shub.deploy import list_targets
+from shub.deploy import _create_default_setup_py
+from shub.utils import closest_file, get_config
 from shub_image import utils
 
 
@@ -39,6 +41,7 @@ def build_cmd(target, version):
     project_dir = utils.get_project_dir()
     config = utils.load_release_config()
     image = config.get_image(target)
+    _create_setup_py_if_needed()
     image_name = utils.format_image_name(image, version)
     if not os.path.exists(os.path.join(project_dir, 'Dockerfile')):
         raise shub_exceptions.BadParameterException(
@@ -57,3 +60,11 @@ def build_cmd(target, version):
         raise shub_exceptions.RemoteErrorException(
             "Build image operation failed")
     click.echo("The image {} build is completed.".format(image_name))
+
+
+def _create_setup_py_if_needed():
+    closest = closest_file('scrapy.cfg')
+    os.chdir(os.path.dirname(closest))
+    if not os.path.exists('setup.py'):
+        settings = get_config().get('settings', 'default')
+        _create_default_setup_py(settings=settings)
