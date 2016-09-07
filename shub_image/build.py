@@ -64,7 +64,8 @@ def build_cmd(target, version):
 
 def _create_setup_py_if_not_exists():
     closest = closest_file('scrapy.cfg')
-    os.chdir(os.path.dirname(closest))
-    if not os.path.exists('setup.py'):
-        settings = get_config().get('settings', 'default')
-        _create_default_setup_py(settings=settings)
+    with utils.remember_cwd():
+        os.chdir(os.path.dirname(closest))
+        if not os.path.exists('setup.py'):
+            settings = get_config().get('settings', 'default')
+            _create_default_setup_py(settings=settings)

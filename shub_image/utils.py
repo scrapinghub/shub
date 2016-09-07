@@ -2,6 +2,7 @@ import os
 import re
 import click
 import importlib
+import contextlib
 
 from six import string_types
 import ruamel.yaml as yaml
@@ -20,6 +21,15 @@ def debug_log(msg):
     ctx = click.get_current_context(True)
     if ctx and ctx.params.get('debug'):
         click.echo(msg)
+
+
+@contextlib.contextmanager
+def remember_cwd():
+    current_dir = os.getcwd()
+    try:
+        yield
+    finally:
+        os.chdir(current_dir)
 
 
 class ReleaseConfig(shub_config.ShubConfig):
