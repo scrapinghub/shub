@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(
     name='shub',
-    version='2.3.0',
+    version='2.4.0',
     packages=['shub'],
     url='http://doc.scrapinghub.com/shub.html',
     description='Scrapinghub Command Line Client',
