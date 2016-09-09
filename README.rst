@@ -162,43 +162,8 @@ Deploying dependencies
 ----------------------
 
 Sometimes your project will depend on third party libraries that are not
-available on Scrapy Cloud. You can easily upload these via ``shub deploy-egg``
-by supplying a repository URL::
-
-    $ shub deploy-egg --from-url https://github.com/scrapinghub/dateparser.git
-    Cloning the repository to a tmp folder...
-    Building egg in: /tmp/egg-tmp-clone
-    Deploying dependency to Scrapy Cloud project "12345"
-    {"status": "ok", "egg": {"version": "v0.2.1-master", "name": "dateparser"}}
-    Deployed eggs list at: https://app.scrapinghub.com/p/12345/eggs
-
-Or even a specific branch if using git::
-
-    $ shub deploy-egg --from-url https://github.com/scrapinghub/dateparser.git --git-branch py3-port
-    Cloning the repository to a tmp folder...
-    py3-port branch was checked out
-    Building egg in: /tmp/egg-tmp-clone
-    Deploying dependency to Scrapy Cloud project "12345"
-    {"status": "ok", "egg": {"version": "v0.1.0-30-g48841f2-py3-port", "name": "dateparser"}}
-    Deployed eggs list at: https://app.scrapinghub.com/p/12345/eggs
-
-Or a package on PyPI::
-
-    $ shub deploy-egg --from-pypi loginform
-    Fetching loginform from pypi
-    Collecting loginform
-      Downloading loginform-1.0.tar.gz
-      Saved /tmp/shub/loginform-1.0.tar.gz
-    Successfully downloaded loginform
-    Package fetched successfully
-    Uncompressing: loginform-1.0.tar.gz
-    Building egg in: /tmp/shub/loginform-1.0
-    Deploying dependency to Scrapy Cloud project "12345"
-    {"status": "ok", "egg": {"version": "loginform-1.0", "name": "loginform"}}
-    Deployed eggs list at: https://app.scrapinghub.com/p/12345/eggs
-
-For projects that use Scrapy Cloud 2.0, instead of uploading eggs of your requirements, you
-can specify a requirements file to be used::
+available on Scrapy Cloud. You can easily upload these by specifying a
+requirements file::
 
     # project_directory/scrapinghub.yml
 
@@ -206,22 +171,44 @@ can specify a requirements file to be used::
       default: 12345
       prod: 33333
 
-    requirements_file: deploy_reqs.txt
+    requirements:
+      file: requirements.txt
 
 Note that this requirements file is an *extension* of the Scrapy Cloud stack, and
 therefore should not contain packages that are already part of the stack, such
 as ``scrapy``.
 
-You can specify the Scrapy Cloud stack to be used by extending the ``projects`` section
-of your configuration::
+When your dependencies cannot be specified in a requirements file, e.g.
+because they are not publicly available, you can supply them as Python eggs::
+
+    # project_directory/scrapinghub.yml
+
+    projects:
+      default: 12345
+      prod: 33333
+
+    requirements:
+      file: requirements.txt
+      eggs:
+        - privatelib.egg
+        - path/to/otherlib.egg
+
+
+Choosing a Scrapy Cloud stack
+-----------------------------
+
+You can specify the `Scrapy Cloud stack`_ to deploy your spider to by extending
+the ``projects`` section of your configuration::
 
     # project_directory/scrapinghub.yml
 
     projects:
       default:
         id: 12345
-        stack: portia
+        stack: scrapy:1.1-py3
       prod: 33333  # will use the original stack
+
+.. _`Scrapy Cloud stack`: http://doc.scrapinghub.com/scrapy-cloud.html#using-stacks
 
 
 Scheduling jobs and fetching job data

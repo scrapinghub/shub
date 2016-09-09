@@ -35,7 +35,7 @@ Alternatively, you can build the egg from a PyPI package:
     shub deploy-egg --from-pypi shub
 """
 
-SHORT_HELP = "Build and deploy egg from source"
+SHORT_HELP = "[DEPRECATED] Build and deploy egg from source"
 
 
 @click.command(help=HELP, short_help=SHORT_HELP)
@@ -44,6 +44,12 @@ SHORT_HELP = "Build and deploy egg from source"
 @click.option("--git-branch", help="Git branch to checkout")
 @click.option("--from-pypi", help="Name of package on pypi")
 def cli(target, from_url=None, git_branch=None, from_pypi=None):
+    click.secho(
+        "deploy-egg was deprecated, define the eggs you would like to deploy "
+        "in your scrapinghub.yml instead. See "
+        "http://doc.scrapinghub.com/shub.html#deploying-dependencies",
+        err=True, fg='yellow',
+    )
     main(target, from_url, git_branch, from_pypi)
 
 
