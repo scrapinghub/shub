@@ -173,8 +173,12 @@ class UtilsTest(unittest.TestCase):
 
     @patch('shub.utils.time.sleep')
     def test_job_resource_iter(self, mock_sleep):
-        job = MagicMock(spec=['metadata'])
+        job = MagicMock(spec=['key', 'metadata', 'resource'])
+        job.key = 'jobkey'
         job.metadata = {'state': 'running'}
+
+        def make_items(iterable):
+            return [{'_key': x} for x in iterable]
 
         def magic_iter(*args, **kwargs):
             """
@@ -185,32 +189,42 @@ class UtilsTest(unittest.TestCase):
                 if 'startafter' in kwargs:
                     self.assertEqual(kwargs['startafter'], None)
                 magic_iter.stage = 1
-                return iter([1, 2, 3])
+                return iter(make_items([1, 2, 3]))
             elif magic_iter.stage == 1:
-                self.assertEqual(kwargs['startafter'], 456)
+                self.assertEqual(kwargs['startafter'], 3)
                 magic_iter.stage = 0
                 job.metadata = {'state': 'finished'}
-                return iter([4, 5, 6])
+                return iter(make_items([4, 5, 6]))
+            elif magic_iter.stage == 2:
+                self.assertEqual(kwargs['startafter'], 'jobkey/996')
+                return iter([])
 
-        def jri_result(follow):
+
+        def jri_result(follow, tail=None):
             return list(utils.job_resource_iter(
                 job,
-                magic_iter,
-                follow,
-                key_func=lambda _: 456,
+                job.resource,
+                follow=follow,
+                tail=tail,
             ))
 
+        job.resource.iter_values = magic_iter
+
         magic_iter.stage = 0
-        self.assertEqual(jri_result(False), [1, 2, 3])
+        self.assertEqual(jri_result(False), make_items([1, 2, 3]))
         self.assertFalse(mock_sleep.called)
 
         magic_iter.stage = 0
-        self.assertEqual(jri_result(True), [1, 2, 3, 4, 5, 6])
+        self.assertEqual(jri_result(True), make_items([1, 2, 3, 4, 5, 6]))
         self.assertTrue(mock_sleep.called)
 
         magic_iter.stage = 0
         job.metadata = {'state': 'finished'}
-        self.assertEqual(jri_result(True), [1, 2, 3])
+        self.assertEqual(jri_result(True), make_items([1, 2, 3]))
+
+        magic_iter.stage = 2
+        job.resource.stats.return_value = {'totals': {'input_values': 1000}}
+        self.assertEqual(jri_result(True, tail=3), [])
 
     @patch('shub.utils.requests.get', autospec=True)
     def test_latest_github_release(self, mock_get):

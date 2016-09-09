@@ -39,7 +39,9 @@ SHORT_HELP = "Fetch requests from Scrapy Cloud"
 @click.argument('job_id')
 @click.option('-f', '--follow', help='output new requests as they are made',
               is_flag=True)
-def cli(job_id, follow):
+@click.option('-n', '--tail', help='output last N requests only', type=int)
+def cli(job_id, follow, tail):
     job = get_job(job_id)
-    for item in job_resource_iter(job, job.requests.iter_json, follow=follow):
+    for item in job_resource_iter(job, job.requests, output_json=True,
+                                  follow=follow, tail=tail):
         click.echo(item)
