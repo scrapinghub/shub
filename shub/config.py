@@ -7,7 +7,7 @@ from collections import namedtuple
 
 import click
 import six
-import ruamel.yaml as yaml
+import yaml
 
 from shub.exceptions import (BadParameterException, BadConfigException,
                              ConfigParseException, MissingAuthException,
@@ -375,20 +375,17 @@ def load_shub_config(load_global=True, load_local=True, load_env=True):
 @contextlib.contextmanager
 def update_yaml_dict(conf_path=None):
     """
-    Context manager for updating a YAML file while preserving key ordering and
-    comments.
+    Context manager for updating a YAML file. Key ordering and comments are not
+    preserved.
     """
     conf_path = conf_path or GLOBAL_SCRAPINGHUB_YML_PATH
-    dumper = yaml.RoundTripDumper
     try:
         with open(conf_path, 'r') as f:
-            conf = yaml.load(f, yaml.RoundTripLoader) or {}
+            conf = yaml.safe_load(f) or {}
     except IOError as e:
         if e.errno != 2:
             raise
         conf = {}
-        # Use alphabetic order when creating files
-        dumper = yaml.Dumper
     # Code inside context manager is executed after this yield
     yield conf
     # Avoid writing "key: {}"
@@ -398,7 +395,7 @@ def update_yaml_dict(conf_path=None):
     with open(conf_path, 'w') as f:
         # Avoid writing "{}"
         if conf:
-            yaml.dump(conf, f, default_flow_style=False, Dumper=dumper)
+            yaml.dump(conf, f, default_flow_style=False)
 
 
 def get_target(target, auth_required=True):

@@ -2,7 +2,7 @@ import os
 import unittest
 import mock
 
-import ruamel.yaml as yaml
+import yaml
 from click.testing import CliRunner
 
 from shub.migrate_eggs import main

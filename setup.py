@@ -19,7 +19,7 @@ setup(
     },
     include_package_data=True,
     zip_safe=False,
-    install_requires=['click', 'hubstorage', 'pip', 'requests', 'ruamel.yaml',
+    install_requires=['click', 'hubstorage', 'pip', 'requests', 'PyYAML',
                       'scrapinghub', 'six'],
     classifiers=[
         'Development Status :: 5 - Production/Stable',
@@ -28,6 +28,9 @@ setup(
         'License :: OSI Approved :: BSD License',
         'Programming Language :: Python',
         'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3.3',
+        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
         'Operating System :: OS Independent',
         'Environment :: Console',
         'Topic :: Internet :: WWW/HTTP',
