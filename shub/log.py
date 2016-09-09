@@ -37,13 +37,33 @@ providing the -f flag:
 SHORT_HELP = "Fetch log from Scrapy Cloud"
 
 
+class LogIterFunc(object):
+    def __init__(self, job, tail):
+        lastline = -1
+        if tail is not None:
+            logstats = job.logs.stats()
+            lines = logstats['totals']['input_values']
+            lastline = max(lines - tail, -1)
+        if lastline == -1:
+            lastline = None
+        self._startafter = None if lastline is None else '{}/{}'.format(job.key, lastline)
+        self._logs = job.logs
+
+    def __call__(self, startafter=None):
+        startafter = startafter or self._startafter
+        for item in self._logs.iter_values(startafter=startafter):
+            self._startafter = item['_key']
+            yield item
+
 @click.command(help=HELP, short_help=SHORT_HELP)
 @click.argument('job_id')
 @click.option('-f', '--follow', help='output new log entries as they are '
               'produced', is_flag=True)
-def cli(job_id, follow):
+@click.option('-n', '--tail',
+              help='Output last N lines', type=int)
+def cli(job_id, follow, tail):
     job = get_job(job_id)
-    for item in job_resource_iter(job, job.logs.iter_values, follow=follow,
+    for item in job_resource_iter(job, LogIterFunc(job, tail), follow=follow,
                                   key_func=lambda item: item['_key']):
         click.echo(
             u"{} {} {}".format(
