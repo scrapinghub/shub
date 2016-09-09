@@ -445,32 +445,37 @@ def job_live(job, refresh_meta_after=60):
     return job.metadata['state'] in ('pending', 'running')
 
 
-def job_resource_iter(job, iter_func, follow=True, key_func=None):
+def job_resource_iter(job, resource, output_json=False, follow=True,
+                      tail=None):
     """
-    Given a python-hubstorage job and resource generator (e.g.
-    job.items.iter_json), return a generator that periodically checks the job
-    resource generator and yields its items. The generator will exit when the
-    job has finished.
-
-    key_func should be a function which accepts an item from iter_func and
-    returns its key. By default, the key is retrieved via
-    json.loads(item)['_key'] (suitable for the iter_json iterators).
+    Given a python-hubstorage job and resource (e.g. job.items), return a
+    generator that periodically checks the job resource and yields its items.
+    The generator will exit when the job has finished.
 
     As a handy shortcut, iter_func will be iterated through only once if
     `follow` is set to `False`.
     """
+    last_item_key = None
+    if tail is not None:
+        total_nr_items = resource.stats()['totals']['input_values']
+        # This is the last entry to be skipped, i.e. it will NOT be displayed
+        last_item = total_nr_items - tail - 1
+        if last_item >= 0:
+            last_item_key = '{}/{}'.format(job.key, last_item)
     if not job_live(job):
         follow = False
+    resource_iter = resource.iter_json if output_json else resource.iter_values
     if not follow:
-        for item in iter_func():
+        for item in resource_iter(startafter=last_item_key):
             yield item
         return
-    last_item_key = None
-    key_func = key_func or (lambda item: json.loads(item)['_key'])
     while True:
-        for item in iter_func(startafter=last_item_key):
+        for item in resource_iter(startafter=last_item_key):
             yield item
-            last_item_key = key_func(item)
+            if output_json:
+                last_item_key = json.loads(item)['_key']
+            else:
+                last_item_key = item['_key']
         if not job_live(job):
             break
         # Workers only upload data to hubstorage every 15 seconds
