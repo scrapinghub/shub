@@ -16,6 +16,20 @@ DEFAULT_DOCKER_VERSION = '1.17'
 STATUS_FILE_LOCATION = '.releases'
 _VALIDSPIDERNAME = re.compile('^[a-z0-9][-._a-z0-9]+$', re.I)
 
+DOCKER_UNAVAILABLE_MSG = """
+Detected error connecting to Docker daemon's host.
+
+Please ensure that you have Docker installed, configured and running locally,
+that's essential for running shub-image tool. To check that run command
+
+    docker version
+
+and check its output: it should contain Docker client and server versions and
+should not contain any errors.
+
+You can learn about Docker at https://www.docker.com/.
+"""
+
 
 def debug_log(msg):
     ctx = click.get_current_context(True)
@@ -92,7 +106,7 @@ def get_project_dir():
     return os.path.dirname(shub_utils.closest_file('scrapy.cfg'))
 
 
-def get_docker_client():
+def get_docker_client(validate=True):
     """A helper to initiate Docker client"""
     try:
         import docker
@@ -126,10 +140,19 @@ def get_docker_client():
             assert_hostname=False)
         docker_host = docker_host.replace('tcp://', 'https://')
     version = os.environ.get('DOCKER_VERSION', DEFAULT_DOCKER_VERSION)
-    return CustomDockerClient(
-        base_url=docker_host,
-        version=version,
-        tls=tls_config)
+    client = CustomDockerClient(base_url=docker_host,
+                                version=version,
+                                tls=tls_config)
+    if validate:
+        validate_connection_with_docker_daemon(client)
+    return client
+
+
+def validate_connection_with_docker_daemon(client):
+    try:
+        client.version()
+    except:
+        raise shub_exceptions.ShubException(DOCKER_UNAVAILABLE_MSG)
 
 
 def format_image_name(image_name, image_tag):
