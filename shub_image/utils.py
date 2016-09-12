@@ -106,7 +106,7 @@ def get_project_dir():
     return os.path.dirname(shub_utils.closest_file('scrapy.cfg'))
 
 
-def get_docker_client():
+def get_docker_client(validate=True):
     """A helper to initiate Docker client"""
     try:
         import docker
@@ -143,7 +143,8 @@ def get_docker_client():
     client = CustomDockerClient(base_url=docker_host,
                                 version=version,
                                 tls=tls_config)
-    validate_connection_with_docker_daemon(client)
+    if validate:
+        validate_connection_with_docker_daemon(client)
     return client
 
 

@@ -53,8 +53,10 @@ class ReleaseUtilsTest(TestCase):
             def __init__(self, *args, **kwargs):
                 client_mock(*args, **kwargs)
 
-        mocked_docker.Client = DockerClientMock
+            def version(self):
+                return {}
 
+        mocked_docker.Client = DockerClientMock
         assert get_docker_client()
         client_mock.assert_called_with(
             base_url=None, tls=None, version='1.17')
@@ -102,7 +104,7 @@ class ReleaseUtilsTest(TestCase):
         )
 
         # mocked_docker.Client._stream_helper.return_value = (line,)
-        client = get_docker_client()
+        client = get_docker_client(validate=False)
         with mock.patch.object(docker.Client, '_stream_helper', return_value=(line,)):
             result = list(client._stream_helper(mock.Mock(), decode=False))
         assert len(result) == 2
