@@ -42,7 +42,8 @@ commands = [
     "schedule",
     "log",
     "requests",
-    "copy_eggs"
+    "copy_eggs",
+    "migrate_eggs",
 ]
 
 for command in commands:
