@@ -9,6 +9,7 @@ from subprocess import check_call
 
 import click
 import setuptools  # not used in code but needed in runtime, don't remove!
+import setuptools.msvc  # same, don't remove
 _ = setuptools  # NOQA
 from scrapinghub import Connection, APIError
 
