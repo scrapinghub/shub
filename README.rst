@@ -1,5 +1,5 @@
 .. BEGIN_SH_DOC - everything in this block will be copied to
-   http://doc.scrapinghub.com/shub.html
+   http://doc.scrapinghub.com/shub.html test
 
 Scrapinghub command line client
 ===============================
