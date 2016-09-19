@@ -64,8 +64,9 @@ def build_cmd(target, version):
 
 def _create_setup_py_if_not_exists():
     closest = closest_file('scrapy.cfg')
-    # create default setup.py only if scrapy.cfg is found
-    # otherwise consider it as a non-scrapy & non-python project
+    # create default setup.py only if scrapy.cfg is found, otherwise
+    # consider it as a non-scrapy/non-python project. FIXME do we need
+    # some warning here in a case if user forgot to create scrapy.cfg?
     if not closest:
         return
     with utils.remember_cwd():
