@@ -24,7 +24,7 @@ from shub_image.utils import store_status_url
 from shub_image.utils import load_status_url
 from shub_image.utils import STATUS_FILE_LOCATION
 
-from .utils import FakeProjectDirectory, add_scrapy_fake_config
+from .utils import FakeProjectDirectory, add_sh_fake_config
 
 
 class ReleaseUtilsTest(TestCase):
@@ -40,7 +40,7 @@ class ReleaseUtilsTest(TestCase):
         self.assertRaises(
             shub_exceptions.BadConfigException, get_project_dir)
         with FakeProjectDirectory() as tmpdir:
-            add_scrapy_fake_config(tmpdir)
+            add_sh_fake_config(tmpdir)
             assert get_project_dir() == tmpdir
 
     def test_get_docker_client(self):

@@ -11,6 +11,7 @@ from shub_image.init import _wrap
 
 from .utils import FakeProjectDirectory
 from .utils import add_fake_requirements
+from .utils import add_sh_fake_config
 from .utils import add_scrapy_fake_config
 
 
@@ -35,6 +36,7 @@ class TestInitCli(TestCase):
     def test_cli_default_settings(self):
         with FakeProjectDirectory() as tmpdir:
             add_scrapy_fake_config(tmpdir)
+            add_sh_fake_config(tmpdir)
             runner = CliRunner()
             result = runner.invoke(cli, [], input='no\n')
             assert result.exit_code == 0
@@ -44,6 +46,7 @@ class TestInitCli(TestCase):
     def test_cli_list_recommended_reqs(self):
         with FakeProjectDirectory() as tmpdir:
             add_scrapy_fake_config(tmpdir)
+            add_sh_fake_config(tmpdir)
             runner = CliRunner()
             result = runner.invoke(cli, ["--list-recommended-reqs"])
             assert result.exit_code == 0
@@ -52,6 +55,7 @@ class TestInitCli(TestCase):
     def test_cli_store_dockerfile(self):
         with FakeProjectDirectory() as tmpdir:
             add_scrapy_fake_config(tmpdir)
+            add_sh_fake_config(tmpdir)
             runner = CliRunner()
             result = runner.invoke(cli, [], input='yes\n')
             assert result.exit_code == 0
