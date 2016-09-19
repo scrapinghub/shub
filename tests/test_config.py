@@ -5,7 +5,7 @@ import six
 import tempfile
 import textwrap
 import unittest
-import ruamel.yaml as yaml
+import yaml
 
 import mock
 
@@ -614,31 +614,27 @@ class ConfigHelpersTest(unittest.TestCase):
 
     def test_update_yaml_dict(self):
         YAML_BEFORE = textwrap.dedent("""\
-            z_first:
+            a:
               unrelated: dict
-            a_second:
+            b:
               key1: val1
-              # some comment
               key2: val2
         """)
-        YAML_EXPECTED = textwrap.dedent("""\
-            z_first:
-              unrelated: dict
-            a_second:
-              key1: newval1
-              # some comment
-              key2: val2
-              key3: val3
-        """)
+        DICT_EXPECTED = {
+            'a': {'unrelated': 'dict'},
+            'b': {'key1': 'newval1', 'key2': 'val2', 'key3': 'val3'}
+        }
         runner = CliRunner()
         with runner.isolated_filesystem():
             with open('conf.yml', 'w') as f:
                 f.write(YAML_BEFORE)
             with update_yaml_dict('conf.yml') as conf:
-                conf['a_second']['key1'] = 'newval1'
-                conf['a_second']['key3'] = 'val3'
+                conf['b']['key1'] = 'newval1'
+                conf['b']['key3'] = 'val3'
             with open('conf.yml', 'r') as f:
-                self.assertEqual(f.read(), YAML_EXPECTED)
+                self.assertEqual(yaml.safe_load(f), DICT_EXPECTED)
+                f.seek(0)
+                self.assertIn("key1: newval1", f.read())
 
     @mock.patch('shub.config.load_shub_config')
     def test_get_target_version(self, mock_lsh):

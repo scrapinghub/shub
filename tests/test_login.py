@@ -4,7 +4,7 @@ from mock import patch, MagicMock
 import textwrap
 
 from click.testing import CliRunner
-import ruamel.yaml as yaml
+import yaml
 
 from shub import login
 from shub.exceptions import AlreadyLoggedInException
