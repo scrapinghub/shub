@@ -8,9 +8,18 @@ from six.moves.urllib.parse import urljoin
 from subprocess import check_call
 
 import click
-import setuptools  # not used in code but needed in runtime, don't remove!
-import setuptools.msvc  # same, don't remove
-_ = setuptools  # NOQA
+# Not used in code but needed in runtime, don't remove!
+import setuptools
+_1 = setuptools  # NOQA
+try:
+    # Only available in setuptools >= 24.0.0
+    import setuptools.msvc
+except ImportError:
+    pass
+else:
+    _2 = setuptools.msvc  # NOQA
+
+
 from scrapinghub import Connection, APIError
 
 from shub.config import load_shub_config, update_yaml_dict
