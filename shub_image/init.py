@@ -17,6 +17,7 @@ TEMPLATE = [
     "WORKDIR %s" % DOCKER_APP_DIR,
     "$requirements",
     "COPY . %s" % DOCKER_APP_DIR,
+    "RUN cd %s && python setup.py install" % DOCKER_APP_DIR,
 ]
 BASE_SYSTEM_DEPS = [
     'telnet', 'vim', 'htop', 'strace', 'ltrace', 'iputils-ping', 'lsof'
@@ -140,7 +141,6 @@ def _wrap(text):
 def _format_system_env(settings_module):
     rows = ['ENV TERM xterm']
     if settings_module:
-        rows.append('ENV PYTHONPATH $PYTHONPATH:%s' % DOCKER_APP_DIR)
         rows.append('ENV SCRAPY_SETTINGS_MODULE %s' % settings_module)
     return '\n'.join(rows)
 
