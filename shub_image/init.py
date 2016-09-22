@@ -9,15 +9,17 @@ from shub_image import utils
 
 
 DOCKER_APP_DIR = '/app'
-TEMPLATE = [
-    "FROM $base_image",
-    "$system_deps",
-    "$system_env",
-    "RUN mkdir -p %s" % DOCKER_APP_DIR,
-    "WORKDIR %s" % DOCKER_APP_DIR,
-    "$requirements",
-    "COPY . %s" % DOCKER_APP_DIR,
-]
+DOCKERFILE_TEMPLATE = """
+FROM $base_image
+$system_deps
+$system_env
+RUN mkdir -p {docker_app_dir}
+WORKDIR {docker_app_dir}
+$requirements
+COPY . {docker_app_dir}
+RUN python setup.py install
+""".format(docker_app_dir=DOCKER_APP_DIR)
+
 BASE_SYSTEM_DEPS = [
     'telnet', 'vim', 'htop', 'strace', 'ltrace', 'iputils-ping', 'lsof'
 ]
@@ -93,8 +95,7 @@ def cli(project, base_image, base_deps, add_deps, requirements):
         'requirements': _format_requirements(project_dir, requirements),
     }
     values = {key: value if value else '' for key, value in values.items()}
-    template = '\n'.join(TEMPLATE) if isinstance(TEMPLATE, list) else TEMPLATE
-    source = Template(template)
+    source = Template(DOCKERFILE_TEMPLATE.strip())
     results = source.substitute(values)
     results = results.replace('\n\n', '\n')
 
@@ -140,7 +141,6 @@ def _wrap(text):
 def _format_system_env(settings_module):
     rows = ['ENV TERM xterm']
     if settings_module:
-        rows.append('ENV PYTHONPATH $PYTHONPATH:%s' % DOCKER_APP_DIR)
         rows.append('ENV SCRAPY_SETTINGS_MODULE %s' % settings_module)
     return '\n'.join(rows)
 

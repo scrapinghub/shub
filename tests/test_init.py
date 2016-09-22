@@ -20,13 +20,13 @@ RUN apt-get update -qq && \\
     apt-get install -qy htop iputils-ping lsof ltrace strace telnet vim && \\
     rm -rf /var/lib/apt/lists/*
 ENV TERM xterm
-ENV PYTHONPATH $PYTHONPATH:/app
 ENV SCRAPY_SETTINGS_MODULE test.settings
 RUN mkdir -p /app
 WORKDIR /app
 COPY ./requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
-COPY . /app\
+COPY . /app
+RUN python setup.py install\
 """
 
 
@@ -88,7 +88,6 @@ class TestInitCli(TestCase):
         assert _format_system_env(None) == 'ENV TERM xterm'
         assert _format_system_env('test.settings') == (
             "ENV TERM xterm\n"
-            "ENV PYTHONPATH $PYTHONPATH:/app\n"
             "ENV SCRAPY_SETTINGS_MODULE test.settings")
 
     def test_format_requirements(self):
