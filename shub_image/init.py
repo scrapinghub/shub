@@ -95,7 +95,7 @@ def cli(project, base_image, base_deps, add_deps, requirements):
         'requirements': _format_requirements(project_dir, requirements),
     }
     values = {key: value if value else '' for key, value in values.items()}
-    source = Template(DOCKERFILE_TEMPLATE)
+    source = Template(DOCKERFILE_TEMPLATE.strip())
     results = source.substitute(values)
     results = results.replace('\n\n', '\n')
 
