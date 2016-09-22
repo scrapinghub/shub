@@ -101,9 +101,11 @@ def get_project_dir():
     """ A helper to get project root dir.
         Used by init/build command to locate Dockerfile.
     """
-    if not shub_utils.inside_project():
-        raise shub_exceptions.BadConfigException("Not inside a project")
-    return os.path.dirname(shub_utils.closest_file('scrapy.cfg'))
+    closest = shub_utils.closest_file('scrapinghub.yml')
+    if not closest:
+        raise shub_exceptions.BadConfigException(
+            "Not inside a project: scrapinghub.yml not found.")
+    return os.path.dirname(closest)
 
 
 def get_docker_client(validate=True):
