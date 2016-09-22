@@ -103,7 +103,8 @@ def get_project_dir():
     """
     closest = shub_utils.closest_file('scrapinghub.yml')
     if not closest:
-        raise shub_exceptions.BadConfigException("scrapinghub.yml not found.")
+        raise shub_exceptions.BadConfigException(
+            "Not inside a project: scrapinghub.yml not found.")
     return os.path.dirname(closest)
 
 

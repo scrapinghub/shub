@@ -2,6 +2,7 @@ import os
 import re
 import json
 import click
+import warnings
 
 from shub import exceptions as shub_exceptions
 from shub.deploy import list_targets
@@ -65,9 +66,9 @@ def build_cmd(target, version):
 def _create_setup_py_if_not_exists():
     closest = closest_file('scrapy.cfg')
     # create default setup.py only if scrapy.cfg is found, otherwise
-    # consider it as a non-scrapy/non-python project. FIXME do we need
-    # some warning here in a case if user forgot to create scrapy.cfg?
+    # consider it as a non-scrapy/non-python project
     if not closest:
+        warnings.warn("scrapy.cfg is not found")
         return
     with utils.remember_cwd():
         os.chdir(os.path.dirname(closest))
