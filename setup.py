@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='shub-image',
-    version='0.2.4',
+    version='0.2.5',
     packages=['shub_image'],
     description='Scrapinghub release tool',
     long_description=open('README.rst').read(),
@@ -20,7 +20,7 @@ setup(
         'click',
         'requests',
         'six',
-        'shub>=0.2.4',
+        'shub>=0.2.5',
         'docker-py',
     ],
     classifiers=[
