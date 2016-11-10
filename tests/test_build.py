@@ -14,7 +14,8 @@ from .utils import add_scrapy_fake_config
 @mock.patch('shub_image.utils.get_docker_client')
 class TestBuildCli(TestCase):
 
-    def test_cli(self, mocked_method):
+    @mock.patch('shub_image.test.test_cmd')
+    def test_cli(self, test_mock, mocked_method):
         mocked = mock.MagicMock()
         mocked.build.return_value = [
             {"stream": "all is ok"},
@@ -32,8 +33,10 @@ class TestBuildCli(TestCase):
             mocked.build.assert_called_with(
                 decode=True, path=tmpdir, tag='registry/user/project:1.0')
             assert os.path.isfile(setup_py_path)
+            test_mock.assert_called_with("dev", None)
 
-    def test_cli_custom_version(self, mocked_method):
+    @mock.patch('shub_image.test.test_cmd')
+    def test_cli_custom_version(self, test_mock, mocked_method):
         mocked = mock.MagicMock()
         mocked.build.return_value = [
             {"stream": "all is ok"},
@@ -48,6 +51,7 @@ class TestBuildCli(TestCase):
             assert result.exit_code == 0
             mocked.build.assert_called_with(
                 decode=True, path=tmpdir, tag='registry/user/project:test')
+            test_mock.assert_called_with("dev", "test")
 
     def test_cli_no_dockerfile(self, mocked_method):
         mocked = mock.MagicMock()

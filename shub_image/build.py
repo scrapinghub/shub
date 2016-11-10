@@ -8,6 +8,7 @@ from shub.deploy import list_targets
 from shub.deploy import _create_default_setup_py
 from shub.utils import closest_file, get_config
 from shub_image import utils
+from shub_image import test as test_mod
 
 
 SHORT_HELP = 'Build release image.'
@@ -32,11 +33,12 @@ shub utils itself).
               callback=list_targets)
 @click.option("-d", "--debug", help="debug mode", is_flag=True)
 @click.option("--version", help="release version")
-def cli(target, debug, version):
-    build_cmd(target, version)
+@click.option("-S", "--skip-tests", help="skip testing image", is_flag=True)
+def cli(target, debug, version, skip_tests):
+    build_cmd(target, version, skip_tests)
 
 
-def build_cmd(target, version):
+def build_cmd(target, version, skip_tests):
     client = utils.get_docker_client()
     project_dir = utils.get_project_dir()
     config = utils.load_release_config()
@@ -59,6 +61,9 @@ def build_cmd(target, version):
         raise shub_exceptions.RemoteErrorException(
             "Build image operation failed")
     click.echo("The image {} build is completed.".format(image_name))
+    # Test the image content after building it
+    if not skip_tests:
+        test_mod.test_cmd(target, version)
 
 
 def _create_setup_py_if_not_exists():
