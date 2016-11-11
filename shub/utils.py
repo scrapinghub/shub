@@ -179,6 +179,7 @@ def pwd_version():
                 ver = _last_line_of(run_python([setuppy, '--version']))
     if not ver:
         ver = str(int(time.time()))
+    ver = re.sub(r'[^\w.-]+', '', ver)
     return ver
 
 

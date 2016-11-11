@@ -79,6 +79,17 @@ class UtilsTest(unittest.TestCase):
             open('../scrapy.cfg', 'w').close()
             self.assertEqual(utils.pwd_version(), '1.0')
 
+    @patch('shub.utils.pwd_git_version')
+    def test_pwd_version_clean(self, mock_git):
+        mock_git.return_value = 'vers_1'
+        self.assertEqual(utils.pwd_version(), 'vers_1')
+        mock_git.return_value = 've  rs _ 2'
+        self.assertEqual(utils.pwd_version(), 'vers_2')
+        mock_git.return_value = 'vers -3_1:1'
+        self.assertEqual(utils.pwd_version(), 'vers-3_11')
+        mock_git.return_value = 'vers -4_1!$@%#&$()2'
+        self.assertEqual(utils.pwd_version(), 'vers-4_12')
+
     def test_get_job_specs(self):
         conf = mock_conf(self)
 
