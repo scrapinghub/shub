@@ -14,7 +14,7 @@ fi
 if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
     brew update > /dev/null
 
-    brew install python
+    brew reinstall python
 
     # Now easy_install and pip are in /usr/local we need to force link
     brew unlink python && brew link --overwrite python
