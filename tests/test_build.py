@@ -10,6 +10,7 @@ from .utils import add_sh_fake_config
 from .utils import add_fake_dockerfile
 from .utils import add_scrapy_fake_config
 
+
 @mock.patch('shub_image.utils.get_docker_client')
 class TestBuildCli(TestCase):
 
@@ -28,8 +29,8 @@ class TestBuildCli(TestCase):
             runner = CliRunner()
             result = runner.invoke(cli, ["dev", "-d"])
             assert result.exit_code == 0
-            mocked.build.assert_called_with(decode=True,
-                path=tmpdir, tag='registry/user/project:1.0')
+            mocked.build.assert_called_with(
+                decode=True, path=tmpdir, tag='registry/user/project:1.0')
             assert os.path.isfile(setup_py_path)
 
     def test_cli_custom_version(self, mocked_method):
@@ -45,8 +46,8 @@ class TestBuildCli(TestCase):
             runner = CliRunner()
             result = runner.invoke(cli, ["dev", "--version", "test"])
             assert result.exit_code == 0
-            mocked.build.assert_called_with(decode=True,
-                path=tmpdir, tag='registry/user/project:test')
+            mocked.build.assert_called_with(
+                decode=True, path=tmpdir, tag='registry/user/project:test')
 
     def test_cli_no_dockerfile(self, mocked_method):
         mocked = mock.MagicMock()

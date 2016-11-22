@@ -119,7 +119,8 @@ def get_docker_client(validate=True):
 
         # XXX: workaround for https://github.com/docker/docker-py/issues/1059
         def _stream_helper(self, response, decode=False):
-            it = super(CustomDockerClient, self)._stream_helper(response, decode=decode)
+            it = super(CustomDockerClient, self)._stream_helper(
+                response, decode=decode)
             for data in it:
                 if not isinstance(data, string_types):
                     yield data
@@ -135,7 +136,7 @@ def get_docker_client(validate=True):
         tls_cert_path = os.environ.get('DOCKER_CERT_PATH')
         if not tls_cert_path:
             tls_cert_path = os.path.join(os.path.expanduser('~'), '.docker')
-        apply_path_fun = lambda name: os.path.join(tls_cert_path, name)
+        apply_path_fun = lambda name: os.path.join(tls_cert_path, name)  # noqa
         tls_config = docker.tls.TLSConfig(
             client_cert=(apply_path_fun('cert.pem'),
                          apply_path_fun('key.pem')),

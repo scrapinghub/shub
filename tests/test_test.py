@@ -1,9 +1,6 @@
-import os
-import sys
 import mock
 import pytest
 from click.testing import CliRunner
-from unittest import TestCase
 from shub import exceptions as shub_exceptions
 from shub_image.test import cli
 
@@ -43,7 +40,7 @@ def test_test_cli(monkeypatch, docker_client):
 
 
 def test_check_image_exists(monkeypatch, docker_client):
-    assert _check_image_exists('img', docker_client) == None
+    assert _check_image_exists('img', docker_client) is None
 
     monkeypatch.setattr('docker.errors.NotFound', MockedNotFound)
     docker_client.inspect_image.side_effect = MockedNotFound
@@ -52,7 +49,7 @@ def test_check_image_exists(monkeypatch, docker_client):
 
 
 def test_check_sh_entrypoint(docker_client):
-    assert _check_sh_entrypoint('image', docker_client) == None
+    assert _check_sh_entrypoint('image', docker_client) is None
     docker_client.create_container.assert_called_with(
         image='image',
         command=['pip', 'show', 'scrapinghub-entrypoint-scrapy'])
@@ -65,8 +62,9 @@ def test_check_sh_entrypoint(docker_client):
     with pytest.raises(shub_exceptions.NotFoundException):
         _check_sh_entrypoint('image', docker_client)
 
+
 def test_start_crawl(docker_client):
-    assert _check_start_crawl_entry('image', docker_client) == None
+    assert _check_start_crawl_entry('image', docker_client) is None
     docker_client.create_container.assert_called_with(
         image='image', command=['which', 'start-crawl'])
     docker_client.wait.return_value = 1
@@ -77,6 +75,7 @@ def test_start_crawl(docker_client):
     docker_client.logs.return_value = ''
     with pytest.raises(shub_exceptions.NotFoundException):
         _check_start_crawl_entry('image', docker_client)
+
 
 def test_run_docker_command(docker_client):
     assert _run_docker_command(

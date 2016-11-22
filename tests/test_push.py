@@ -1,4 +1,3 @@
-import os
 import mock
 from click.testing import CliRunner
 from unittest import TestCase
@@ -7,6 +6,7 @@ from shub_image.push import cli
 
 from .utils import FakeProjectDirectory
 from .utils import add_sh_fake_config
+
 
 @mock.patch('shub_image.utils.get_docker_client')
 class TestPushCli(TestCase):
@@ -102,7 +102,7 @@ class TestPushCli(TestCase):
     def test_cli_push_fail(self, mocked_method):
         mocked = mock.MagicMock()
         mocked.login.return_value = {"Status": "Login Succeeded"}
-        mocked.push.return_value = [{"error":"Failed:(", "errorDetail":""}]
+        mocked.push.return_value = [{"error": "Failed:(", "errorDetail": ""}]
         mocked_method.return_value = mocked
         with FakeProjectDirectory() as tmpdir:
             add_sh_fake_config(tmpdir)

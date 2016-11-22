@@ -1,11 +1,9 @@
-import os
 import mock
 from click.testing import CliRunner
 from unittest import TestCase
 
-from shub_image.list import cli, list_cmd
+from shub_image.list import cli
 from shub_image.list import _run_list_cmd
-from shub_image.list import _get_project_settings
 
 from .utils import FakeProjectDirectory
 from .utils import add_sh_fake_config
@@ -14,11 +12,10 @@ from .utils import add_sh_fake_config
 class TestListCli(TestCase):
 
     def test_cli_no_sh_config(self):
-        with FakeProjectDirectory() as tmpdir:
-            runner = CliRunner()
-            result = runner.invoke(cli, ["dev", "-d", "--version", "test"])
-            assert result.exit_code == 69
-            assert 'Could not find image for dev' in result.output
+        runner = CliRunner()
+        result = runner.invoke(cli, ["dev", "-d", "--version", "test"])
+        assert result.exit_code == 69
+        assert 'Could not find image for dev' in result.output
 
     @mock.patch('shub_image.utils.get_docker_client')
     @mock.patch('requests.get')
@@ -83,7 +80,7 @@ class TestListCli(TestCase):
 
 
 class TestListCmd(TestCase):
-    
+
     @mock.patch('shub_image.utils.get_docker_client')
     def test_run_list_cmd(self, get_client_mock):
         client_mock = mock.Mock()

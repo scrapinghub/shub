@@ -37,6 +37,7 @@ def FakeProjectDirectory():
         os.chdir(current)
         shutil.rmtree(tmpdir)
 
+
 def add_scrapy_fake_config(tmpdir):
     # add fake scrapy.cfg
     config_path = os.path.join(tmpdir, 'scrapy.cfg')

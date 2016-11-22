@@ -1,4 +1,3 @@
-import os
 import click
 import requests
 

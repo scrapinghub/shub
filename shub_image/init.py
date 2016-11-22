@@ -45,7 +45,8 @@ Dockerfile as you want.
 
 System deps for Dockerfile:
 By default there're several system deps to be included to the Dockerfile ({}),
-you can extend it via --add-deps option, or redefine at all with --base-deps option.
+you can extend it via --add-deps option, or redefine at all with --base-deps
+option.
 
 Python deps for Dockerfile:
 The correct way to install python deps is using requirements.txt. If there's
