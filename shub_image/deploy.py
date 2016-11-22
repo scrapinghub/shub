@@ -3,12 +3,13 @@ import re
 import ast
 import json
 import time
-import click
-import requests
 import textwrap
 import subprocess
-from urlparse import urljoin
+
+import click
+import requests
 from retrying import retry
+from six.moves.urllib.parse import urljoin
 
 from shub.deploy import list_targets
 from shub.exceptions import ShubException

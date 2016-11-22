@@ -1,7 +1,9 @@
 import os
-import click
 import textwrap
 from string import Template
+
+import click
+from six.moves import input
 
 from shub import exceptions as shub_exceptions
 from shub import utils as shub_utils
@@ -104,7 +106,7 @@ def cli(project, base_image, base_deps, add_deps, requirements):
              "no": False, "n": False}
     while True:
         dockefile_path = os.path.join(project_dir, 'Dockerfile')
-        choice = raw_input("Save to {}: (y/n)".format(dockefile_path)).lower()
+        choice = input("Save to {}: (y/n)".format(dockefile_path)).lower()
         if choice in valid:
             if valid[choice]:
                 with open(dockefile_path, 'w') as dockerfile:

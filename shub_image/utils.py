@@ -4,8 +4,8 @@ import click
 import importlib
 import contextlib
 
+import yaml
 from six import string_types
-import ruamel.yaml as yaml
 
 from shub import config as shub_config
 from shub import utils as shub_utils
@@ -14,7 +14,7 @@ from shub import exceptions as shub_exceptions
 
 DEFAULT_DOCKER_VERSION = '1.17'
 STATUS_FILE_LOCATION = '.releases'
-_VALIDSPIDERNAME = re.compile('^[a-z0-9][-._a-z0-9]+$', re.I)
+_VALIDSPIDERNAME = re.compile(b'^[a-z0-9][-._a-z0-9]+$', re.I)
 
 DOCKER_UNAVAILABLE_MSG = """
 Detected error connecting to Docker daemon's host.
@@ -123,10 +123,11 @@ def get_docker_client(validate=True):
             for data in it:
                 if not isinstance(data, string_types):
                     yield data
-                for line in data.split('\r\n'):
-                    line = line.strip()
-                    if line:
-                        yield line
+                else:
+                    for line in data.split('\r\n'):
+                        line = line.strip()
+                        if line:
+                            yield line
 
     docker_host = os.environ.get('DOCKER_HOST')
     tls_config = None
@@ -241,7 +242,7 @@ def _load_status_file(path):
     with open(path, 'r') as f:
         try:
             data = yaml.safe_load(f)
-        except yaml.YAMLError, exc:
+        except yaml.YAMLError as exc:
             raise shub_exceptions.BadConfigException(
                 "Error reading releases file:\n{}".format(exc))
     if not isinstance(data, dict):

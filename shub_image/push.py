@@ -1,4 +1,3 @@
-import json
 import click
 
 from shub.deploy import list_targets
@@ -48,9 +47,8 @@ def push_cmd(target, version, username, password, email, apikey, insecure):
         _execute_push_login(client, image, username, password, email)
     image_name = utils.format_image_name(image, version)
     click.echo("Pushing {} to the registry.".format(image_name))
-    for line in client.push(image_name, stream=True,
+    for data in client.push(image_name, stream=True, decode=True,
                             insecure_registry=not bool(username)):
-        data = json.loads(line)
         if 'status' in data:
             utils.debug_log("Logs:{} {}".format(data['status'],
                             data.get('progress')))
