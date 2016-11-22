@@ -16,8 +16,8 @@ class TestBuildCli(TestCase):
     def test_cli(self, mocked_method):
         mocked = mock.MagicMock()
         mocked.build.return_value = [
-            '{"stream":"all is ok"}',
-            '{"stream":"Successfully built 12345"}']
+            {"stream": "all is ok"},
+            {"stream": "Successfully built 12345"}]
         mocked_method.return_value = mocked
         with FakeProjectDirectory() as tmpdir:
             add_scrapy_fake_config(tmpdir)
@@ -28,15 +28,15 @@ class TestBuildCli(TestCase):
             runner = CliRunner()
             result = runner.invoke(cli, ["dev", "-d"])
             assert result.exit_code == 0
-            mocked.build.assert_called_with(
+            mocked.build.assert_called_with(decode=True,
                 path=tmpdir, tag='registry/user/project:1.0')
             assert os.path.isfile(setup_py_path)
 
     def test_cli_custom_version(self, mocked_method):
         mocked = mock.MagicMock()
         mocked.build.return_value = [
-            '{"stream":"all is ok"}',
-            '{"stream":"Successfully built 12345"}']
+            {"stream": "all is ok"},
+            {"stream": "Successfully built 12345"}]
         mocked_method.return_value = mocked
         with FakeProjectDirectory() as tmpdir:
             add_scrapy_fake_config(tmpdir)
@@ -45,14 +45,14 @@ class TestBuildCli(TestCase):
             runner = CliRunner()
             result = runner.invoke(cli, ["dev", "--version", "test"])
             assert result.exit_code == 0
-            mocked.build.assert_called_with(
+            mocked.build.assert_called_with(decode=True,
                 path=tmpdir, tag='registry/user/project:test')
 
     def test_cli_no_dockerfile(self, mocked_method):
         mocked = mock.MagicMock()
         mocked.build.return_value = [
-            '{"error":"Minor","errorDetail":"Testing output"}',
-            '{"stream":"Successfully built 12345"}']
+            {"error": "Minor", "errorDetail": "Testing output"},
+            {"stream": "Successfully built 12345"}]
         mocked_method.return_value = mocked
         with FakeProjectDirectory() as tmpdir:
             add_scrapy_fake_config(tmpdir)
@@ -64,7 +64,7 @@ class TestBuildCli(TestCase):
 
     def test_cli_fail(self, mocked_method):
         mocked = mock.MagicMock()
-        mocked.build.return_value = ['{"error":"Minor","errorDetail":"Test"}']
+        mocked.build.return_value = [{"error": "Minor", "errorDetail": "Test"}]
         mocked_method.return_value = mocked
         with FakeProjectDirectory() as tmpdir:
             add_scrapy_fake_config(tmpdir)

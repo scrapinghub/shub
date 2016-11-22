@@ -26,7 +26,7 @@ class TestListCli(TestCase):
         client_mock = mock.Mock()
         client_mock.create_container.return_value = {'Id': '1234'}
         client_mock.wait.return_value = 0
-        client_mock.logs.return_value = 'abc\ndef'
+        client_mock.logs.return_value = b'abc\ndef'
         get_client_mock.return_value = client_mock
 
         with FakeProjectDirectory() as tmpdir:
@@ -62,7 +62,7 @@ class TestListCli(TestCase):
         client_mock = mock.Mock()
         client_mock.create_container.return_value = {'Id': '1234'}
         client_mock.wait.return_value = 0
-        client_mock.logs.return_value = 'abc\ndef\ndsd'
+        client_mock.logs.return_value = b'abc\ndef\ndsd'
         get_client_mock.return_value = client_mock
 
         get_settings_mock = mock.Mock()

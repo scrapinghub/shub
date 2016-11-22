@@ -2,13 +2,13 @@ import os
 import sys
 import json
 import tempfile
+from six import StringIO
 from unittest import TestCase
 
 import mock
 import click
 import docker
 import pytest
-import StringIO
 from shub import exceptions as shub_exceptions
 
 from shub_image.utils import missing_modules
@@ -130,7 +130,7 @@ class ReleaseConfigTest(TestCase):
 
     def test_load(self):
         config = ReleaseConfig()
-        stream = StringIO.StringIO(
+        stream = StringIO(
             'projects:\n  dev: 123\n  prod: 321\n'
             'images:\n  dev: registry/user/project\n  prod: user/project\n'
             'endpoints:\n  dev: http://127.0.0.1/api/scrapyd/\n'
