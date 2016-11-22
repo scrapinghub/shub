@@ -21,8 +21,8 @@ setup(
         'requests',
         'six',
         'shub>=0.2.5',
-        'docker-py',
     ],
+    extras_require = {'docker-py': ['docker-py>=1.7.0']},
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
