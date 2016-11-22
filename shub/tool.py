@@ -30,6 +30,7 @@ def cli():
         click.echo("INFO: A newer version of shub is available. Update "
                    "via pip or get it at {}".format(update_url),  err=True)
 
+
 commands = [
     "deploy",
     "login",
