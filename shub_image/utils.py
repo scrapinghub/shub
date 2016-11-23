@@ -1,7 +1,6 @@
 import os
 import re
 import click
-import importlib
 import contextlib
 
 import yaml
@@ -80,20 +79,6 @@ def load_release_config():
     """ shub.config.load_shub_config with replaced config class """
     shub_config.ShubConfig = ReleaseConfig
     return shub_config.load_shub_config()
-
-
-def missing_modules(*modules):
-    """Receives a list of module names and returns those which are missing"""
-    missing = []
-    for module_name in modules:
-        try:
-            importlib.import_module(module_name)
-        except ImportError:
-            if module_name == 'docker':
-                missing.append('docker-py')
-            else:
-                missing.append(module_name)
-    return missing
 
 
 def get_project_dir():

@@ -9,7 +9,6 @@ import click
 import pytest
 from shub import exceptions as shub_exceptions
 
-from shub_image.utils import missing_modules
 from shub_image.utils import get_project_dir
 from shub_image.utils import get_docker_client
 from shub_image.utils import format_image_name
@@ -26,13 +25,6 @@ from .utils import FakeProjectDirectory, add_sh_fake_config
 
 
 class ReleaseUtilsTest(TestCase):
-
-    def test_missing_modules(self):
-        assert missing_modules() == []
-        assert missing_modules('os', 'non-existing-module') == \
-            ['non-existing-module']
-        assert missing_modules('os', 'six', 'xxx11', 'xxx22') == \
-            ['xxx11', 'xxx22']
 
     def test_get_project_dir(self):
         self.assertRaises(
