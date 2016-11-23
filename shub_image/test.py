@@ -21,6 +21,10 @@ SH_EP_SCRAPY_WARNING = \
 @click.option("-d", "--debug", help="debug mode", is_flag=True)
 @click.option("--version", help="release version")
 def cli(target, debug, version):
+    test_cmd(target, version)
+
+
+def test_cmd(target, version):
     config = utils.load_release_config()
     image = config.get_image(target)
     version = version or config.get_version()
