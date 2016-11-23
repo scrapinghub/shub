@@ -1,13 +1,11 @@
 import os
 import sys
-import json
 import tempfile
 from six import StringIO
 from unittest import TestCase
 
 import mock
 import click
-import docker
 import pytest
 from shub import exceptions as shub_exceptions
 
