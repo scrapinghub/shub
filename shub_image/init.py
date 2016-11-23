@@ -1,7 +1,9 @@
 import os
-import click
 import textwrap
 from string import Template
+
+import click
+from six.moves import input
 
 from shub import exceptions as shub_exceptions
 from shub import utils as shub_utils
@@ -43,7 +45,8 @@ Dockerfile as you want.
 
 System deps for Dockerfile:
 By default there're several system deps to be included to the Dockerfile ({}),
-you can extend it via --add-deps option, or redefine at all with --base-deps option.
+you can extend it via --add-deps option, or redefine at all with --base-deps
+option.
 
 Python deps for Dockerfile:
 The correct way to install python deps is using requirements.txt. If there's
@@ -104,7 +107,7 @@ def cli(project, base_image, base_deps, add_deps, requirements):
              "no": False, "n": False}
     while True:
         dockefile_path = os.path.join(project_dir, 'Dockerfile')
-        choice = raw_input("Save to {}: (y/n)".format(dockefile_path)).lower()
+        choice = input("Save to {}: (y/n)".format(dockefile_path)).lower()
         if choice in valid:
             if valid[choice]:
                 with open(dockefile_path, 'w') as dockerfile:

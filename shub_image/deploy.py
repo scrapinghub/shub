@@ -3,12 +3,12 @@ import re
 import ast
 import json
 import time
+import textwrap
+
 import click
 import requests
-import textwrap
-import subprocess
-from urlparse import urljoin
 from retrying import retry
+from six.moves.urllib.parse import urljoin
 
 from shub.deploy import list_targets
 from shub.exceptions import ShubException
@@ -55,11 +55,11 @@ Does a simple POST request to Dash API with given parameters
 def cli(target, debug, version, username, password, email,
         apikey, insecure, async):
     deploy_cmd(target, version, username, password, email,
-        apikey, insecure, async)
+               apikey, insecure, async)
 
 
 def deploy_cmd(target, version, username, password, email,
-        apikey, insecure, async):
+               apikey, insecure, async):
     config = utils.load_release_config()
     project, endpoint, target_apikey = config.get_target(target)
     image = config.get_image(target)

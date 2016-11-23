@@ -1,6 +1,5 @@
 import os
 import re
-import json
 import click
 import warnings
 
@@ -48,8 +47,7 @@ def build_cmd(target, version):
         raise shub_exceptions.BadParameterException(
             'Dockerfile is not found, please use shub-image init cmd')
     is_built = False
-    for line in client.build(path=project_dir, tag=image_name):
-        data = json.loads(line)
+    for data in client.build(path=project_dir, tag=image_name, decode=True):
         if 'stream' in data:
             utils.debug_log("{}".format(data['stream'][:-1]))
             is_built = re.search(

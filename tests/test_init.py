@@ -1,7 +1,6 @@
 import os
 from click.testing import CliRunner
 from unittest import TestCase
-from shub import exceptions as shub_exceptions
 
 from shub_image.init import cli
 from shub_image.init import _format_system_deps
@@ -67,11 +66,11 @@ class TestInitCli(TestCase):
         assert _wrap(short_cmd) == short_cmd
         assert _wrap(short_cmd + ' ' + short_cmd) == (
             short_cmd + ' ' + ' '.join(short_cmd.split()[:3]) +
-            " \\\n    "  + ' '.join(short_cmd.split()[3:]))
+            " \\\n    " + ' '.join(short_cmd.split()[3:]))
 
     def test_format_system_deps(self):
         # no deps at all
-        assert _format_system_deps('-', None) == None
+        assert _format_system_deps('-', None) is None
         # base deps only
         assert _format_system_deps('a,b,cd', None) == (
             "RUN apt-get update -qq && \\\n"

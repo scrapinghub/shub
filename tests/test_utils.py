@@ -1,17 +1,14 @@
 import os
 import sys
-import json
 import tempfile
+from six import StringIO
 from unittest import TestCase
 
 import mock
 import click
-import docker
 import pytest
-import StringIO
 from shub import exceptions as shub_exceptions
 
-from shub_image.utils import missing_modules
 from shub_image.utils import get_project_dir
 from shub_image.utils import get_docker_client
 from shub_image.utils import format_image_name
@@ -28,13 +25,6 @@ from .utils import FakeProjectDirectory, add_sh_fake_config
 
 
 class ReleaseUtilsTest(TestCase):
-
-    def test_missing_modules(self):
-        assert missing_modules() == []
-        assert missing_modules('os', 'non-existing-module') == \
-            ['non-existing-module']
-        assert missing_modules('os', 'six', 'xxx11', 'xxx22') == \
-            ['xxx11', 'xxx22']
 
     def test_get_project_dir(self):
         self.assertRaises(
@@ -96,21 +86,6 @@ class ReleaseUtilsTest(TestCase):
             mocked.return_value = config
             assert format_image_name('test', None) == 'test:test-version'
 
-    def test_custom_docker_client_workaround(self):
-        """Test workaround for https://github.com/docker/docker-py/issues/1059."""
-        line = (
-            '{"status":"Pulling from library/python","id":"2.7"}\r\n'
-            '{"status":"Pulling fs layer","progressDetail":{},"id":"5c90d4a2d1a8"}\r\n'
-        )
-
-        # mocked_docker.Client._stream_helper.return_value = (line,)
-        client = get_docker_client(validate=False)
-        with mock.patch.object(docker.Client, '_stream_helper', return_value=(line,)):
-            result = list(client._stream_helper(mock.Mock(), decode=False))
-        assert len(result) == 2
-        assert json.loads(result[0])['id'] == '2.7'
-        assert json.loads(result[1])['id'] == '5c90d4a2d1a8'
-
     def test_get_credentials(self):
         assert get_credentials(insecure=True) == (None, None)
         assert get_credentials(apikey='apikey') == ('apikey', ' ')
@@ -130,7 +105,7 @@ class ReleaseConfigTest(TestCase):
 
     def test_load(self):
         config = ReleaseConfig()
-        stream = StringIO.StringIO(
+        stream = StringIO(
             'projects:\n  dev: 123\n  prod: 321\n'
             'images:\n  dev: registry/user/project\n  prod: user/project\n'
             'endpoints:\n  dev: http://127.0.0.1/api/scrapyd/\n'

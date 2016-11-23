@@ -1,9 +1,8 @@
-import os
-import re
 import json
+
 import click
 import requests
-from urlparse import urljoin
+from six.moves.urllib.parse import urljoin
 
 from shub import exceptions as shub_exceptions
 from shub.deploy import list_targets

@@ -1,11 +1,9 @@
 import os
 import re
 import click
-import importlib
 import contextlib
 
-from six import string_types
-import ruamel.yaml as yaml
+import yaml
 
 from shub import config as shub_config
 from shub import utils as shub_utils
@@ -14,7 +12,7 @@ from shub import exceptions as shub_exceptions
 
 DEFAULT_DOCKER_VERSION = '1.17'
 STATUS_FILE_LOCATION = '.releases'
-_VALIDSPIDERNAME = re.compile('^[a-z0-9][-._a-z0-9]+$', re.I)
+_VALIDSPIDERNAME = re.compile(b'^[a-z0-9][-._a-z0-9]+$', re.I)
 
 DOCKER_UNAVAILABLE_MSG = """
 Detected error connecting to Docker daemon's host.
@@ -83,20 +81,6 @@ def load_release_config():
     return shub_config.load_shub_config()
 
 
-def missing_modules(*modules):
-    """Receives a list of module names and returns those which are missing"""
-    missing = []
-    for module_name in modules:
-        try:
-            importlib.import_module(module_name)
-        except ImportError:
-            if module_name == 'docker':
-                missing.append('docker-py')
-            else:
-                missing.append(module_name)
-    return missing
-
-
 def get_project_dir():
     """ A helper to get project root dir.
         Used by init/build command to locate Dockerfile.
@@ -115,26 +99,13 @@ def get_docker_client(validate=True):
     except ImportError:
         raise ImportError('You need docker-py installed for the cmd')
 
-    class CustomDockerClient(docker.Client):
-
-        # XXX: workaround for https://github.com/docker/docker-py/issues/1059
-        def _stream_helper(self, response, decode=False):
-            it = super(CustomDockerClient, self)._stream_helper(response, decode=decode)
-            for data in it:
-                if not isinstance(data, string_types):
-                    yield data
-                for line in data.split('\r\n'):
-                    line = line.strip()
-                    if line:
-                        yield line
-
     docker_host = os.environ.get('DOCKER_HOST')
     tls_config = None
     if os.environ.get('DOCKER_TLS_VERIFY', False):
         tls_cert_path = os.environ.get('DOCKER_CERT_PATH')
         if not tls_cert_path:
             tls_cert_path = os.path.join(os.path.expanduser('~'), '.docker')
-        apply_path_fun = lambda name: os.path.join(tls_cert_path, name)
+        apply_path_fun = lambda name: os.path.join(tls_cert_path, name)  # noqa
         tls_config = docker.tls.TLSConfig(
             client_cert=(apply_path_fun('cert.pem'),
                          apply_path_fun('key.pem')),
@@ -142,9 +113,9 @@ def get_docker_client(validate=True):
             assert_hostname=False)
         docker_host = docker_host.replace('tcp://', 'https://')
     version = os.environ.get('DOCKER_VERSION', DEFAULT_DOCKER_VERSION)
-    client = CustomDockerClient(base_url=docker_host,
-                                version=version,
-                                tls=tls_config)
+    client = docker.Client(base_url=docker_host,
+                           version=version,
+                           tls=tls_config)
     if validate:
         validate_connection_with_docker_daemon(client)
     return client
@@ -241,7 +212,7 @@ def _load_status_file(path):
     with open(path, 'r') as f:
         try:
             data = yaml.safe_load(f)
-        except yaml.YAMLError, exc:
+        except yaml.YAMLError as exc:
             raise shub_exceptions.BadConfigException(
                 "Error reading releases file:\n{}".format(exc))
     if not isinstance(data, dict):

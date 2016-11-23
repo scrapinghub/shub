@@ -1,11 +1,8 @@
-import os
 import mock
 from click.testing import CliRunner
 from unittest import TestCase
 from shub_image.upload import cli
 
-from .utils import FakeProjectDirectory
-from .utils import add_sh_fake_config
 
 class TestUploadCli(TestCase):
 
