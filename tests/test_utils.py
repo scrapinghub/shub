@@ -96,24 +96,6 @@ class ReleaseUtilsTest(TestCase):
             mocked.return_value = config
             assert format_image_name('test', None) == 'test:test-version'
 
-    def test_custom_docker_client_workaround(self):
-        """Test workaround for https://github.com/docker/docker-py/issues/1059.
-        """
-        line = (
-            '{"status":"Pulling from library/python","id":"2.7"}\r\n'
-            '{"status":"Pulling fs layer","progressDetail":{},'
-            '"id":"5c90d4a2d1a8"}\r\n'
-        )
-
-        # mocked_docker.Client._stream_helper.return_value = (line,)
-        client = get_docker_client(validate=False)
-        with mock.patch.object(docker.Client, '_stream_helper',
-                               return_value=(line,)):
-            result = list(client._stream_helper(mock.Mock(), decode=False))
-        assert len(result) == 2
-        assert json.loads(result[0])['id'] == '2.7'
-        assert json.loads(result[1])['id'] == '5c90d4a2d1a8'
-
     def test_get_credentials(self):
         assert get_credentials(insecure=True) == (None, None)
         assert get_credentials(apikey='apikey') == ('apikey', ' ')

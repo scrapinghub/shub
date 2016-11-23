@@ -5,7 +5,6 @@ import importlib
 import contextlib
 
 import yaml
-from six import string_types
 
 from shub import config as shub_config
 from shub import utils as shub_utils
@@ -115,21 +114,6 @@ def get_docker_client(validate=True):
     except ImportError:
         raise ImportError('You need docker-py installed for the cmd')
 
-    class CustomDockerClient(docker.Client):
-
-        # XXX: workaround for https://github.com/docker/docker-py/issues/1059
-        def _stream_helper(self, response, decode=False):
-            it = super(CustomDockerClient, self)._stream_helper(
-                response, decode=decode)
-            for data in it:
-                if not isinstance(data, string_types):
-                    yield data
-                else:
-                    for line in data.split('\r\n'):
-                        line = line.strip()
-                        if line:
-                            yield line
-
     docker_host = os.environ.get('DOCKER_HOST')
     tls_config = None
     if os.environ.get('DOCKER_TLS_VERIFY', False):
@@ -144,9 +128,9 @@ def get_docker_client(validate=True):
             assert_hostname=False)
         docker_host = docker_host.replace('tcp://', 'https://')
     version = os.environ.get('DOCKER_VERSION', DEFAULT_DOCKER_VERSION)
-    client = CustomDockerClient(base_url=docker_host,
-                                version=version,
-                                tls=tls_config)
+    client = docker.Client(base_url=docker_host,
+                           version=version,
+                           tls=tls_config)
     if validate:
         validate_connection_with_docker_daemon(client)
     return client
