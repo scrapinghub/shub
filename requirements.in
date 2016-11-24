@@ -1,0 +1,7 @@
+click
+docker-py
+PyYAML
+requests
+retrying
+shub
+six
