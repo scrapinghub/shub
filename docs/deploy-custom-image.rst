@@ -1,34 +1,24 @@
-.. _shub-image-deploy:
+.. _deploy-custom-image:
 
 =========================================
 Deploy a custom image to Scrapy Cloud 2.0
 =========================================
 
-**Scrapy Cloud 2.0** is the newest Scrapy Cloud platform version which allows you to run Scrapy spiders in Docker containers. This document will show you how to use the shub-image_ command line tool to deploy custom Docker images for your Scrapy projects to Scrapy Cloud 2.0.
+**Scrapy Cloud 2.0** is the newest Scrapy Cloud platform version which allows you to run Scrapy spiders in Docker containers. This document will show you how to use the shub_ command line tool to deploy custom Docker images for your Scrapy projects to Scrapy Cloud 2.0.
 
-.. note:: If you don't need a custom Docker image, you can continue using shub_ to deploy your spiders. Just make sure to **upgrade** it before doing so:
-
-    .. code-block:: bash
-
-        $ pip install shub --upgrade
-
-.. _shub-image: https://github.com/scrapinghub/shub-image/
 .. _shub: https://github.com/scrapinghub/shub
 
 Installation
 ============
-Install the ``shub-image`` tool via pip:
+Install the ``shub`` tool via pip:
 
 .. code-block:: bash
 
-    $ pip install shub-image
+    $ pip install shub
 
 Deployment
 ==========
 This section describes how to build and deploy to Scrapy Cloud 2.0 a custom Docker image for a Scrapy project.
-
-
-.. warning:: Make sure you are working on a Scrapy Cloud 2.0 project before following this guide. You can migrate your old projects via `Scrapy Cloud web dashboard <http://dash.scrapinghub.com>`_.
 
 .. _step-one:
 
@@ -44,13 +34,13 @@ And then run the :ref:`init command <commands-init>`:
 
 .. code-block:: bash
 
-    $ shub-image init --requirements path/to/requirements.txt
+    $ shub image init --requirements path/to/requirements.txt
 
 This will create a Dockerfile for your container including ``requirements.txt`` as a dependency and using `python:2.7 <https://hub.docker.com/r/library/python/>`_ as `the base image <https://docs.docker.com/engine/reference/builder/>`_ for your custom image. If you want to use a different one, pass the ``--base-image`` option, like this:
 
 .. code-block:: bash
 
-    $ shub-image init --base-image scrapinghub/base:12.04
+    $ shub image init --base-image scrapinghub/base:12.04
 
 In this case, it will use the image available at https://hub.docker.com/r/scrapinghub/base tagged with ``12.04``.
 
@@ -68,7 +58,7 @@ Now you need to define the Docker repository that will store the image built by 
         default: yourusername/repository
 
 
-The settings above define that ``shub-image`` will push the image of your Docker container to https://hub.docker.com/r/yourusername/repository. You can also specify the complete URL for your repository if you are not using the default registry (which is https://hub.docker.com).
+The settings above define that ``shub`` will push the image of your Docker container to https://hub.docker.com/r/yourusername/repository. You can also specify the complete URL for your repository if you are not using the default registry (which is https://hub.docker.com).
 
 .. tip:: Your project might not have a ``scrapinghub.yml`` file, because it has been introduced with recent versions of `shub`_. Make sure to upgrade your `shub`_ package by running:
 
@@ -87,19 +77,21 @@ The settings above define that ``shub-image`` will push the image of your Docker
 
 3. Build the image
 ------------------
-Once you have the Dockerfile (generated in :ref:`step 1 <step-one>`) and your target image settings, run the :ref:`build <commands-build>` command to make ``shub-image`` build the Docker image for you:
+Once you have the Dockerfile (generated in :ref:`step 1 <step-one>`) and your target image settings, run the :ref:`build <commands-build>` command to make ``shub`` build the Docker image for you:
 
 .. code-block:: bash
 
-    $ shub-image build
+    $ shub image build
     The image yourusername/repository:1.0 build is completed.
 
-After doing so, you can run the :ref:`test <commands-test>` command to make sure everything is alright for deployment:
+In the end of the command, ``shub`` will automatically run a few tests to make sure everything is alright for deployment.
+
+You can run the :ref:`test <commands-test>` command manually by:
 
 
 .. code-block:: bash
 
-    $ shub-image test
+    $ shub image test
 
 
 4. Push the image to the registry
@@ -108,7 +100,7 @@ This step will push the image you just built to the repository defined in the ``
 
 .. code-block:: bash
 
-    $ shub-image push
+    $ shub image push
     Pushing yourusername/repository:1.0 to the registry.
     The image yourusername/repository:1.0 pushed successfully.
 
@@ -121,9 +113,9 @@ Once your image has been uploaded to the Docker registry, you have to deploy it 
 
 .. code-block:: bash
 
-    $ shub-image deploy
+    $ shub image deploy
     Deploy task results: <Response [302]>
-    You can check deploy results later with 'shub-image check --id 10'.
+    You can check deploy results later with 'shub image check --id 10'.
     Deploy results:
      {u'status': u'started'}
      {u'status': u'progress', u'last_step': u'pulling'}
@@ -144,7 +136,7 @@ Each of the commands we used in the steps above has some options that allow you 
 
 init
 ----
-The first command you have to run when migrating your projects to run on Scrapy Cloud 2.0 is ``shub-image init``. This command generates a ``Dockerfile`` to be used later by the :ref:`build <commands-build>` command to create a Docker container based on your Scrapy project.
+The first command you have to run when migrating your projects to run on Scrapy Cloud 2.0 is ``shub image init``. This command generates a ``Dockerfile`` to be used later by the :ref:`build <commands-build>` command to create a Docker container based on your Scrapy project.
 
 The generated Dockerfile will likely fit your needs. But if it doesn't, it's just a matter of editing the file.
 
@@ -193,7 +185,7 @@ List recommended Python requirements for a Scrapy Cloud 2.0 project and exit.
 
 .. code-block:: bash
 
-    $ shub-image init --base-image scrapinghub/base:12.04 \
+    $ shub image init --base-image scrapinghub/base:12.04 \
     --requirements other/requirements-dev.txt \
     --add-deps phantomjs,tmux
 
@@ -238,6 +230,11 @@ If you pass the ``--version`` parameter here, you will have to pass the exact sa
 **Default value**: identifier generated by shub.
 
 
+.. function:: -S/--skip-tests
+
+Option to skip testing image with ``shub image test`` after build.
+
+
 .. function:: -d/--debug
 
 Increase the tool's verbosity.
@@ -247,11 +244,11 @@ Increase the tool's verbosity.
 
 .. code-block:: bash
 
-    $ shub-image build --list-targets
+    $ shub image build --list-targets
     default
     private
     fallback
-    $ shub-image build --target private --version 1.0.4
+    $ shub image build --target private --version 1.0.4
 
 .. _commands-push:
 
@@ -301,7 +298,7 @@ Set the email to authenticate in the Docker registry (if needed).
 
 .. function:: --apikey <text>
 
-(beta) Use provided apikey to authenticate in the Scrapy Cloud Docker registry.
+Use provided apikey to authenticate in the Scrapy Cloud Docker registry.
 
 
 .. function:: --insecure
@@ -314,13 +311,13 @@ Use the Docker registry in insecure mode.
 Increase the tool's verbosity.
 
 
-Most of these options are related with Docker registry authentication. If you don't provide them, ``shub-image`` will try to push your image using the plain HTTP ``--insecure-registry`` docker mode.
+Most of these options are related with Docker registry authentication. If you don't provide them, ``shub`` will try to push your image using the plain HTTP ``--insecure-registry`` docker mode.
 
 **Example:**
 
 .. code-block:: bash
 
-    $ shub-image push --target private --version 1.0.4 \
+    $ shub image push --target private --version 1.0.4 \
     --username johndoe --password johndoepwd
 
 This example authenticates the user ``johndoe`` to the registry ``your.own.registry:port`` (as defined in the :ref:`build command example <commands-build>`).
@@ -375,7 +372,7 @@ Set the email to authenticate in the Docker registry (if needed).
 
 .. function:: --apikey <text>
 
-(beta) Use provided apikey to authenticate in the Scrapy Cloud Docker registry.
+Use provided apikey to authenticate in the Scrapy Cloud Docker registry.
 
 
 .. function:: --insecure
@@ -399,7 +396,7 @@ Increase the tool's verbosity.
 
 .. code-block:: bash
 
-    $ shub-image deploy --target private --version 1.0.4 \
+    $ shub image deploy --target private --version 1.0.4 \
     --username johndoe --password johndoepwd --async
 
 This command will deploy the image from the ``private`` target, using user credentials passed as parameters and exit as soon as the deploy process starts (``--async``).
@@ -416,7 +413,7 @@ It is a shortcut for the build -> push -> deploy chain of commands.
 
 .. code-block:: bash
 
-    $ shub-image upload --target private --version 1.0.4 \
+    $ shub image upload --target private --version 1.0.4 \
     --username johndoe --password johndoepwd
 
 
@@ -448,7 +445,7 @@ The id of the deploy you want to check the status.
 
 .. code-block:: bash
 
-    $ shub-image check --id 0
+    $ shub image check --id 0
 
 This command above will check the status of the first deploy made (id 0).
 
@@ -466,6 +463,46 @@ Options for test
 .. function:: --list-targets
 
 List available targets and exit.
+
+.. function:: --target <text>
+
+Target name that defines an image that is going to be tested.
+
+**Default value**: ``default``
+
+.. function:: --version <text>
+
+The image version that you want to test. If you provided a custom version to the :ref:`deploy <commands-deploy>`, make sure to provide the same value here.
+
+.. function:: -d/--debug
+
+Increase the tool's verbosity.
+
+list
+----
+This command lists spiders for your project based on the image you built and your project settings in Dash. You can run it right after the :ref:`build command <commands-build>` to make sure that all your spiders are found.
+
+
+Options for list
+^^^^^^^^^^^^^^^^
+
+.. function:: --list-targets
+
+List available targets and exit.
+
+.. function:: --target <text>
+
+Target name that defines an image to get spiders list.
+
+**Default value**: ``default``
+
+.. function:: --version <text>
+
+The image version that you want to use to extract spiders list. If you provided a custom version to the :ref:`deploy <commands-deploy>`, make sure to provide the same value here.
+
+.. function:: -s/--silent-mode
+
+Silent mode to suspend errors in a case if project isn't found for a given target in scrapinghub.yml.
 
 .. function:: -d/--debug
 
@@ -487,11 +524,11 @@ Make sure the repository you set in your ``scrapinghub.yml`` images section exis
     images:
         default: johndoe/scrapy-crawler
 
-``shub-image`` will try to deploy the image to http://hub.docker.com/johndoe/scrapy-crawler, since `hub.docker.com <http://hub.docker.com>`_ is the default registry. So, to make it work, you have to log into your account there and create the repository.
+``shub`` will try to deploy the image to http://hub.docker.com/johndoe/scrapy-crawler, since `hub.docker.com <http://hub.docker.com>`_ is the default registry. So, to make it work, you have to log into your account there and create the repository.
 
 Otherwise, you are going to get an error message like this:
 
-.. code-block:: json
+.. code-block:: bash
 
     Deploy results: {u'status': u'error', u'last_step': u'pulling', u'error': u"DockerCmdFailure(u'Error: image johndoe/scrapy-crawler not found',)"}
 
@@ -502,22 +539,11 @@ If you are using a private repository to push your images to, make sure to pass 
 
 .. code-block:: bash
 
-    $ shub-image push --username johndoe --password yourpass
-    $ shub-image deploy --username johndoe --password yourpass
+    $ shub image push --username johndoe --password yourpass
+    $ shub image deploy --username johndoe --password yourpass
 
-
-ImportError while initializing the project
-------------------------------------------
-If you are getting an ``ImportError`` like this while running ``shub-image init``:
+Or pass it to :ref:`upload <commands-upload>` command:
 
 .. code-block:: bash
 
-    ...
-        from shub import config as shub_config
-    ImportError: cannot import name config
-
-You should make sure you have the latest version of shub_ installed by running:
-
-.. code-block:: bash
-
-    $ pip install shub --upgrade
+    $ shub image upload --username johndoe --password yourpass

@@ -2,13 +2,13 @@ import mock
 from click.testing import CliRunner
 from unittest import TestCase
 from shub import exceptions as shub_exceptions
-from shub_image.push import cli
+from shub.image.push import cli
 
 from .utils import FakeProjectDirectory
 from .utils import add_sh_fake_config
 
 
-@mock.patch('shub_image.utils.get_docker_client')
+@mock.patch('shub.image.utils.get_docker_client')
 class TestPushCli(TestCase):
 
     def test_cli_with_apikey_login(self, mocked_method):

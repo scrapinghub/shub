@@ -7,7 +7,7 @@ from six.moves import input
 
 from shub import exceptions as shub_exceptions
 from shub import utils as shub_utils
-from shub_image import utils
+from shub.image import utils
 
 
 DOCKER_APP_DIR = '/app'

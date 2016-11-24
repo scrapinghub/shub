@@ -2,12 +2,12 @@ import mock
 import pytest
 from click.testing import CliRunner
 from shub import exceptions as shub_exceptions
-from shub_image.test import cli
+from shub.image.test import cli
 
-from shub_image.test import _run_docker_command
-from shub_image.test import _check_image_exists
-from shub_image.test import _check_start_crawl_entry
-from shub_image.test import _check_sh_entrypoint
+from shub.image.test import _run_docker_command
+from shub.image.test import _check_image_exists
+from shub.image.test import _check_start_crawl_entry
+from shub.image.test import _check_sh_entrypoint
 
 from .utils import FakeProjectDirectory
 from .utils import add_sh_fake_config
@@ -29,7 +29,7 @@ def docker_client():
 def test_test_cli(monkeypatch, docker_client):
     """ This test mocks docker library to test the function itself """
     monkeypatch.setattr('docker.errors.NotFound', MockedNotFound)
-    monkeypatch.setattr('shub_image.utils.get_docker_client',
+    monkeypatch.setattr('shub.image.utils.get_docker_client',
                         lambda *args, **kwargs: docker_client)
     with FakeProjectDirectory() as tmpdir:
         add_sh_fake_config(tmpdir)

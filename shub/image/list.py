@@ -6,7 +6,7 @@ from six.moves.urllib.parse import urljoin
 
 from shub import exceptions as shub_exceptions
 from shub.deploy import list_targets
-from shub_image import utils
+from shub.image import utils
 
 
 SETTING_TYPES = ['project_settings',

@@ -3,8 +3,8 @@ from click.testing import CliRunner
 from unittest import TestCase
 from shub import exceptions as shub_exceptions
 
-from shub_image.check import cli
-from shub_image import utils
+from shub.image.check import cli
+from shub.image import utils
 from .utils import FakeProjectDirectory
 
 

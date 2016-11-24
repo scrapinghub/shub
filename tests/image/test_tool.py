@@ -1,14 +1,14 @@
 from click.testing import CliRunner
 from unittest import TestCase
-from shub_image.tool import cli
+from shub.image import image_cli
 
 
 class TestToolCli(TestCase):
 
     def test_cli(self):
         runner = CliRunner()
-        result = runner.invoke(cli, [])
+        result = runner.invoke(image_cli, [])
         assert result.exit_code == 0
-        assert 'Scrapinghub release tool' in result.output
+        assert 'Release project with Docker' in result.output
         assert 'Options:' in result.output
         assert 'Commands:' in result.output

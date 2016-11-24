@@ -1,14 +1,14 @@
 import mock
 from click.testing import CliRunner
 from unittest import TestCase
-from shub_image.upload import cli
+from shub.image.upload import cli
 
 
 class TestUploadCli(TestCase):
 
-    @mock.patch('shub_image.deploy.deploy_cmd')
-    @mock.patch('shub_image.push.push_cmd')
-    @mock.patch('shub_image.build.build_cmd')
+    @mock.patch('shub.image.deploy.deploy_cmd')
+    @mock.patch('shub.image.push.push_cmd')
+    @mock.patch('shub.image.build.build_cmd')
     def test_cli(self, build, push, deploy):
         runner = CliRunner()
         result = runner.invoke(

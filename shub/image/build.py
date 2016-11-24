@@ -7,8 +7,8 @@ from shub import exceptions as shub_exceptions
 from shub.deploy import list_targets
 from shub.deploy import _create_default_setup_py
 from shub.utils import closest_file, get_config
-from shub_image import utils
-from shub_image import test as test_mod
+from shub.image import utils
+from shub.image import test as test_mod
 
 
 SHORT_HELP = 'Build release image.'

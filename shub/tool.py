@@ -4,6 +4,7 @@ import importlib
 import click
 
 import shub
+from shub.image import image_cli
 from shub.utils import update_available
 
 
@@ -52,3 +53,6 @@ for command in commands:
     command_module = importlib.import_module(module_path)
     command_name = command.replace('_', '-')  # easier to type
     cli.add_command(command_module.cli, command_name)
+
+# Add image commands group
+cli.add_command(image_cli, "image")

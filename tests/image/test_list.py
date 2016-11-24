@@ -2,8 +2,8 @@ import mock
 from click.testing import CliRunner
 from unittest import TestCase
 
-from shub_image.list import cli
-from shub_image.list import _run_list_cmd
+from shub.image.list import cli
+from shub.image.list import _run_list_cmd
 
 from .utils import FakeProjectDirectory
 from .utils import add_sh_fake_config
@@ -17,7 +17,7 @@ class TestListCli(TestCase):
         assert result.exit_code == 69
         assert 'Could not find image for dev' in result.output
 
-    @mock.patch('shub_image.utils.get_docker_client')
+    @mock.patch('shub.image.utils.get_docker_client')
     @mock.patch('requests.get')
     def test_cli_no_project(self, get_mocked, get_client_mock):
         client_mock = mock.Mock()
@@ -34,7 +34,7 @@ class TestListCli(TestCase):
             assert result.output.endswith('abc\ndef\n')
         assert not get_mocked.called
 
-    @mock.patch('shub_image.utils.get_docker_client')
+    @mock.patch('shub.image.utils.get_docker_client')
     @mock.patch('requests.get')
     def test_cli_container_error(self, get_mocked, get_client_mock):
         client_mock = mock.Mock()
@@ -53,7 +53,7 @@ class TestListCli(TestCase):
             assert result.exit_code == 1
             assert 'list cmd exited with code 66' in result.output
 
-    @mock.patch('shub_image.utils.get_docker_client')
+    @mock.patch('shub.image.utils.get_docker_client')
     @mock.patch('requests.get')
     def test_cli(self, get_mocked, get_client_mock):
         client_mock = mock.Mock()
@@ -81,7 +81,7 @@ class TestListCli(TestCase):
 
 class TestListCmd(TestCase):
 
-    @mock.patch('shub_image.utils.get_docker_client')
+    @mock.patch('shub.image.utils.get_docker_client')
     def test_run_list_cmd(self, get_client_mock):
         client_mock = mock.Mock()
         client_mock.create_container.return_value = {'Id': '1234'}

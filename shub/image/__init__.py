@@ -1,11 +1,9 @@
 import click
 import importlib
-import shub_image
 
 
-@click.group(help="Scrapinghub release tool")
-@click.version_option(shub_image.__version__)
-def cli():
+@click.group(help="Release project with Docker")
+def image_cli():
     pass
 
 
@@ -21,6 +19,6 @@ module_deps = [
 ]
 
 for command in module_deps:
-    module_path = "shub_image." + command
+    module_path = "shub.image." + command
     command_module = importlib.import_module(module_path)
-    cli.add_command(command_module.cli, command)
+    image_cli.add_command(command_module.cli, command)

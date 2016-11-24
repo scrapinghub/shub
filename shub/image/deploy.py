@@ -12,8 +12,8 @@ from six.moves.urllib.parse import urljoin
 
 from shub.deploy import list_targets
 from shub.exceptions import ShubException
-from shub_image import utils
-from shub_image import list as list_mod
+from shub.image import utils
+from shub.image import list as list_mod
 
 
 VALIDSPIDERNAME = re.compile('^[a-z0-9][-._a-z0-9]+$', re.I)
@@ -137,7 +137,7 @@ def _check_status_url(status_url):
 
 def _prepare_deploy_params(project, version, image_name, endpoint, apikey,
                            username, password, email):
-    # Reusing shub_image.list logic to get spiders list
+    # Reusing shub.image.list logic to get spiders list
     spiders = list_mod.list_cmd(image_name, project, endpoint, apikey)
     scripts = _extract_scripts_from_project()
     params = {'project': project,

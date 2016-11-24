@@ -1,7 +1,7 @@
 import click
 import requests
 
-from shub_image.utils import load_status_url
+from shub.image.utils import load_status_url
 
 SHORT_HELP = "Check a deploy task's status url saved in a temporary file."
 

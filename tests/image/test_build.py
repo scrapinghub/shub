@@ -2,8 +2,8 @@ import os
 import mock
 from click.testing import CliRunner
 from unittest import TestCase
-from shub_image.build import cli
 from shub import exceptions as shub_exceptions
+from shub.image.build import cli
 
 from .utils import FakeProjectDirectory
 from .utils import add_sh_fake_config
@@ -11,10 +11,10 @@ from .utils import add_fake_dockerfile
 from .utils import add_scrapy_fake_config
 
 
-@mock.patch('shub_image.utils.get_docker_client')
+@mock.patch('shub.image.utils.get_docker_client')
 class TestBuildCli(TestCase):
 
-    @mock.patch('shub_image.test.test_cmd')
+    @mock.patch('shub.image.test.test_cmd')
     def test_cli(self, test_mock, mocked_method):
         mocked = mock.MagicMock()
         mocked.build.return_value = [
@@ -35,7 +35,7 @@ class TestBuildCli(TestCase):
             assert os.path.isfile(setup_py_path)
             test_mock.assert_called_with("dev", None)
 
-    @mock.patch('shub_image.test.test_cmd')
+    @mock.patch('shub.image.test.test_cmd')
     def test_cli_custom_version(self, test_mock, mocked_method):
         mocked = mock.MagicMock()
         mocked.build.return_value = [

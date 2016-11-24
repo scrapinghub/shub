@@ -2,7 +2,7 @@ import click
 from shub.deploy import list_targets
 
 from shub import exceptions as shub_exceptions
-from shub_image import utils
+from shub.image import utils
 
 SHORT_HELP = "Test a built image with Scrapy Cloud contract"
 HELP = """ TODO """
