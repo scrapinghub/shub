@@ -2,10 +2,27 @@ import click
 from shub.deploy import list_targets
 
 from shub import exceptions as shub_exceptions
+from shub.config import load_shub_config
 from shub.image import utils
 
 SHORT_HELP = "Test a built image with Scrapy Cloud contract"
-HELP = """ TODO """
+HELP = """
+A command to test an image after build step to make sure it fits contract.
+
+It consists of the following steps:
+
+1) check that image exists on local machine
+2) check that image has scrapinghub-entrypoint-scrapy python package
+3) check that image has start-crawl entrypoint
+4) check that image has list-spiders entrypoint
+
+These entrypoints are provided by scrapinghub-entrypoint-scrapy package,
+so the goal of the last checks is to validate the package version.
+
+If any of the checks fails - the test command fails as a whole. By default,
+the test command is also executed automatically as a part of build command
+in its end (if you do not provide --skip-tests parameter explicitly).
+"""
 
 SH_EP_SCRAPY_WARNING = \
     'You should add scrapinghub-entrypoint-scrapy(>=0.7.0) dependency' \
@@ -25,7 +42,7 @@ def cli(target, debug, version):
 
 
 def test_cmd(target, version):
-    config = utils.load_release_config()
+    config = load_shub_config()
     image = config.get_image(target)
     version = version or config.get_version()
     image_name = utils.format_image_name(image, version)

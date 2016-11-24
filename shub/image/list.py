@@ -2,9 +2,11 @@ import json
 
 import click
 import requests
+from six import binary_type
 from six.moves.urllib.parse import urljoin
 
 from shub import exceptions as shub_exceptions
+from shub.config import load_shub_config
 from shub.deploy import list_targets
 from shub.image import utils
 
@@ -43,7 +45,7 @@ def cli(target, debug, silent, version):
 
 
 def list_cmd_full(target, silent, version):
-    config = utils.load_release_config()
+    config = load_shub_config()
     image = config.get_image(target)
     version = version or config.get_version()
     image_name = utils.format_image_name(image, version)
@@ -76,7 +78,8 @@ def list_cmd(image_name, project, endpoint, apikey):
         raise shub_exceptions.ShubException(
             'Container with list cmd exited with code %s' % status_code)
 
-    spiders = utils.valid_spiders(logs)
+    spiders = utils.valid_spiders(
+        logs.decode('utf-8') if isinstance(logs, binary_type) else logs)
     return spiders
 
 

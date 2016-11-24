@@ -7,12 +7,13 @@ import yaml
 
 from shub import config as shub_config
 from shub import utils as shub_utils
-from shub import exceptions as shub_exceptions
+from shub.exceptions import (ShubException, NotFoundException,
+                             BadConfigException)
 
 
 DEFAULT_DOCKER_VERSION = '1.17'
 STATUS_FILE_LOCATION = '.releases'
-_VALIDSPIDERNAME = re.compile(b'^[a-z0-9][-._a-z0-9]+$', re.I)
+_VALIDSPIDERNAME = re.compile('^[a-z0-9][-._a-z0-9]+$', re.I)
 
 DOCKER_UNAVAILABLE_MSG = """
 Detected error connecting to Docker daemon's host.
@@ -44,50 +45,13 @@ def remember_cwd():
         os.chdir(current_dir)
 
 
-class ReleaseConfig(shub_config.ShubConfig):
-
-    def __init__(self, *args, **kwargs):
-        super(ReleaseConfig, self).__init__(*args, **kwargs)
-        self.images = {}
-
-    def load(self, stream):
-        """ Modified load logic to read images as well """
-        super(ReleaseConfig, self).load(stream)
-        try:
-            # we have to read the stream twice to avoid
-            # copy-pasting all the logic from shub tool
-            stream.seek(0)
-            yaml_cfg = yaml.safe_load(stream)
-            if not yaml_cfg:
-                return
-            getattr(self, 'images').update(yaml_cfg.get('images', {}))
-        except (yaml.YAMLError, AttributeError):
-            # AttributeError: stream is valid YAML but not dictionary-like
-            raise shub_exceptions.ConfigParseException
-
-    def get_image(self, target):
-        """Return image for given target."""
-        try:
-            return self.images[target]
-        except KeyError:
-            raise shub_exceptions.NotFoundException(
-                "Could not find image for %s. Please define"
-                " it in your scrapinghub.yml." % target)
-
-
-def load_release_config():
-    """ shub.config.load_shub_config with replaced config class """
-    shub_config.ShubConfig = ReleaseConfig
-    return shub_config.load_shub_config()
-
-
 def get_project_dir():
     """ A helper to get project root dir.
         Used by init/build command to locate Dockerfile.
     """
     closest = shub_utils.closest_file('scrapinghub.yml')
     if not closest:
-        raise shub_exceptions.BadConfigException(
+        raise BadConfigException(
             "Not inside a project: scrapinghub.yml not found.")
     return os.path.dirname(closest)
 
@@ -125,7 +89,7 @@ def validate_connection_with_docker_daemon(client):
     try:
         client.version()
     except:
-        raise shub_exceptions.ShubException(DOCKER_UNAVAILABLE_MSG)
+        raise ShubException(DOCKER_UNAVAILABLE_MSG)
 
 
 def format_image_name(image_name, image_tag):
@@ -189,7 +153,7 @@ def store_status_url(status_url, limit):
 def load_status_url(status_id):
     """ Load status url from file by status_id"""
     if not os.path.isfile(STATUS_FILE_LOCATION):
-        raise shub_exceptions.NotFoundException(
+        raise NotFoundException(
             'Status file is not found at {}'.format(STATUS_FILE_LOCATION))
     data = _load_status_file(STATUS_FILE_LOCATION)
     # return latest status url if status id is not provided
@@ -199,7 +163,7 @@ def load_status_url(status_id):
                    .format(max_status_id))
         return data[max_status_id]
     if status_id not in data:
-        raise shub_exceptions.NotFoundException(
+        raise NotFoundException(
             "Status url with id {} is not found".format(status_id))
     return data[status_id]
 
@@ -213,10 +177,10 @@ def _load_status_file(path):
         try:
             data = yaml.safe_load(f)
         except yaml.YAMLError as exc:
-            raise shub_exceptions.BadConfigException(
+            raise BadConfigException(
                 "Error reading releases file:\n{}".format(exc))
     if not isinstance(data, dict):
-        raise shub_exceptions.BadConfigException(
+        raise BadConfigException(
             "Releases file has wrong format ({}).".format(data))
     return data
 

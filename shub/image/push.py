@@ -2,6 +2,7 @@ import click
 
 from shub.deploy import list_targets
 from shub import exceptions as shub_exceptions
+from shub.config import load_shub_config
 from shub.image import utils
 
 SHORT_HELP = 'Push an image to a specified docker registry'
@@ -37,7 +38,7 @@ def cli(target, debug, version, username, password, email, apikey, insecure):
 
 def push_cmd(target, version, username, password, email, apikey, insecure):
     client = utils.get_docker_client()
-    config = utils.load_release_config()
+    config = load_shub_config()
     image = config.get_image(target)
     username, password = utils.get_credentials(
         username=username, password=password, insecure=insecure,

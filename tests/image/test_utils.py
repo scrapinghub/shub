@@ -7,15 +7,12 @@ from unittest import TestCase
 import mock
 import click
 import pytest
-from shub import exceptions as shub_exceptions
+from shub.exceptions import BadConfigException, NotFoundException
 
 from shub.image.utils import get_project_dir
 from shub.image.utils import get_docker_client
 from shub.image.utils import format_image_name
 from shub.image.utils import get_credentials
-
-from shub.image.utils import ReleaseConfig
-from shub.image.utils import load_release_config
 
 from shub.image.utils import store_status_url
 from shub.image.utils import load_status_url
@@ -27,8 +24,7 @@ from .utils import FakeProjectDirectory, add_sh_fake_config
 class ReleaseUtilsTest(TestCase):
 
     def test_get_project_dir(self):
-        self.assertRaises(
-            shub_exceptions.BadConfigException, get_project_dir)
+        self.assertRaises(BadConfigException, get_project_dir)
         with FakeProjectDirectory() as tmpdir:
             add_sh_fake_config(tmpdir)
             assert get_project_dir() == tmpdir
@@ -97,43 +93,6 @@ class ReleaseUtilsTest(TestCase):
         assert get_credentials(target_apikey='tapikey') == ('tapikey', ' ')
 
 
-class ReleaseConfigTest(TestCase):
-
-    def test_init(self):
-        config = ReleaseConfig()
-        assert hasattr(config, 'images')
-        assert config.images == {}
-
-    def test_load(self):
-        config = ReleaseConfig()
-        stream = StringIO(
-            'projects:\n  dev: 123\n  prod: 321\n'
-            'images:\n  dev: registry/user/project\n  prod: user/project\n'
-            'endpoints:\n  dev: http://127.0.0.1/api/scrapyd/\n'
-            'apikeys:\n  default: abcde\n'
-            'version: GIT')
-        config.load(stream)
-        assert getattr(config, 'projects') == {'dev': 123, 'prod': 321}
-        assert getattr(config, 'endpoints') == {
-            'default': 'https://app.scrapinghub.com/api/',
-            'dev': 'http://127.0.0.1/api/scrapyd/'}
-        assert config.images == {
-            'dev': 'registry/user/project',
-            'prod': 'user/project'}
-        assert getattr(config, 'apikeys') == {'default': 'abcde'}
-        assert getattr(config, 'version') == 'GIT'
-
-    def test_get_image(self):
-        config = ReleaseConfig()
-        config.images = {'dev': 'registry/user/project'}
-        self.assertRaises(shub_exceptions.NotFoundException,
-                          config.get_image, 'test')
-        assert config.get_image('dev') == 'registry/user/project'
-
-    def test_load_release_config(self):
-        assert isinstance(load_release_config(), ReleaseConfig)
-
-
 class StatusUrlsTest(TestCase):
 
     def setUp(self):
@@ -144,17 +103,14 @@ class StatusUrlsTest(TestCase):
             os.remove(self.status_file)
 
     def test_load_status_url(self):
-        self.assertRaises(shub_exceptions.NotFoundException,
-                          load_status_url, 0)
+        self.assertRaises(NotFoundException, load_status_url, 0)
         # try with void file
         open(self.status_file, 'a').close()
-        self.assertRaises(shub_exceptions.BadConfigException,
-                          load_status_url, 0)
+        self.assertRaises(BadConfigException, load_status_url, 0)
         # try with data
         with open(self.status_file, 'w') as f:
             f.write('1: http://link1\n2: https://link2\n')
-        self.assertRaises(shub_exceptions.NotFoundException,
-                          load_status_url, 0)
+        self.assertRaises(NotFoundException, load_status_url, 0)
         assert load_status_url(1) == 'http://link1'
         assert load_status_url(2) == 'https://link2'
 

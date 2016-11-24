@@ -14,9 +14,10 @@ class TestUploadCli(TestCase):
         result = runner.invoke(
             cli, ["dev", "-d", "--version", "test",
                   "--username", "user", "--password", "pass",
-                  "--email", "mail", "--async", "--apikey", "apikey"])
+                  "--email", "mail", "--async", "--apikey", "apikey",
+                  "--skip-tests"])
         assert result.exit_code == 0
-        build.assert_called_with('dev', 'test')
+        build.assert_called_with('dev', 'test', True)
         push.assert_called_with(
             'dev', 'test', 'user', 'pass', 'mail', "apikey", False)
         deploy.assert_called_with(

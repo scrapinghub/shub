@@ -7,6 +7,7 @@ from shub import exceptions as shub_exceptions
 from shub.deploy import list_targets
 from shub.deploy import _create_default_setup_py
 from shub.utils import closest_file, get_config
+from shub.config import load_shub_config
 from shub.image import utils
 from shub.image import test as test_mod
 
@@ -41,7 +42,7 @@ def cli(target, debug, version, skip_tests):
 def build_cmd(target, version, skip_tests):
     client = utils.get_docker_client()
     project_dir = utils.get_project_dir()
-    config = utils.load_release_config()
+    config = load_shub_config()
     image = config.get_image(target)
     _create_setup_py_if_not_exists()
     image_name = utils.format_image_name(image, version)

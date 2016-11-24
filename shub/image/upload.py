@@ -28,9 +28,10 @@ Obviously it accepts all the options for the commands above.
 @click.option("--apikey", help="SH apikey to use built-in registry")
 @click.option("--insecure", is_flag=True, help="use insecure registry")
 @click.option("--async", is_flag=True, help="enable asynchronous mode")
+@click.option("-S", "--skip-tests", help="skip testing image", is_flag=True)
 def cli(target, debug, version, username, password, email,
-        apikey, insecure, async):
-    build.build_cmd(target, version)
+        apikey, insecure, async, skip_tests):
+    build.build_cmd(target, version, skip_tests)
     push.push_cmd(target, version, username, password, email, apikey, insecure)
     deploy.deploy_cmd(target, version, username, password, email,
                       apikey, insecure, async)

@@ -34,6 +34,7 @@ class ShubConfig(object):
         self.stacks = {}
         self.requirements_file = None
         self.eggs = []
+        self.images = {}
 
     def _check_endpoints(self):
         """Check the endpoints. Send warnings if necessary."""
@@ -64,7 +65,7 @@ class ShubConfig(object):
             yaml_cfg = yaml.safe_load(stream)
             if not yaml_cfg:
                 return
-            for option in ('projects', 'endpoints', 'apikeys', 'stacks'):
+            for option in ('projects', 'endpoints', 'apikeys', 'stacks', 'images'):
                 getattr(self, option).update(yaml_cfg.get(option, {}))
             self.version = yaml_cfg.get('version', self.version)
             self.requirements_file = yaml_cfg.get('requirements_file',
@@ -134,6 +135,7 @@ class ShubConfig(object):
             yml['apikeys'] = self.apikeys
             yml['version'] = self.version
             yml['stacks'] = self.stacks
+            yml['images'] = self.images
             if self.eggs:
                 yml.setdefault('requirements', {})['eggs'] = self.eggs
             if self.requirements_file:
@@ -257,6 +259,14 @@ class ShubConfig(object):
 
     def get_apikey(self, target, required=True):
         return self.get_target_conf(target, auth_required=required).apikey
+
+    def get_image(self, target):
+        """Return image for a given target."""
+        if target not in self.images:
+            raise NotFoundException("Could not find image for %s. Please "
+                                    "define it in your scrapinghub.yml."
+                                    "" % target)
+        return self.images[target]
 
 
 Target = namedtuple('Target', ['project_id', 'endpoint', 'apikey', 'stack',

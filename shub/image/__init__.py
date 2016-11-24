@@ -2,8 +2,8 @@ import click
 import importlib
 
 
-@click.group(help="Release project with Docker")
-def image_cli():
+@click.group(help="Manage project based on custom Docker image")
+def cli():
     pass
 
 
@@ -21,4 +21,4 @@ module_deps = [
 for command in module_deps:
     module_path = "shub.image." + command
     command_module = importlib.import_module(module_path)
-    image_cli.add_command(command_module.cli, command)
+    cli.add_command(command_module.cli, command)
