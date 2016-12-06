@@ -24,7 +24,11 @@ import click
 import pip
 import requests
 
-from hubstorage import HubstorageClient
+try:
+    from scrapinghub import HubstorageClient
+except ImportError:
+    # scrapinghub < 1.9.0
+    from hubstorage import HubstorageClient
 
 import shub
 from shub.compat import to_native_str
