@@ -475,12 +475,12 @@ def job_resource_iter(job, resource, output_json=False, follow=True,
             yield item
         return
     while True:
-        for item in resource_iter(startafter=last_item_key):
-            yield item
-            if output_json:
-                last_item_key = json.loads(item)['_key']
-            else:
-                last_item_key = item['_key']
+        # XXX: Always use iter_json until Kumo team fixes iter_values to also
+        # return '_key'
+        for json_line in resource.iter_json(startafter=last_item_key):
+            item = json.loads(json_line)
+            last_item_key = item['_key']
+            yield json_line if output_json else item
         if not job_live(job):
             break
         # Workers only upload data to hubstorage every 15 seconds

@@ -3,6 +3,7 @@
 
 
 from __future__ import absolute_import
+import json
 import os
 import stat
 import sys
@@ -189,7 +190,7 @@ class UtilsTest(unittest.TestCase):
         job.metadata = {'state': 'running'}
 
         def make_items(iterable):
-            return [{'_key': x} for x in iterable]
+            return [json.dumps({'_key': x}) for x in iterable]
 
         def magic_iter(*args, **kwargs):
             """
@@ -217,9 +218,10 @@ class UtilsTest(unittest.TestCase):
                 job.resource,
                 follow=follow,
                 tail=tail,
+                output_json=True,
             ))
 
-        job.resource.iter_values = magic_iter
+        job.resource.iter_json = magic_iter
 
         magic_iter.stage = 0
         self.assertEqual(jri_result(False), make_items([1, 2, 3]))
