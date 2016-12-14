@@ -1,11 +1,11 @@
 from __future__ import absolute_import
-from setuptools import setup
+from setuptools import setup, find_packages
 
 
 setup(
     name='shub',
     version='2.4.2',
-    packages=['shub'],
+    packages=find_packages(exclude=('tests', 'tests.*')),
     url='http://doc.scrapinghub.com/shub.html',
     description='Scrapinghub Command Line Client',
     long_description=open('README.rst').read(),
