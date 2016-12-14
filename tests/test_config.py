@@ -39,6 +39,9 @@ VALID_YAML_CFG = """
         otheruser: otherkey
     stacks:
         dev: scrapy:v1.1
+    images:
+        dev: registry/user/project
+        prod: user/project
     requirements:
         eggs:
           - ./egg1.egg
@@ -112,6 +115,9 @@ class ShubConfigTest(unittest.TestCase):
         self.assertEqual(apikeys, self.conf.apikeys)
         stacks = {'dev': 'scrapy:v1.1'}
         self.assertEqual(stacks, self.conf.stacks)
+        images = {'dev': 'registry/user/project',
+                  'prod': 'user/project'}
+        self.assertEqual(images, self.conf.images)
         self.assertEqual('requirements.txt', self.conf.requirements_file)
 
     def test_load_partial(self):
@@ -126,6 +132,7 @@ class ShubConfigTest(unittest.TestCase):
         self.assertDictContainsSubset(endpoints, conf.endpoints)
         self.assertEqual(conf.projects, {})
         self.assertEqual(conf.apikeys, {})
+        self.assertEqual(conf.images, {})
         # Assert no exception raised on empty file
         conf = self._get_conf_with_yml("")
 
@@ -327,6 +334,10 @@ class ShubConfigTest(unittest.TestCase):
                          self.conf.get_project('456'))
         self.assertEqual(self.conf.get_project('externalproj'),
                          self.conf.get_project('external/123'))
+
+    def test_get_image(self):
+        self.assertRaises(NotFoundException, self.conf.get_image, 'test')
+        assert self.conf.get_image('dev') == 'registry/user/project'
 
     def test_get_target_conf(self):
         self.assertEqual(

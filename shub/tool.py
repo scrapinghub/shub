@@ -45,6 +45,7 @@ commands = [
     "requests",
     "copy_eggs",
     "migrate_eggs",
+    "image",
 ]
 
 for command in commands:

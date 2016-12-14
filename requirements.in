@@ -1,6 +1,8 @@
 click
+docker-py
 PyYAML
 requests
+retrying
 six
 
 hubstorage

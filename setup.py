@@ -20,7 +20,7 @@ setup(
     include_package_data=True,
     zip_safe=False,
     install_requires=['click', 'hubstorage', 'pip', 'requests', 'PyYAML',
-                      'scrapinghub', 'six'],
+                      'scrapinghub', 'six', 'docker-py', 'retrying'],
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
@@ -35,6 +35,4 @@ setup(
         'Environment :: Console',
         'Topic :: Internet :: WWW/HTTP',
     ],
-    test_suite='tests',
-    tests_require=['mock']
 )
