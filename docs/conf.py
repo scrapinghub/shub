@@ -14,15 +14,18 @@
 
 import os
 from datetime import datetime
-from shub import __version__
 
-YEAR = datetime.now().year
-VERSION = __version__.rsplit('.', 1)[0]
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
+import sys
+sys.path.insert(0, os.path.abspath('..'))
+
+
+from shub import __version__  # noqa
+
+YEAR = datetime.now().year
+VERSION = __version__.rsplit('.', 1)[0]
 
 # -- General configuration ------------------------------------------------
 
