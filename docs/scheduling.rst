@@ -12,7 +12,7 @@ where ``SPIDER`` should match the spider's name. By default, shub will schedule
 the spider in your default project (as defined in ``scrapinghub.yml``). You may
 also explicitly specify the project to use::
 
-    shub schedule prod/SPIDER
+    shub schedule project_alias_or_id/SPIDER
 
 You can supply spider arguments and job-specific settings through the ``-a``
 and ``-s`` options::

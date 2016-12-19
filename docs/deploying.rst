@@ -22,16 +22,8 @@ your ``scrapinghub.yml``, you can leave out the parameter completely::
     {"status": "ok", "project": 12345, "version": "3af023e-master", "spiders": 1}
     Run your spiders at: https://app.scrapinghub.com/p/12345/
 
-::
-
-    $ shub deploy prod --version 1.0.0
-    Packing version 1.0.0
-    Deploying to Scrapy Cloud project "33333"
-    {"status": "ok", "project": 33333, "version": "1.0.0", "spiders": 1}
-    Run your spiders at: https://app.scrapinghub.com/p/33333/
-
-Run ``shub deploy -l`` to see a list of all available targets. You can also
-deploy your project from a Python egg, or build one without deploying::
+You can also deploy your project from a Python egg, or build one without
+deploying::
 
     $ shub deploy --egg egg_name --version 1.0.0
     Using egg: egg_name
@@ -61,9 +53,9 @@ requirements file::
     requirements:
       file: requirements.txt
 
-Note that this requirements file is an *extension* of the Scrapy Cloud stack, and
-therefore should not contain packages that are already part of the stack, such
-as ``scrapy``.
+Note that this requirements file is an *extension* of the `Scrapy Cloud
+stack`_, and therefore should not contain packages that are already part of the
+stack, such as ``scrapy``.
 
 When your dependencies cannot be specified in a requirements file, e.g.
 because they are not publicly available, you can supply them as Python eggs::
@@ -79,6 +71,10 @@ because they are not publicly available, you can supply them as Python eggs::
       eggs:
         - privatelib.egg
         - path/to/otherlib.egg
+
+Alternatively, if you cannot or don't want to supply Python eggs, you can also
+build your own Docker image to be used on Scrapy Cloud. See
+:ref:`deploy-custom-image`.
 
 
 Choosing a Scrapy Cloud stack

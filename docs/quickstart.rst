@@ -48,26 +48,15 @@ can deploy it to Scrapy Cloud via::
 
 On the first call, this will guide you through a wizard to save your project ID
 into a YAML file named ``scrapinghub.yml``, living next to your ``scrapy.cfg``.
-For advanced uses, you can even define aliases for multiple project IDs there::
-
-    # project_directory/scrapinghub.yml
-    projects:
-      default: 12345
-      prod: 33333
-
-From anywhere within the project directory tree, you can now deploy via
-``shub deploy`` (to project 12345) or ``shub deploy prod`` (to project 33333).
-
-You can also directly supply the Scrapinghub project ID, e.g.::
-
-    shub deploy 12345
+From anywhere within the project directory tree, you can now deploy via ``shub
+deploy``.
 
 Next, schedule one of your spiders to run on Scrapy Cloud::
 
     shub schedule myspider
 
-(or ``shub schedule prod/myspider``). You can watch its log or the scraped
-items while the spider is running by supplying the job ID::
+You can watch its log or the scraped items while the spider is running by
+supplying the job ID::
 
     shub log -f 2/34
     shub items -f 2/34
