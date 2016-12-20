@@ -183,6 +183,36 @@ class DeployFilesTest(unittest.TestCase):
                 'No such file or directory ./requirements.txt',
             )
 
+    def test_egg_glob_pattern(self):
+        with self.runner.isolated_filesystem():
+            with open('./main.egg', 'w') as f:
+                f.write('main content')
+            with open('./a1.egg', 'w') as f:
+                f.write('a1.egg content')
+            with open('./a2.egg', 'w') as f:
+                f.write('a2.egg content')
+            with open('./b3.egg', 'w') as f:
+                f.write('b3.egg content')
+            files_a = self._deploy(eggs=['./a*.egg'], req=None)
+            files_c = self._deploy(eggs=['./c*.egg'], req=None)
+            files_all = self._deploy(eggs=['./*.egg'], req=None)
+            files_main = self._deploy(eggs=['./main.egg', './*.egg'], req=None)
+
+        self.assertEqual(len(files_a['eggs']), 2)
+        self.assertIn('a1.egg content', files_a['eggs'])
+        self.assertIn('a2.egg content', files_a['eggs'])
+        self.assertNotIn('eggs', files_c)
+
+        # main egg should not be added to eggs even it it matches glob pattern
+        self.assertEqual(len(files_all['eggs']), 3)
+        self.assertIn('a1.egg content', files_all['eggs'])
+        self.assertIn('a2.egg content', files_all['eggs'])
+        self.assertIn('b3.egg content', files_all['eggs'])
+
+        # but do upload the main egg if it's directly requested
+        self.assertEqual(len(files_main['eggs']), 4)
+        self.assertIn('main content', files_main['eggs'])
+
 
 if __name__ == '__main__':
     unittest.main()
