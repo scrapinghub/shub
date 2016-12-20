@@ -3,21 +3,22 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to shub.image's documentation!
-======================================
+Welcome to shub's documentation!
+================================
 
-Contents:
+``shub`` is the Scrapinghub command line client. It allows you to deploy
+projects or dependencies, schedule spiders, and retrieve scraped data or logs
+without leaving the command line.
+
+Contents
+--------
 
 .. toctree::
    :maxdepth: 2
 
+   quickstart
+   configuration
+   deploying
+   scheduling
    deploy-custom-image
    custom-images-contract
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-

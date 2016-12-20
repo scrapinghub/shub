@@ -14,15 +14,18 @@
 
 import os
 from datetime import datetime
-from shub import __version__
 
-YEAR = datetime.now().year
-VERSION = __version__.rsplit('.', 1)[0]
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-# import sys
-# sys.path.insert(0, os.path.abspath('.'))
+import sys
+sys.path.insert(0, os.path.abspath('..'))
+
+
+from shub import __version__  # noqa
+
+YEAR = datetime.now().year
+VERSION = __version__.rsplit('.', 1)[0]
 
 # -- General configuration ------------------------------------------------
 
@@ -49,7 +52,7 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'shub.image'
+project = u'shub'
 copyright = u'{}, Scrapinghub'.format(YEAR)
 author = u'Scrapinghub'
 
@@ -203,7 +206,7 @@ html_static_path = ['_static']
 # html_search_scorer = 'scorer.js'
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'shub.imagedoc'
+htmlhelp_basename = 'shubdoc'
 
 # -- Options for LaTeX output ---------------------------------------------
 
@@ -225,7 +228,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  (master_doc, 'shub.image.tex', u'shub.image Documentation',
+  (master_doc, 'shub.tex', u'shub Documentation',
    u'Scrapinghub', 'manual'),
 ]
 
@@ -255,7 +258,7 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    (master_doc, 'shub.image', u'shub.image Documentation',
+    (master_doc, 'shub', u'shub Documentation',
      [author], 1)
 ]
 
@@ -269,8 +272,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  (master_doc, 'shub.image', u'shub.image Documentation',
-   author, 'shub.image', 'One line description of project.',
+  (master_doc, 'shub', u'shub Documentation',
+   author, 'shub', 'One line description of project.',
    'Miscellaneous'),
 ]
 
