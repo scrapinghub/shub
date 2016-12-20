@@ -139,7 +139,7 @@ def _url(endpoint, action):
 
 def _upload_egg(endpoint, eggpath, project, version, auth, verbose, keep_log,
                 stack=None, requirements_file=None, eggs=None):
-    eggs = eggs or []
+    eggs = [i for sl in (glob.glob(e) for e in eggs or []) for i in sl]
     data = {'project': project, 'version': version}
     if stack:
         data['stack'] = stack
