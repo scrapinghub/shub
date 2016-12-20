@@ -139,13 +139,25 @@ def _url(endpoint, action):
 
 def _upload_egg(endpoint, eggpath, project, version, auth, verbose, keep_log,
                 stack=None, requirements_file=None, eggs=None):
-    eggs = eggs or []
+    expanded_eggs = []
+    for e in (eggs or []):
+        # Expand glob patterns, but make sure we don't swallow non-existing
+        # eggs that were directly named
+        # (glob.glob('non_existing_file') returns [])
+        if any(['*' in e, '?' in e, '[' in e and ']' in e]):
+            # Never match the main egg
+            expanded_eggs.extend(
+                [x for x in glob.glob(e)
+                 if os.path.abspath(x) != os.path.abspath(eggpath)])
+        else:
+            expanded_eggs.append(e)
+
     data = {'project': project, 'version': version}
     if stack:
         data['stack'] = stack
 
     try:
-        files = [('eggs', open(path, 'rb')) for path in eggs]
+        files = [('eggs', open(path, 'rb')) for path in expanded_eggs]
         if requirements_file:
             files.append(('requirements', open(requirements_file, 'rb')))
     except IOError as e:
