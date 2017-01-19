@@ -70,10 +70,14 @@ def _check_image_exists(image_name, docker_client):
 def _check_sh_entrypoint(image_name, docker_client):
     """Check that the image has scrapinghub-entrypoint-scrapy pkg"""
     status, logs = _run_docker_command(
-        docker_client, image_name,
-        ['pip', 'show', 'scrapinghub-entrypoint-scrapy'])
-    if status != 0 or not logs:
-        raise shub_exceptions.NotFoundException(SH_EP_SCRAPY_WARNING)
+        docker_client, image_name, ['pip', 'show', 'Scrapy'])
+    # doesn't make sense to check sh-ep-scrapy if there's no Scrapy
+    if status == 0 and logs:
+        status, logs = _run_docker_command(
+            docker_client, image_name,
+            ['pip', 'show', 'scrapinghub-entrypoint-scrapy'])
+        if status != 0 or not logs:
+            raise shub_exceptions.NotFoundException(SH_EP_SCRAPY_WARNING)
 
 
 def _check_list_spiders_entry(image_name, docker_client):
@@ -99,10 +103,13 @@ def _check_start_crawl_entry(image_name, docker_client):
 def _run_docker_command(client, image_name, command):
     """A helper to execute an arbitrary cmd with given docker image"""
     container = client.create_container(image=image_name, command=command)
-    client.start(container)
-    statuscode = client.wait(container=container['Id'])
-    logs = client.logs(container=container['Id'], stdout=True,
-                       stderr=True if statuscode else False,
-                       stream=False, timestamps=False)
-    utils.debug_log("{} results:\n{}".format(command, logs))
-    return statuscode, logs
+    try:
+        client.start(container)
+        statuscode = client.wait(container=container['Id'])
+        logs = client.logs(container=container['Id'], stdout=True,
+                           stderr=True if statuscode else False,
+                           stream=False, timestamps=False)
+        utils.debug_log("{} results:\n{}".format(command, logs))
+        return statuscode, logs
+    finally:
+        client.remove_container(container)
