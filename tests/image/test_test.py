@@ -7,7 +7,6 @@ from shub.image.test import cli
 from shub.image.test import _run_docker_command
 from shub.image.test import _check_image_exists
 from shub.image.test import _check_start_crawl_entry
-from shub.image.test import _check_sh_entrypoint
 
 from .utils import FakeProjectDirectory
 from .utils import add_sh_fake_config
@@ -46,30 +45,6 @@ def test_check_image_exists(monkeypatch, docker_client):
     docker_client.inspect_image.side_effect = MockedNotFound
     with pytest.raises(shub_exceptions.NotFoundException):
         _check_image_exists('image', docker_client)
-
-
-def test_check_sh_entrypoint(docker_client):
-    # scrapy/sh-ep-scrapy exists, everything is fine
-    assert _check_sh_entrypoint('image', docker_client) is None
-    docker_client.create_container.assert_has_calls([
-        mock.call(image='image', command=['pip', 'show', 'Scrapy']),
-        mock.call(image='image', command=[
-            'pip', 'show', 'scrapinghub-entrypoint-scrapy'])])
-
-    # scrapy is here, but no sh-ep-scrapy (failed command)
-    docker_client.wait.side_effect = [0, 1]
-    with pytest.raises(shub_exceptions.NotFoundException):
-        _check_sh_entrypoint('image', docker_client)
-    # scrapy is here, but no sh-ep-scrapy (no logs)
-    docker_client.wait.side_effect = [0, 0]
-    docker_client.logs.side_effect = ['some-log', '']
-    with pytest.raises(shub_exceptions.NotFoundException):
-        _check_sh_entrypoint('image', docker_client)
-
-    # no scrapy -> nothing to check
-    docker_client.wait.side_effect = [1, 0]
-    docker_client.logs.side_effect = ['error', 'logs']
-    _check_sh_entrypoint('image', docker_client)
 
 
 def test_start_crawl(docker_client):

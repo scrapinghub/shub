@@ -25,7 +25,7 @@ in its end (if you do not provide --skip-tests parameter explicitly).
 """
 
 SH_EP_SCRAPY_WARNING = \
-    'You should add scrapinghub-entrypoint-scrapy(>=0.7.0) dependency' \
+    'You should add scrapinghub-entrypoint-scrapy(>=0.8.0) dependency' \
     ' to your requirements.txt or to Dockerfile to run the image with' \
     ' Scrapy Cloud.'
 
@@ -49,8 +49,7 @@ def test_cmd(target, version):
     docker_client = utils.get_docker_client()
     for check in [_check_image_exists,
                   _check_start_crawl_entry,
-                  _check_list_spiders_entry,
-                  _check_sh_entrypoint]:
+                  _check_list_spiders_entry]:
         check(image_name, docker_client)
 
 
@@ -65,19 +64,6 @@ def _check_image_exists(image_name, docker_client):
         utils.debug_log("{}".format(exc))
         raise shub_exceptions.NotFoundException(
             "The image doesn't exist yet, please use build command at first.")
-
-
-def _check_sh_entrypoint(image_name, docker_client):
-    """Check that the image has scrapinghub-entrypoint-scrapy pkg"""
-    status, logs = _run_docker_command(
-        docker_client, image_name, ['pip', 'show', 'Scrapy'])
-    # doesn't make sense to check sh-ep-scrapy if there's no Scrapy
-    if status == 0 and logs:
-        status, logs = _run_docker_command(
-            docker_client, image_name,
-            ['pip', 'show', 'scrapinghub-entrypoint-scrapy'])
-        if status != 0 or not logs:
-            raise shub_exceptions.NotFoundException(SH_EP_SCRAPY_WARNING)
 
 
 def _check_list_spiders_entry(image_name, docker_client):
