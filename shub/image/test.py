@@ -20,12 +20,13 @@ the test command is also executed automatically as a part of build command
 in its end (if you do not provide -S/--skip-tests parameter explicitly).
 """
 
-CONTRACT_CMD_NOT_FOUND_WARNING = \
-    'Command %s is not found in the image. ' \
-    'Please make sure you provided it according to Scrapy Cloud contract ' \
-    '(https://shub.readthedocs.io/en/stable/custom-images-contract.html) ' \
-    'or added scrapinghub-entrypoint-scrapy>=0.8.0 to your requirements ' \
-    'file if you use Scrapy.'
+CONTRACT_CMD_NOT_FOUND_WARNING = (
+    'Command %s is not found in the image. '
+    'Please make sure you provided it according to Scrapy Cloud contract '
+    '(https://shub.readthedocs.io/en/stable/custom-images-contract.html) or '
+    'added scrapinghub-entrypoint-scrapy>=0.8.0 to your requirements file '
+    'if you use Scrapy.'
+)
 
 
 @click.command(help=HELP, short_help=SHORT_HELP)
