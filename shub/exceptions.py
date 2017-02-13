@@ -54,6 +54,11 @@ class BadParameterException(BadParameter):
     exit_code = 64  # EX_USAGE
 
 
+class SubcommandException(ShubException):
+    exit_code = 65  # EX_DATAERR
+    default_msg = "Error while calling subcommand."
+
+
 class RemoteErrorException(ShubException):
     exit_code = 76  # EX_PROTOCOL
     # Should be initialised with more specific message

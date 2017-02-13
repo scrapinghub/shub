@@ -2,14 +2,13 @@ from __future__ import absolute_import
 import os
 import tempfile
 
-from subprocess import Popen, PIPE
-
 import click
 
 from shub import utils
 from shub.config import get_target_conf
-from shub.exceptions import BadParameterException, NotFoundException
-from shub.utils import decompress_egg_files, download_from_pypi
+from shub.exceptions import (BadParameterException, NotFoundException,
+                             SubcommandException)
+from shub.utils import decompress_egg_files, download_from_pypi, run_cmd
 
 
 HELP = """
@@ -80,16 +79,24 @@ def _checkout(repo, git_branch=None):
     click.echo("Cloning the repository to a tmp folder...")
     os.chdir(tmpdir)
 
-    if (_run('git clone %s egg-tmp-clone' % repo) != 0 and
-            _run('hg clone %s egg-tmp-clone' % repo) != 0 and
-            _run('bzr branch %s egg-tmp-clone' % repo) != 0):
-        error = "\nERROR: The provided repository URL is not valid: %s\n"
-        raise BadParameterException(error % repo)
+    vcs_commands = [['git', 'clone'], ['hg', 'clone'], ['bzr', 'branch']]
+    for cmd in vcs_commands:
+        try:
+            run_cmd(cmd + [repo, 'egg-tmp-clone'])
+        except SubcommandException:
+            pass
+        else:
+            break
+    else:
+        raise BadParameterException(
+            "\nERROR: The provided repository URL is not valid: %s\n")
 
     os.chdir('egg-tmp-clone')
 
     if git_branch:
-        if _run('git checkout %s' % git_branch) != 0:
+        try:
+            run_cmd(['git', 'checkout', git_branch])
+        except SubcommandException:
             raise BadParameterException("Branch %s is not valid" % git_branch)
         click.echo("%s branch was checked out" % git_branch)
 
@@ -100,9 +107,3 @@ def _fetch_from_pypi(pkg):
     download_from_pypi(tmpdir, pkg=pkg)
     click.echo('Package fetched successfully')
     os.chdir(tmpdir)
-
-
-def _run(cmd):
-    p = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
-    p.communicate()
-    return p.returncode
