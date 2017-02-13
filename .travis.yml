@@ -10,6 +10,8 @@ env:
 
 matrix:
   include:
+    - python: 3.6
+      env: TOX_ENV=py36
     - os: osx
       # Using "generic" because osx in Travis doesn't support python
       language: generic
