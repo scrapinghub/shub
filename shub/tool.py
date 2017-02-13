@@ -21,8 +21,11 @@ For usage and help on a specific command, run it with a --help flag, e.g.:
     shub schedule --help
 """
 
+CONTEXT_SETTINGS = {'help_option_names': ['-h', '--help']}
 
-@click.group(help=HELP, short_help=SHORT_HELP, epilog=EPILOG)
+
+@click.group(help=HELP, short_help=SHORT_HELP, epilog=EPILOG,
+             context_settings=CONTEXT_SETTINGS)
 @click.version_option(shub.__version__)
 def cli():
     update_url = update_available()
