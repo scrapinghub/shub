@@ -20,8 +20,9 @@ Obviously it accepts all the options for the commands above.
 @click.option("-l", "--list-targets", help="list available targets",
               is_flag=True, is_eager=True, expose_value=False,
               callback=list_targets)
-@click.option("-d", "--debug", help="debug mode", is_flag=True)
-@click.option("--version", help="release version")
+@click.option("-v", "--verbose", is_flag=True,
+              help="stream upload logs to console")
+@click.option("-V", "--version", help="release version")
 @click.option("--username", help="docker registry name")
 @click.option("--password", help="docker registry password")
 @click.option("--email", help="docker registry email")
@@ -29,7 +30,7 @@ Obviously it accepts all the options for the commands above.
 @click.option("--insecure", is_flag=True, help="use insecure registry")
 @click.option("--async", is_flag=True, help="enable asynchronous mode")
 @click.option("-S", "--skip-tests", help="skip testing image", is_flag=True)
-def cli(target, debug, version, username, password, email,
+def cli(target, verbose, version, username, password, email,
         apikey, insecure, async, skip_tests):
     build.build_cmd(target, version, skip_tests)
     push.push_cmd(target, version, username, password, email, apikey, insecure)

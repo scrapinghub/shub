@@ -28,7 +28,7 @@ class TestBuildCli(TestCase):
             setup_py_path = os.path.join(tmpdir, 'setup.py')
             assert not os.path.isfile(setup_py_path)
             runner = CliRunner()
-            result = runner.invoke(cli, ["dev", "-d"])
+            result = runner.invoke(cli, ["dev", "-v"])
             assert result.exit_code == 0
             mocked.build.assert_called_with(
                 decode=True, path=tmpdir, tag='registry/user/project:1.0')

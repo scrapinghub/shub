@@ -37,10 +37,10 @@ shub utils itself).
 @click.option("-l", "--list-targets", help="list available targets",
               is_flag=True, is_eager=True, expose_value=False,
               callback=list_targets)
-@click.option("-d", "--debug", help="debug mode", is_flag=True)
+@click.option("-v", "--verbose", is_flag=True, help="stream logs to console")
 @click.option("-s", "--silent", help="silent mode", is_flag=True)
-@click.option("--version", help="release version")
-def cli(target, debug, silent, version):
+@click.option("-V", "--version", help="release version")
+def cli(target, verbose, silent, version):
     list_cmd_full(target, silent, version)
 
 

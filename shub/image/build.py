@@ -32,10 +32,11 @@ shub utils itself).
 @click.option("-l", "--list-targets", help="list available targets",
               is_flag=True, is_eager=True, expose_value=False,
               callback=list_targets)
-@click.option("-d", "--debug", help="debug mode", is_flag=True)
-@click.option("--version", help="release version")
+@click.option("-v", "--verbose", is_flag=True,
+              help="stream build logs to console")
+@click.option("-V", "--version", help="release version")
 @click.option("-S", "--skip-tests", help="skip testing image", is_flag=True)
-def cli(target, debug, version, skip_tests):
+def cli(target, verbose, version, skip_tests):
     build_cmd(target, version, skip_tests)
 
 

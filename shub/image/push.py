@@ -25,14 +25,15 @@ otherwise you have to enter your credentials (at least username/password).
 @click.option("-l", "--list-targets", help="list available targets",
               is_flag=True, is_eager=True, expose_value=False,
               callback=list_targets)
-@click.option("-d", "--debug", help="debug mode", is_flag=True)
-@click.option("--version", help="release version")
+@click.option("-v", "--verbose", is_flag=True,
+              help="stream push logs to console")
+@click.option("-V", "--version", help="release version")
 @click.option("--username", help="docker registry name")
 @click.option("--password", help="docker registry password")
 @click.option("--email", help="docker registry email")
 @click.option("--apikey", help="SH apikey to use built-in registry")
 @click.option("--insecure", is_flag=True, help="use insecure registry")
-def cli(target, debug, version, username, password, email, apikey, insecure):
+def cli(target, verbose, version, username, password, email, apikey, insecure):
     push_cmd(target, version, username, password, email, apikey, insecure)
 
 

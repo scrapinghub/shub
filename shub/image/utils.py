@@ -32,7 +32,7 @@ You can learn about Docker at https://www.docker.com/.
 
 def debug_log(msg):
     ctx = click.get_current_context(True)
-    if ctx and ctx.params.get('debug'):
+    if ctx and ctx.params.get('verbose'):
         click.echo(msg)
 
 
