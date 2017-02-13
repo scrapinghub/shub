@@ -32,8 +32,16 @@ You can learn about Docker at https://www.docker.com/.
 
 def debug_log(msg):
     ctx = click.get_current_context(True)
-    if ctx and ctx.params.get('verbose'):
+    # FIXME remove check of debug param as it's deprecated
+    if ctx and (ctx.params.get('verbose') or ctx.params.get('debug')):
         click.echo(msg)
+
+
+def deprecate_debug_parameter(ctx, param, value):
+    if value:
+        click.echo("WARNING: -d/--debug parameter is deprecated. "
+                   "Please use -v/--verbose parameter instead.",
+                   err=True)
 
 
 @contextlib.contextmanager
