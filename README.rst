@@ -30,4 +30,4 @@ Documentation
 -------------
 
 Documentation is available online via Read the Docs:
-https://shub.readthedocs.io/en/latest/, or in the ``docs`` directory.
+https://shub.readthedocs.io/, or in the ``docs`` directory.
