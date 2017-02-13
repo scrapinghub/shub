@@ -12,22 +12,21 @@ A command to test an image after build step to make sure it fits contract.
 It consists of the following steps:
 
 1) check that image exists on local machine
-2) check that image has scrapinghub-entrypoint-scrapy python package
-3) check that image has start-crawl entrypoint
-4) check that image has list-spiders entrypoint
-
-These entrypoints are provided by scrapinghub-entrypoint-scrapy package,
-so the goal of the last checks is to validate the package version.
+2) check that image has start-crawl entrypoint
+3) check that image has list-spiders entrypoint
 
 If any of the checks fails - the test command fails as a whole. By default,
 the test command is also executed automatically as a part of build command
-in its end (if you do not provide --skip-tests parameter explicitly).
+in its end (if you do not provide -S/--skip-tests parameter explicitly).
 """
 
-SH_EP_SCRAPY_WARNING = \
-    'You should add scrapinghub-entrypoint-scrapy(>=0.7.0) dependency' \
-    ' to your requirements.txt or to Dockerfile to run the image with' \
-    ' Scrapy Cloud.'
+CONTRACT_CMD_NOT_FOUND_WARNING = (
+    'Command %s is not found in the image. '
+    'Please make sure you provided it according to Scrapy Cloud contract '
+    '(https://shub.readthedocs.io/en/stable/custom-images-contract.html) or '
+    'added scrapinghub-entrypoint-scrapy>=0.8.0 to your requirements file '
+    'if you use Scrapy.'
+)
 
 
 @click.command(help=HELP, short_help=SHORT_HELP)
@@ -49,8 +48,7 @@ def test_cmd(target, version):
     docker_client = utils.get_docker_client()
     for check in [_check_image_exists,
                   _check_start_crawl_entry,
-                  _check_list_spiders_entry,
-                  _check_sh_entrypoint]:
+                  _check_list_spiders_entry]:
         check(image_name, docker_client)
 
 
@@ -67,23 +65,13 @@ def _check_image_exists(image_name, docker_client):
             "The image doesn't exist yet, please use build command at first.")
 
 
-def _check_sh_entrypoint(image_name, docker_client):
-    """Check that the image has scrapinghub-entrypoint-scrapy pkg"""
-    status, logs = _run_docker_command(
-        docker_client, image_name,
-        ['pip', 'show', 'scrapinghub-entrypoint-scrapy'])
-    if status != 0 or not logs:
-        raise shub_exceptions.NotFoundException(SH_EP_SCRAPY_WARNING)
-
-
 def _check_list_spiders_entry(image_name, docker_client):
     """Check that the image has list-spiders entrypoint"""
     status, logs = _run_docker_command(
         docker_client, image_name, ['which', 'list-spiders'])
     if status != 0 or not logs:
         raise shub_exceptions.NotFoundException(
-            "list-spiders command is not found in the image.\n"
-            "Please upgrade your scrapinghub-entrypoint-scrapy(>=0.7.0)")
+            CONTRACT_CMD_NOT_FOUND_WARNING % 'list-spiders')
 
 
 def _check_start_crawl_entry(image_name, docker_client):
@@ -92,17 +80,19 @@ def _check_start_crawl_entry(image_name, docker_client):
         docker_client, image_name, ['which', 'start-crawl'])
     if status != 0 or not logs:
         raise shub_exceptions.NotFoundException(
-            "start-crawl command is not found in the image.\n"
-            + SH_EP_SCRAPY_WARNING)
+            CONTRACT_CMD_NOT_FOUND_WARNING % 'start-crawl')
 
 
 def _run_docker_command(client, image_name, command):
     """A helper to execute an arbitrary cmd with given docker image"""
     container = client.create_container(image=image_name, command=command)
-    client.start(container)
-    statuscode = client.wait(container=container['Id'])
-    logs = client.logs(container=container['Id'], stdout=True,
-                       stderr=True if statuscode else False,
-                       stream=False, timestamps=False)
-    utils.debug_log("{} results:\n{}".format(command, logs))
-    return statuscode, logs
+    try:
+        client.start(container)
+        statuscode = client.wait(container=container['Id'])
+        logs = client.logs(container=container['Id'], stdout=True,
+                           stderr=True if statuscode else False,
+                           stream=False, timestamps=False)
+        utils.debug_log("{} results:\n{}".format(command, logs))
+        return statuscode, logs
+    finally:
+        client.remove_container(container)

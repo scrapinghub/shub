@@ -7,7 +7,6 @@ from shub.image.test import cli
 from shub.image.test import _run_docker_command
 from shub.image.test import _check_image_exists
 from shub.image.test import _check_start_crawl_entry
-from shub.image.test import _check_sh_entrypoint
 
 from .utils import FakeProjectDirectory
 from .utils import add_sh_fake_config
@@ -48,21 +47,6 @@ def test_check_image_exists(monkeypatch, docker_client):
         _check_image_exists('image', docker_client)
 
 
-def test_check_sh_entrypoint(docker_client):
-    assert _check_sh_entrypoint('image', docker_client) is None
-    docker_client.create_container.assert_called_with(
-        image='image',
-        command=['pip', 'show', 'scrapinghub-entrypoint-scrapy'])
-    docker_client.wait.return_value = 1
-    with pytest.raises(shub_exceptions.NotFoundException):
-        _check_sh_entrypoint('image', docker_client)
-
-    docker_client.wait.return_value = 0
-    docker_client.logs.return_value = ''
-    with pytest.raises(shub_exceptions.NotFoundException):
-        _check_sh_entrypoint('image', docker_client)
-
-
 def test_start_crawl(docker_client):
     assert _check_start_crawl_entry('image', docker_client) is None
     docker_client.create_container.assert_called_with(
@@ -88,3 +72,4 @@ def test_run_docker_command(docker_client):
     docker_client.logs.assert_called_with(
         container='12345', stdout=True, stderr=False,
         stream=False, timestamps=False)
+    docker_client.remove_container.assert_called_with({'Id': '12345'})
