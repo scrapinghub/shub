@@ -13,7 +13,7 @@ class TestListCli(TestCase):
 
     def test_cli_no_sh_config(self):
         runner = CliRunner()
-        result = runner.invoke(cli, ["dev", "-d", "--version", "test"])
+        result = runner.invoke(cli, ["dev", "-v", "--version", "test"])
         assert result.exit_code == 69
         assert 'Could not find image for dev' in result.output
 
@@ -49,7 +49,7 @@ class TestListCli(TestCase):
         with FakeProjectDirectory() as tmpdir:
             add_sh_fake_config(tmpdir)
             runner = CliRunner()
-            result = runner.invoke(cli, ["dev", "-d", "--version", "test"])
+            result = runner.invoke(cli, ["dev", "-v", "--version", "test"])
             assert result.exit_code == 1
             assert 'list cmd exited with code 66' in result.output
 
@@ -70,7 +70,7 @@ class TestListCli(TestCase):
             add_sh_fake_config(tmpdir)
             runner = CliRunner()
             result = runner.invoke(cli, [
-                "dev", "-d", "-s", "--version", "test"])
+                "dev", "-v", "-s", "--version", "test"])
             assert result.exit_code == 0
             assert result.output.endswith('abc\ndef\ndsd\n')
         get_mocked.assert_called_with(

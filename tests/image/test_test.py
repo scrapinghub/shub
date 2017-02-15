@@ -34,7 +34,7 @@ def test_test_cli(monkeypatch, docker_client):
         add_sh_fake_config(tmpdir)
         runner = CliRunner()
         result = runner.invoke(
-            cli, ["dev", "-d", "--version", "test"])
+            cli, ["dev", "-v", "--version", "test"])
         assert result.exit_code == 0
 
 

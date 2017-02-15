@@ -12,7 +12,7 @@ class TestUploadCli(TestCase):
     def test_cli(self, build, push, deploy):
         runner = CliRunner()
         result = runner.invoke(
-            cli, ["dev", "-d", "--version", "test",
+            cli, ["dev", "-v", "--version", "test",
                   "--username", "user", "--password", "pass",
                   "--email", "mail", "--async", "--apikey", "apikey",
                   "--skip-tests"])
