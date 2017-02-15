@@ -25,7 +25,7 @@ branches:
 
 install:
   - "./.travis-workarounds.sh"
-  - '[ "$TRAVIS_OS_NAME" != osx ] || source ~/virtualenv/python2.7/bin/activate'
+  - '[ "$TRAVIS_OS_NAME" != osx ] || source ~/virtualenv/python3.5/bin/activate'
   - pip install -U tox twine wheel codecov
 
 script: tox -e $TOX_ENV
