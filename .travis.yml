@@ -10,6 +10,8 @@ env:
 
 matrix:
   include:
+    - python: 3.6
+      env: TOX_ENV=py36
     - os: osx
       # Using "generic" because osx in Travis doesn't support python
       language: generic
@@ -23,7 +25,7 @@ branches:
 
 install:
   - "./.travis-workarounds.sh"
-  - '[ "$TRAVIS_OS_NAME" != osx ] || source ~/virtualenv/python2.7/bin/activate'
+  - '[ "$TRAVIS_OS_NAME" != osx ] || source ~/virtualenv/python3.5/bin/activate'
   - pip install -U tox twine wheel codecov
 
 script: tox -e $TOX_ENV

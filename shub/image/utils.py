@@ -145,7 +145,7 @@ def store_status_url(status_url, limit):
     status_id = max(data.keys()) + 1
     data[status_id] = status_url
     if len(data) > limit:
-        data.popitem()
+        del data[min(data.keys())]
     _update_status_file(data, STATUS_FILE_LOCATION)
     return status_id
 

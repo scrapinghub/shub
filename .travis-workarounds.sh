@@ -14,17 +14,10 @@ fi
 if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
     brew update > /dev/null
 
-    brew reinstall python
-
-    # Now easy_install and pip are in /usr/local we need to force link
-    brew unlink python && brew link --overwrite python
+    brew install zoidbergwill/python/python35
 
     PATH="/usr/local/bin:$PATH"
 
     # Use brew python for virtualenv
-    /usr/local/bin/virtualenv -p /usr/local/bin/python ~/virtualenv/python2.7
-
+    /usr/local/bin/virtualenv -p /usr/local/bin/python3.5 ~/virtualenv/python3.5
 fi
-
-# Workaround travis-ci/travis-ci#2065
-pip install -U wheel
