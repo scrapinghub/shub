@@ -98,7 +98,7 @@ def deploy_cmd(target, version, username, password, email,
         status_url, limit=STORE_N_LAST_STATUS_URLS)
     click.echo(
         "You can check deploy results later with "
-        "'shub-image check --id {}'.".format(status_id))
+        "'shub image check --id {}'.".format(status_id))
 
     click.echo("Deploy results:")
     actual_state = _check_status_url(status_url)

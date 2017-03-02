@@ -51,7 +51,7 @@ def build_cmd(target, version, skip_tests):
     image_name = utils.format_image_name(image, version)
     if not os.path.exists(os.path.join(project_dir, 'Dockerfile')):
         raise shub_exceptions.BadParameterException(
-            'Dockerfile is not found, please use shub-image init cmd')
+            "Dockerfile is not found, please use shub image 'init' command")
     is_built = False
     for data in client.build(path=project_dir, tag=image_name, decode=True):
         if 'stream' in data:
