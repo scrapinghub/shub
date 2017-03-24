@@ -28,7 +28,13 @@ This will create a Dockerfile for your container including ``requirements.txt`` 
 
 In this case, it will use the image available at https://hub.docker.com/r/scrapinghub/base tagged with ``12.04``.
 
-.. warning:: Make sure to include `scrapinghub-entrypoint-scrapy <https://pypi.python.org/pypi/scrapinghub-entrypoint-scrapy>`_ in your requirements.txt file. It is a support layer to pass all the job data to Scrapy inside a Mesos task. If you ignore this, your Scrapy projects won't work at Scrapy Cloud 2.0.
+.. warning:: If you want to use Scrapy in the custom Docker image you may want to include
+    `scrapinghub-entrypoint-scrapy`_ in your requirements.txt file.
+    It is a support layer that passes data from the job to Scrapinghub storage.
+    Otherwise you will need to send data to Scrapinghub storage using `HTTP API`__.
+
+.. _scrapinghub-entrypoint-scrapy: https://pypi.python.org/pypi/scrapinghub-entrypoint-scrapy
+__ https://doc.scrapinghub.com/scrapy-cloud.html#storage-scrapinghub-com
 
 2. Define your target image
 ---------------------------
