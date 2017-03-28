@@ -91,4 +91,4 @@ the ``projects`` section of your configuration::
         stack: scrapy:1.1-py3
       prod: 33333  # will use the original stack
 
-.. _`Scrapy Cloud stack`: http://doc.scrapinghub.com/scrapy-cloud.html#using-stacks
+.. _`Scrapy Cloud stack`: http://help.scrapinghub.com/scrapy-cloud/scrapy-cloud-stacks
