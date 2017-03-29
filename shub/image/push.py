@@ -4,6 +4,7 @@ from shub.deploy import list_targets
 from shub import exceptions as shub_exceptions
 from shub.config import load_shub_config
 from shub.image import utils
+from shub.image import test as test_cmd
 
 SHORT_HELP = 'Push an image to a specified docker registry'
 
@@ -30,17 +31,22 @@ otherwise you have to enter your credentials (at least username/password).
 @click.option("-v", "--verbose", is_flag=True,
               help="stream push logs to console")
 @click.option("-V", "--version", help="release version")
+@click.option("-S", "--skip-tests", help="skip testing image", is_flag=True)
 @click.option("--username", help="docker registry name")
 @click.option("--password", help="docker registry password")
 @click.option("--email", help="docker registry email")
 @click.option("--apikey", help="SH apikey to use built-in registry")
 @click.option("--insecure", is_flag=True, help="use insecure registry")
 def cli(target, debug, verbose, version, username, password, email, apikey,
-        insecure):
-    push_cmd(target, version, username, password, email, apikey, insecure)
+        insecure, skip_tests):
+    push_cmd(target, version, username, password, email, apikey, insecure, skip_tests)
 
 
-def push_cmd(target, version, username, password, email, apikey, insecure):
+def push_cmd(target, version, username, password, email, apikey, insecure, skip_tests):
+    # Test the image content after building it
+    if not skip_tests:
+        test_cmd.test_cmd(target, version)
+
     client = utils.get_docker_client()
     config = load_shub_config()
     image = config.get_image(target)

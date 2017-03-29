@@ -19,6 +19,6 @@ class TestUploadCli(TestCase):
         assert result.exit_code == 0
         build.assert_called_with('dev', 'test', True)
         push.assert_called_with(
-            'dev', 'test', 'user', 'pass', 'mail', "apikey", False)
+            'dev', 'test', 'user', 'pass', 'mail', "apikey", False, skip_tests=True)
         deploy.assert_called_with(
             'dev', 'test', 'user', 'pass', 'mail', "apikey", False, True)

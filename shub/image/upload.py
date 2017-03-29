@@ -36,6 +36,8 @@ Obviously it accepts all the options for the commands above.
 def cli(target, debug, verbose, version, username, password, email,
         apikey, insecure, async, skip_tests):
     build.build_cmd(target, version, skip_tests)
-    push.push_cmd(target, version, username, password, email, apikey, insecure)
+    # skip tests for push command anyway because they run in build command if not skipped
+    push.push_cmd(target, version, username, password, email, apikey,
+                  insecure, skip_tests=True)
     deploy.deploy_cmd(target, version, username, password, email,
                       apikey, insecure, async)
