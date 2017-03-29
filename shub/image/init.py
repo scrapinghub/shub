@@ -55,7 +55,7 @@ via --requirements option, we'll create new requirements.txt in the
 project_dir with the recommended deps(use --list-recommended-reqs to list it).
 
 You should also include scrapinghub-entrypoint-scrapy package to your py-reqs,
-it's a necessary condition to run your project with Kumo (use shub-image test
+it's a necessary condition to run your project with Kumo (use 'shub image test'
 to check if your image fits our expectations).
 """.format(BASE_SYSTEM_DEPS)
 

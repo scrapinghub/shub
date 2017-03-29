@@ -19,7 +19,7 @@ DOCKER_UNAVAILABLE_MSG = """
 Detected error connecting to Docker daemon's host.
 
 Please ensure that you have Docker installed, configured and running locally,
-that's essential for running shub-image tool. To check that run command
+that's essential for running shub image command. To check that run command
 
     docker version
 
