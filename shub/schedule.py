@@ -56,7 +56,7 @@ def cli(spider, argument, set):
                               targetconf.apikey, spider, argument, set)
     watch_url = urljoin(
         targetconf.endpoint,
-        '../p/{}/job/{}/{}'.format(*job_key.split('/')),
+        '../p/{}/{}/{}'.format(*job_key.split('/')),
     )
     short_key = job_key.split('/', 1)[1] if target == 'default' else job_key
     click.echo("Spider {} scheduled, job ID: {}".format(spider, job_key))

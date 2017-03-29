@@ -15,7 +15,7 @@ the job ID, separated by forward slashes, e.g.:
 
 You can also provide the Scrapinghub job URL instead:
 
-    shub items https://app.scrapinghub.com/p/12345/job/2/15
+    shub items https://app.scrapinghub.com/p/12345/2/15
 
 You can omit the project ID if you have a default target defined in your
 scrapinghub.yml:
