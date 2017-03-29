@@ -11,6 +11,7 @@ import shutil
 from zipfile import ZipFile
 
 from shub import deploy_egg
+from shub.exceptions import BadParameterException
 
 
 class FakeRequester:
@@ -66,6 +67,21 @@ class TestDeployEgg(unittest.TestCase):
         branch = 'dev'
         data = self.call_main_and_check_request_data(from_url=repo, git_branch=branch)
         self.assertTrue('dev' in data['version'])
+
+    def test_fails_on_invalid_repo(self):
+        self._unzip_git_repo_to(self.tmp_dir)
+        repo = os.path.join(self.tmp_dir, 'deploy_egg_sample_repo.git')
+        shutil.rmtree(os.path.join(repo, '.git'))
+
+        with self.assertRaises(BadParameterException):
+            self.call_main_and_check_request_data(from_url=repo)
+
+    def test_fails_on_invalid_branch(self):
+        self._unzip_git_repo_to(self.tmp_dir)
+        repo = os.path.join(self.tmp_dir, 'deploy_egg_sample_repo.git')
+        with self.assertRaises(BadParameterException):
+            self.call_main_and_check_request_data(
+                from_url=repo, git_branch='nonexisting')
 
     def _unzip_git_repo_to(self, path):
         zipped_repo = os.path.abspath('tests/samples/deploy_egg_sample_repo.git.zip')

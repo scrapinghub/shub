@@ -8,7 +8,8 @@ from shub import utils
 from shub.config import get_target_conf
 from shub.exceptions import (BadParameterException, NotFoundException,
                              SubcommandException)
-from shub.utils import decompress_egg_files, download_from_pypi, run_cmd
+from shub.utils import (decompress_egg_files, download_from_pypi,
+                        find_executable, run_cmd)
 
 
 HELP = """
@@ -73,29 +74,43 @@ def main(target, from_url=None, git_branch=None, from_pypi=None):
                                targetconf.apikey)
 
 
-def _checkout(repo, git_branch=None):
+def _checkout(repo, git_branch=None, target_dir='egg-tmp-clone'):
     tmpdir = tempfile.mkdtemp(prefix='shub-deploy-egg-from-url')
 
     click.echo("Cloning the repository to a tmp folder...")
     os.chdir(tmpdir)
 
-    vcs_commands = [['git', 'clone'], ['hg', 'clone'], ['bzr', 'branch']]
+    vcs_commands = [
+        ['git', 'clone', repo, target_dir],
+        ['hg', 'clone', repo, target_dir],
+        ['bzr', 'branch', repo, target_dir],
+    ]
+    missing_exes = []
     for cmd in vcs_commands:
+        exe = find_executable(cmd[0])
+        if not exe:
+            missing_exes.append(cmd[0])
+            continue
         try:
-            run_cmd(cmd + [repo, 'egg-tmp-clone'])
+            run_cmd([exe] + cmd[1:])
         except SubcommandException:
             pass
         else:
             break
     else:
+        if missing_exes:
+            click.secho(
+                "shub was unable to find the following VCS executables and "
+                "could not try to check out your repository with these: %s"
+                "" % ', '.join(missing_exes), fg='yellow')
         raise BadParameterException(
             "\nERROR: The provided repository URL is not valid: %s\n")
 
-    os.chdir('egg-tmp-clone')
+    os.chdir(target_dir)
 
     if git_branch:
         try:
-            run_cmd(['git', 'checkout', git_branch])
+            run_cmd([find_executable('git'), 'checkout', git_branch])
         except SubcommandException:
             raise BadParameterException("Branch %s is not valid" % git_branch)
         click.echo("%s branch was checked out" % git_branch)
