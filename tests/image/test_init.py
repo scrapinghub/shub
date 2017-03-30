@@ -2,6 +2,7 @@ import os
 from click.testing import CliRunner
 from unittest import TestCase
 
+from shub.exceptions import BadConfigException
 from shub.image.init import cli
 from shub.image.init import _format_system_deps
 from shub.image.init import _format_system_env
@@ -15,10 +16,7 @@ from .utils import add_scrapy_fake_config
 
 
 BASE_DOCKERFILE = """\
-FROM python:2.7
-RUN apt-get update -qq && \\
-    apt-get install -qy htop iputils-ping lsof ltrace strace telnet vim && \\
-    rm -rf /var/lib/apt/lists/*
+FROM scrapinghub/scrapinghub-stack-scrapy:1.3
 ENV TERM xterm
 ENV SCRAPY_SETTINGS_MODULE test.settings
 RUN mkdir -p /app
@@ -26,7 +24,7 @@ WORKDIR /app
 COPY ./requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . /app
-RUN python setup.py install\
+RUN python setup.py install
 """
 
 
@@ -112,3 +110,17 @@ class TestInitCli(TestCase):
                     "RUN pip install --no-cache-dir -r requirements.txt")
             assert os.path.exists(basereqs)
             os.remove(basereqs)
+
+    def test_no_scrapy_cfg(self):
+        with FakeProjectDirectory() as tmpdir:
+            add_sh_fake_config(tmpdir)
+            runner = CliRunner()
+            result = runner.invoke(cli, [])
+            assert result.exit_code == BadConfigException.exit_code
+            error_msg = (
+                'Error: Cannot find Scrapy project settings. Please ensure that current '
+                'directory contains scrapy.cfg with settings section, see example at '
+                'https://doc.scrapy.org/en/latest/topics/commands.html#default-structure-of-scrapy-projects'
+            )
+            assert error_msg in result.output
+            assert not os.path.exists(os.path.join(tmpdir, 'Dockerfile'))
