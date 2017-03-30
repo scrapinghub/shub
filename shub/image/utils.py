@@ -4,6 +4,7 @@ import click
 import contextlib
 
 import yaml
+from tqdm import tqdm
 
 from shub import config as shub_config
 from shub import utils as shub_utils
@@ -207,3 +208,11 @@ def valid_spiders(buf):
     ['A77aque']
     """
     return sorted(filter(_VALIDSPIDERNAME.match, buf.splitlines()))
+
+
+class ProgressBar(tqdm):
+
+    def moveto(self, *args, **kwargs):
+        super(ProgressBar, self).moveto(*args, **kwargs)
+        if hasattr(self.fp, 'flush'):
+            self.fp.flush()

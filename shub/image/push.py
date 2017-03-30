@@ -1,3 +1,6 @@
+import sys
+from collections import OrderedDict
+
 import click
 
 from shub import exceptions as shub_exceptions
@@ -58,16 +61,15 @@ def push_cmd(target, version, username, password, email, apikey, insecure, skip_
         _execute_push_login(client, image, username, password, email)
     image_name = utils.format_image_name(image, version)
     click.echo("Pushing {} to the registry.".format(image_name))
-    for data in client.push(image_name, stream=True, decode=True,
-                            insecure_registry=not bool(username)):
-        if 'status' in data:
-            utils.debug_log("Logs:{} {}".format(data['status'],
-                            data.get('progress')))
-        if 'error' in data:
-            click.echo("Error {}: {}".format(data['error'],
-                                             data['errorDetail']))
-            raise shub_exceptions.RemoteErrorException(
-                "Docker push operation failed")
+    events = client.push(image_name, stream=True, decode=True,
+                         insecure_registry=not bool(username))
+    ctx = click.get_current_context(True)
+    if ctx and ctx.params.get('verbose'):
+        push_progress_cls = _LoggedPushProgress
+    else:
+        push_progress_cls = _PushProgress
+    push_progress = push_progress_cls(events)
+    push_progress.show()
     click.echo("The image {} pushed successfully.".format(image_name))
 
 
@@ -82,3 +84,112 @@ def _execute_push_login(client, image, username, password, email):
         raise shub_exceptions.RemoteErrorException(
             "Docker registry login error.")
     click.echo("Login to {} succeeded.".format(registry))
+
+
+class _LoggedPushProgress(object):
+    """Visualize push progress in verbose mode.
+
+    Output all the events received from the docker daemon.
+    """
+
+    def __init__(self, push_events):
+        self.push_events = push_events
+
+    def show(self):
+        for event in self.push_events:
+            self.handle_event(event)
+
+    def handle_event(self, event):
+        if 'status' in event:
+            self.handle_status_event(event)
+        if 'error' in event:
+            click.echo("Error {}: {}".format(event['error'],
+                                             event['errorDetail']))
+            raise shub_exceptions.RemoteErrorException(
+                "Docker push operation failed")
+
+    def handle_status_event(self, event):
+        msg = "Logs:{} {}".format(event['status'], event.get('progress'))
+        utils.debug_log(msg)
+
+
+class _PushProgress(_LoggedPushProgress):
+    """Visualize push progress in non-verbose mode.
+
+    Show total progress bar and separate bar for each pushed layer.
+    """
+
+    def __init__(self, push_events):
+        super(_PushProgress, self).__init__(push_events)
+        # Total bar repesents total progress in terms of amount of layers.
+        self.total_bar = self._create_total_bar()
+        self.layers = set()
+        # XXX: has to be OrderedDict to make tqdm.write/click.echo work as expected.
+        # Otherwise it writes at random position, usually in the middle of the progress bars.
+        self.layers_bars = OrderedDict()
+
+    def handle_status_event(self, event):
+        layer_id = event.get('id')
+        status = event.get('status')
+        progress = event.get('progressDetail')
+        # `preparing` events are correlated with amount of layers to push
+        if status in ('Preparing', 'Waiting'):
+            self._add_layer(layer_id)
+        # the events are final and used to update total bar once per layer
+        elif status in ('Layer already exists', 'Pushed'):
+            self._add_layer(layer_id)
+            self.total_bar.update()
+        # `pushing` events represents actual push process per layer
+        elif event.get('status') == 'Pushing' and progress:
+            progress_total = progress.get('total', 0)
+            progress_current = progress.get('current', 0)
+            if layer_id not in self.layers_bars:
+                # create a progress bar per pushed layer
+                self.layers_bars[layer_id] = self._create_bar_per_layer(
+                    layer_id, progress_total)
+            bar = self.layers_bars[layer_id]
+            bar.total = max(bar.total, progress_total)
+            bar.update(max(min(bar.total, progress_current) - bar.n, 0))
+
+    def _add_layer(self, layer_id):
+        self.layers.add(layer_id)
+        self.total_bar.total = max(self.total_bar.total, len(self.layers))
+        self.total_bar.refresh()
+
+    def show(self):
+        super(_PushProgress, self).show()
+        self.total_bar.close()
+        for bar in self.layers_bars.values():
+            bar.close()
+
+    def _create_total_bar(self):
+        return self._create_bar(
+            total=1,
+            desc='total',
+            # don't need rate here, let's simplify the bar
+            bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt}'
+        )
+
+    def _create_bar_per_layer(self, layer_id, total):
+        return self._create_bar(
+            total=total,
+            desc=layer_id,
+            unit='B',
+            unit_scale=True,
+            # don't need estimates here, keep only rate
+            bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{rate_fmt}]',
+        )
+
+    def _create_bar(self, total, desc, **kwargs):
+        return utils.ProgressBar(
+            total=total,
+            desc=desc,
+            # XXX: click.get_text_stream or click.get_binary_stream don't work well with tqdm
+            # on Windows and Python 3
+            file=sys.stdout,
+            # helps to update bars on resizing terminal
+            dynamic_ncols=True,
+            # miniters improves progress on erratic updates caused by network
+            miniters=1,
+            **kwargs
+        )
