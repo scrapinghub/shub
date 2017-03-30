@@ -24,6 +24,15 @@ class ShubConfig(object):
 
     DEFAULT_ENDPOINT = 'https://app.scrapinghub.com/api/'
 
+    # Dictionary option name: Shortcut to set 'default' key
+    SHORTCUTS = {
+        'projects': 'project',
+        'endpoints': 'endpoint',
+        'apikeys': 'apikey',
+        'stacks': 'stack',
+        'images': 'image',
+    }
+
     def __init__(self):
         self.projects = {}
         self.endpoints = {
@@ -65,8 +74,20 @@ class ShubConfig(object):
             yaml_cfg = yaml.safe_load(stream)
             if not yaml_cfg:
                 return
-            for option in ('projects', 'endpoints', 'apikeys', 'stacks', 'images'):
-                getattr(self, option).update(yaml_cfg.get(option, {}))
+            for option, shortcut in self.SHORTCUTS.items():
+                option_conf = getattr(self, option)
+                yaml_option_conf = yaml_cfg.get(option, {})
+                option_conf.update(yaml_option_conf)
+                if shortcut in yaml_cfg:
+                    # We explicitly check yaml_option_conf and not option_conf.
+                    # It is okay to set conflicting defaults if they are in
+                    # different files (b/c then one of these will have
+                    # priority)
+                    if 'default' in yaml_option_conf:
+                        raise BadConfigException(
+                            "You cannot specify both '%s' and a 'default' key "
+                            "for '%s' in the same file" % (shortcut,  option))
+                    option_conf['default'] = yaml_cfg[shortcut]
             self.version = yaml_cfg.get('version', self.version)
             self.requirements_file = yaml_cfg.get('requirements_file',
                                                   self.requirements_file)
