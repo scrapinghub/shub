@@ -31,12 +31,12 @@ otherwise you have to enter your credentials (at least username/password).
 @click.option("-v", "--verbose", is_flag=True,
               help="stream push logs to console")
 @click.option("-V", "--version", help="release version")
-@click.option("-S", "--skip-tests", help="skip testing image", is_flag=True)
 @click.option("--username", help="docker registry name")
 @click.option("--password", help="docker registry password")
 @click.option("--email", help="docker registry email")
 @click.option("--apikey", help="SH apikey to use built-in registry")
 @click.option("--insecure", is_flag=True, help="use insecure registry")
+@click.option("-S", "--skip-tests", help="skip testing image", is_flag=True)
 def cli(target, debug, verbose, version, username, password, email, apikey,
         insecure, skip_tests):
     push_cmd(target, version, username, password, email, apikey, insecure, skip_tests)
