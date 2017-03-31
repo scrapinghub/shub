@@ -65,7 +65,8 @@ def cli(target, debug, verbose, version, username, password, email,
 def deploy_cmd(target, version, username, password, email,
                apikey, insecure, async):
     config = load_shub_config()
-    project, endpoint, target_apikey = config.get_target(target)
+    target_conf = config.get_target_conf(target)
+    endpoint, target_apikey = target_conf.endpoint, target_conf.apikey
     image = config.get_image(target)
     version = version or config.get_version()
     image_name = utils.format_image_name(image, version)
@@ -75,7 +76,7 @@ def deploy_cmd(target, version, username, password, email,
 
     apikey = apikey or target_apikey
     params = _prepare_deploy_params(
-        project, version, image_name, endpoint, apikey,
+        target_conf.project_id, version, image_name, endpoint, apikey,
         username, password, email)
 
     utils.debug_log('Deploy with params: {}'.format(params))

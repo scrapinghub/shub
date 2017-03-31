@@ -54,7 +54,7 @@ def list_cmd_full(target, silent, version):
     image_name = utils.format_image_name(image, version)
     project, endpoint, apikey = None, None, None
     try:
-        project, endpoint, apikey = config.get_target(target)
+        target_conf = config.get_target_conf(target)
     except shub_exceptions.BadParameterException as exc:
         if 'Could not find target' not in exc.message:
             raise
@@ -62,6 +62,10 @@ def list_cmd_full(target, silent, version):
             click.echo(
                 "Not found project for target {}, "
                 "not getting project settings from Dash.".format(target))
+    else:
+        project = target_conf.project_id
+        endpoint = target_conf.endpoint
+        apikey = target_conf.apikey
     spiders = list_cmd(image_name, project, endpoint, apikey)
     for spider in spiders:
         click.echo(spider)
