@@ -1,11 +1,9 @@
 from __future__ import absolute_import
 import os
-import sys
 import glob
 import shutil
 import tempfile
 from six.moves.urllib.parse import urljoin
-from subprocess import check_call
 
 import click
 # Not used in code but needed in runtime, don't remove!
@@ -26,8 +24,7 @@ from shub.config import load_shub_config, update_yaml_dict
 from shub.exceptions import (InvalidAuthException, NotFoundException,
                              RemoteErrorException, ShubException)
 from shub.utils import (closest_file, get_config, inside_project,
-                        make_deploy_request, patch_sys_executable,
-                        retry_on_eintr)
+                        make_deploy_request, run_python)
 
 
 HELP = """
@@ -175,14 +172,7 @@ def _build_egg():
         settings = get_config().get('settings', 'default')
         _create_default_setup_py(settings=settings)
     d = tempfile.mkdtemp(prefix="shub-deploy-")
-    with open(os.path.join(d, "stdout"), "wb") as o, \
-            open(os.path.join(d, "stderr"), "wb") as e, \
-            patch_sys_executable():
-        retry_on_eintr(
-            check_call,
-            [sys.executable, 'setup.py', 'clean', '-a', 'bdist_egg', '-d', d],
-            stdout=o, stderr=e,
-        )
+    run_python(['setup.py', 'clean', '-a', 'bdist_egg', '-d', d])
     egg = glob.glob(os.path.join(d, '*.egg'))[0]
     return egg, d
 

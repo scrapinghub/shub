@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 import contextlib
 import datetime
-import errno
 import json
 import os
 import subprocess
@@ -18,7 +17,6 @@ from glob import glob
 from importlib import import_module
 from tempfile import NamedTemporaryFile
 from six.moves.urllib.parse import urljoin
-from subprocess import Popen, PIPE, CalledProcessError
 
 import click
 import pip
@@ -33,7 +31,8 @@ except ImportError:
 import shub
 from shub.compat import to_native_str
 from shub.exceptions import (BadParameterException, InvalidAuthException,
-                             NotFoundException, RemoteErrorException)
+                             NotFoundException, RemoteErrorException,
+                             SubcommandException)
 
 SCRAPY_CFG_FILE = os.path.expanduser("~/.scrapy.cfg")
 FALLBACK_ENCODING = 'utf-8'
@@ -145,14 +144,29 @@ def find_exe(exe_name):
     return exe
 
 
-def get_cmd(cmd):
-    with open(os.devnull, 'wb') as null:
-        return Popen(cmd, stdout=PIPE, stderr=null)
+def run_cmd(*args, **kwargs):
+    """Run a command and return its output, decoded by the stdout encoding and
+    stripped of trailing newlines. `args` and `kwargs` are forwarded to
+    `subprocess.check_output`.
 
+    Raises SubcommandException on non-zero exit codes or other subprocess
+    errors."""
+    if sys.version_info >= (3, 5):
+        kwargs.setdefault('stderr', subprocess.PIPE)
 
-def get_cmd_output(cmd):
-    process = get_cmd(cmd)
-    return process.communicate()[0].decode(STDOUT_ENCODING)
+    def _clean(s):
+        return s.decode(STDOUT_ENCODING).replace(os.linesep, '\n').strip('\n')
+
+    try:
+        return _clean(subprocess.check_output(*args, **kwargs))
+    except subprocess.CalledProcessError as e:
+        stderr = ""
+        if sys.version_info >= (3, 5) and e.stderr:
+            stderr = "\n\nSTDERR\n------\n%s" % _clean(e.stderr)
+        raise SubcommandException(
+            "Error while calling subcommand: %s\n\n"
+            "COMMAND OUTPUT\n--------------\n%s"
+            "%s" % (e, _clean(e.output), stderr))
 
 
 def pwd_version():
@@ -191,13 +205,14 @@ def pwd_git_version():
     git = find_executable('git')
     if not git:
         return None
-    process = get_cmd([git, 'describe', '--always'])
-    commit_id = process.communicate()[0].decode(STDOUT_ENCODING).strip('\n')
-    if process.wait() != 0:
-        commit_id = get_cmd_output([git, 'rev-list', '--count', 'HEAD']).strip('\n')
-    if not commit_id:
-        return None
-    branch = get_cmd_output([git, 'rev-parse', '--abbrev-ref', 'HEAD']).strip('\n')
+    try:
+        commit_id = run_cmd([git, 'describe', '--always'])
+    except SubcommandException:
+        try:
+            commit_id = run_cmd([git, 'rev-list', '--count', 'HEAD'])
+        except SubcommandException:
+            return None
+    branch = run_cmd([git, 'rev-parse', '--abbrev-ref', 'HEAD'])
     return '%s-%s' % (commit_id, branch)
 
 
@@ -205,10 +220,11 @@ def pwd_hg_version():
     hg = find_executable('hg')
     if not hg:
         return None
-    commit_id = get_cmd_output([hg, 'tip', '--template', '{rev}'])
-    if not commit_id:
+    try:
+        commit_id = run_cmd([hg, 'tip', '--template', '{rev}'])
+    except SubcommandException:
         return None
-    branch = get_cmd_output([hg, 'branch']).strip('\n')
+    branch = run_cmd([hg, 'branch'])
     return 'r%s-%s' % (commit_id, branch)
 
 
@@ -216,17 +232,19 @@ def pwd_bzr_version():
     bzr = find_executable('bzr')
     if not bzr:
         return None
-    return '%s' % get_cmd_output([bzr, 'revno']).strip()
+    try:
+        return '%s' % run_cmd([bzr, 'revno']).strip()
+    except SubcommandException:
+        return None
 
 
-def run_python(args):
+def run_python(cmd, *args, **kwargs):
     """
-    Call Python 2 interpreter with supplied list of arguments and return its
-    output.
+    Call Python interpreter with supplied list of arguments and return its
+    output. `args` and `kwargs` are forwarded to `subprocess.check_output`.
     """
     with patch_sys_executable():
-        output = subprocess.check_output([sys.executable] + args)
-        return output.decode(STDOUT_ENCODING).strip()
+        return run_cmd([sys.executable] + cmd, *args, **kwargs)
 
 
 def decompress_egg_files(directory=None):
@@ -268,7 +286,7 @@ def build_and_deploy_egg(project, endpoint, apikey):
     click.echo("Building egg in: %s" % os.getcwd())
     try:
         run_python(['setup.py', 'bdist_egg'])
-    except CalledProcessError:
+    except SubcommandException:
         # maybe a C extension or distutils package, forcing bdist_egg
         click.echo("Couldn't build an egg with vanilla setup.py, trying with "
                    "setuptools...")
@@ -351,16 +369,6 @@ def get_job(job):
     if not job.metadata:
         raise NotFoundException('Job {} does not exist'.format(jobid))
     return job
-
-
-def retry_on_eintr(function, *args, **kw):
-    """Run a function and retry it while getting EINTR errors"""
-    while True:
-        try:
-            return function(*args, **kw)
-        except IOError as e:
-            if e.errno != errno.EINTR:
-                raise
 
 
 def closest_file(filename, path='.', prevpath=None):

@@ -50,6 +50,13 @@ class UtilsTest(unittest.TestCase):
         with self.assertRaises(NotFoundException):
             utils.find_exe('python')
 
+    def test_pwd_git_version_without_git(self):
+        # Change into test dir to make sure we're within a repo
+        os.chdir(os.path.dirname(__file__))
+        self.assertIsNotNone(utils.pwd_git_version())
+        with patch('shub.utils.find_executable', return_value=None):
+            self.assertIsNone(utils.pwd_git_version())
+
     @patch('shub.utils.pwd_git_version', return_value='ver_GIT')
     @patch('shub.utils.pwd_hg_version', return_value='ver_HG')
     @patch('shub.utils.pwd_bzr_version', return_value='ver_BZR')
