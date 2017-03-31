@@ -345,7 +345,7 @@ def get_job_specs(job):
     """
     match = re.match(r'^((\w+)/)?(\d+/\d+)$', job)
     if not match:
-        job_url_re = r'^https?://[^/]+/p/((\d+)/)job/(\d+/\d+).*'
+        job_url_re = r'^https?://[^/]+/p/((\d+)/)(?:job/)?(\d+/\d+).*'
         match = re.match(job_url_re, job)
     if not match:
         raise BadParameterException(

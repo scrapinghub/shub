@@ -112,7 +112,12 @@ class UtilsTest(unittest.TestCase):
         _test_specs('prod/2/3', '2/2/3', 'default')
         _test_specs('vagrant/2/3', '3/2/3', 'vagrant')
         _test_specs(
-            'https://app.scrapinghub.com/p/7389/job/259/1/#/log/line/0',
+            'https://app.scrapinghub.com/p/7389/259/1/#/log/line/0',
+            '7389/259/1',
+            'default',
+        )
+        _test_specs(
+            'https://app.scrapinghub.com/p/7389/job/259/1/',
             '7389/259/1',
             'default',
         )
