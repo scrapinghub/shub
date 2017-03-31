@@ -1,10 +1,10 @@
 import click
 
-from shub.deploy import list_targets
 from shub import exceptions as shub_exceptions
 from shub.config import load_shub_config
+from shub.deploy import list_targets
 from shub.image import utils
-from shub.image import test as test_cmd
+from shub.image.test import test_cmd
 
 SHORT_HELP = 'Push an image to a specified docker registry'
 
@@ -45,7 +45,7 @@ def cli(target, debug, verbose, version, username, password, email, apikey,
 def push_cmd(target, version, username, password, email, apikey, insecure, skip_tests):
     # Test the image content after building it
     if not skip_tests:
-        test_cmd.test_cmd(target, version)
+        test_cmd(target, version)
 
     client = utils.get_docker_client()
     config = load_shub_config()

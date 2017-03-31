@@ -1,7 +1,15 @@
+import mock
 import pytest
 from click.testing import CliRunner
 from shub import exceptions as shub_exceptions
 from shub.image.push import cli
+
+
+@pytest.fixture
+def test_mock():
+    """Mock for shub image test command"""
+    with mock.patch('shub.image.push.test_cmd') as m:
+        yield m
 
 
 @pytest.mark.usefixtures('project_dir')

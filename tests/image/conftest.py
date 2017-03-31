@@ -17,13 +17,6 @@ def docker_client_mock():
 
 
 @pytest.fixture
-def test_mock():
-    """Mock for shub image test command"""
-    with mock.patch('shub.image.test.test_cmd') as m:
-        yield m
-
-
-@pytest.fixture
 def project_dir():
     """Fake project directory"""
     with FakeProjectDirectory() as tmpdir:
