@@ -42,6 +42,7 @@ the ``project`` option with a ``projects`` dictionary::
 shub will now deploy to project ``12345`` when you run ``shub deploy``, and
 deploy to project ``33333`` when you run ``shub deploy prod``.
 
+.. _configuration-options:
 
 The configuration options
 -------------------------
@@ -102,7 +103,6 @@ Option            Description                                   Scope
                   directory, via ``shub login``.
 ================  ============================================  ===============
 
-
 .. _`Scrapy Cloud stack`: https://helpdesk.scrapinghub.com/support/solutions/articles/22000200402-scrapy-cloud-stacks
 
 
@@ -136,7 +136,7 @@ production stack to a specific release::
       prod:
         id: 44444
         stack: scrapy:1.3-py3-20170322
- 
+
     stack: scrapy:1.3-py3
 
 Using a custom Docker image::

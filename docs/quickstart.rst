@@ -30,6 +30,8 @@ For help on a specific command, run it with a ``--help`` flag, e.g.::
     shub schedule --help
 
 
+.. _basic-usage:
+
 Basic usage
 -----------
 
