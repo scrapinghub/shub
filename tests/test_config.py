@@ -136,6 +136,57 @@ class ShubConfigTest(unittest.TestCase):
         # Assert no exception raised on empty file
         conf = self._get_conf_with_yml("")
 
+    def test_load_shortcuts(self):
+        yml = """
+            project: 111
+            stack: awesome_stack
+            apikey: awesome_key
+            endpoint: awesome_endpoint
+            image: awesome_image
+        """
+        conf = self._get_conf_with_yml(yml)
+        self.assertEqual(conf.projects['default'], 111)
+        self.assertEqual(conf.stacks['default'], 'awesome_stack')
+        self.assertEqual(conf.apikeys['default'], 'awesome_key')
+        self.assertEqual(conf.endpoints['default'], 'awesome_endpoint')
+        self.assertEqual(conf.images['default'], 'awesome_image')
+        self.assertEqual(conf.get_target_conf('default').stack,
+                         'awesome_stack')
+
+    def test_load_shortcut_mixed(self):
+        # Weird, but allowed
+        yml = """
+            stacks:
+                dev: dev_stack
+            stack: prod_stack
+        """
+        self.assertDictContainsSubset(
+            self._get_conf_with_yml(yml).stacks,
+            {'default': 'prod_stack', 'dev': 'dev_stack'},
+        )
+
+    def test_load_shortcut_conflict(self):
+        outer_yml = """
+            project: 111
+            stacks:
+                default: outer
+        """
+        inner_yml = """
+            stack: inner
+        """
+        conflicting_yml = """
+            stacks:
+                default: A
+            stack: B
+        """
+        # It is allowed to override a default option via shortcut if it is from
+        # a previously loaded file
+        self.conf.load(outer_yml)
+        self.conf.load(inner_yml)
+        # But not to specify both stacks: default and stack
+        with self.assertRaises(BadConfigException):
+            self.conf.load(conflicting_yml)
+
     def test_load_malformed(self):
         # Invalid YAML
         yml = """
@@ -283,12 +334,14 @@ class ShubConfigTest(unittest.TestCase):
         self.assertEqual(self.conf.requirements_file, 'newstyle.txt')
 
     def test_save(self):
-        tmpdir = tempfile.mkdtemp()
-        tmpfilepath = os.path.join(tmpdir, 'saved_conf.yml')
-        self.conf.save(tmpfilepath)
-        with open(tmpfilepath, 'r') as f:
-            self.assertEqual(yaml.load(f), yaml.load(VALID_YAML_CFG))
-        shutil.rmtree(tmpdir)
+        with CliRunner().isolated_filesystem():
+            self.conf.save('conf.yml')
+            loaded_conf = ShubConfig()
+            loaded_conf.load_file('conf.yml')
+            for option in ['projects', 'endpoints', 'apikeys', 'version',
+                           'stacks', 'requirements_file', 'eggs', 'images']:
+                self.assertEqual(
+                    getattr(self.conf, option), getattr(loaded_conf, option))
 
     def test_save_partial(self):
         runner = CliRunner()
@@ -299,7 +352,7 @@ class ShubConfigTest(unittest.TestCase):
                 """)
             conf.save('conf.yml')
             with open('conf.yml', 'r') as f:
-                self.assertEqual(yaml.load(f), {'projects': {'default': 123}})
+                self.assertEqual(yaml.load(f), {'project': 123})
 
             conf = self._get_conf_with_yml("""
                 projects:
@@ -310,9 +363,34 @@ class ShubConfigTest(unittest.TestCase):
             conf.save('conf.yml')
             with open('conf.yml', 'r') as f:
                 self.assertEqual(yaml.load(f), {
-                    'projects': {'default': 123},
+                    'project': 123,
                     'requirements': {'file': 'reqs.txt'}}
                 )
+
+    def test_save_skip_defaults(self):
+        conf = ShubConfig()
+        with CliRunner().isolated_filesystem():
+            conf.save('conf.yml')
+            with open('conf.yml', 'r') as f:
+                self.assertEqual(yaml.load(f), None)
+
+    def test_save_shortcut(self):
+        conf = ShubConfig()
+        conf.endpoints['ext'] = 'external'
+        conf.stacks['default'] = 'my_stack'
+        expected_yml_dict = {
+            # No shortcut
+            'endpoints': {
+                'default': ShubConfig.DEFAULT_ENDPOINT,
+                'ext': 'external',
+            },
+            # Shortcut
+            'stack': 'my_stack',
+        }
+        with CliRunner().isolated_filesystem():
+            conf.save('conf.yml')
+            with open('conf.yml', 'r') as f:
+                self.assertEqual(yaml.load(f), expected_yml_dict)
 
     def test_normalized_projects(self):
         expected_projects = {

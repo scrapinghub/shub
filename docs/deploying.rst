@@ -80,15 +80,23 @@ build your own Docker image to be used on Scrapy Cloud. See
 Choosing a Scrapy Cloud stack
 -----------------------------
 
-You can specify the `Scrapy Cloud stack`_ to deploy your spider to by extending
-the ``projects`` section of your configuration::
+You can specify the `Scrapy Cloud stack`_ to deploy your spider to by adding a
+``stack`` entry to your configuration::
+
+    # project_directory/scrapinghub.yml
+
+    projects:
+      default: 12345
+    stack: scrapy:1.3-py3
+
+It is also possible to define the stack per project for advanced use cases::
 
     # project_directory/scrapinghub.yml
 
     projects:
       default:
         id: 12345
-        stack: scrapy:1.1-py3
-      prod: 33333  # will use the original stack
+        stack: scrapy:1.3-py3
+      prod: 33333  # will use Scrapinghub's default stack
 
 .. _`Scrapy Cloud stack`: http://help.scrapinghub.com/scrapy-cloud/scrapy-cloud-stacks

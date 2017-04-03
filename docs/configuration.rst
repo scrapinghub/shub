@@ -16,10 +16,13 @@ Both files have the same format::
     projects:
       default: 12345
       prod: 33333
-    apikeys:  # populated manually or via shub login
-      default: 0bbf4f0f691e0d9378ae00ca7bcf7f0c
-    version: GIT  # Use git branch/commit as version when deploying. Other
-                  # possible values are AUTO (default) or HG
+
+    # Populated manually or via shub login
+    apikey: 0bbf4f0f691e0d9378ae00ca7bcf7f0c
+
+    # Use git branch/commit as version when deploying. Other possible values
+    # are AUTO (default) or HG
+    version: GIT
 
 ``projects`` is a mapping from human-friendly names to project IDs. This allows
 you to run ``shub deploy prod`` instead of ``shub deploy 33333``. ``version``
