@@ -1,15 +1,16 @@
 import os
 import re
-import click
 import warnings
 
+import click
+
 from shub import exceptions as shub_exceptions
+from shub.config import load_shub_config
 from shub.deploy import list_targets
 from shub.deploy import _create_default_setup_py
-from shub.utils import closest_file, get_config
-from shub.config import load_shub_config
 from shub.image import utils
-from shub.image import test as test_cmd
+from shub.image.test import test_cmd
+from shub.utils import closest_file, get_config
 
 
 SHORT_HELP = 'Build release image.'
@@ -67,7 +68,7 @@ def build_cmd(target, version, skip_tests):
     click.echo("The image {} build is completed.".format(image_name))
     # Test the image content after building it
     if not skip_tests:
-        test_cmd.test_cmd(target, version)
+        test_cmd(target, version)
 
 
 def _create_setup_py_if_not_exists():

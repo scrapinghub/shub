@@ -1,9 +1,17 @@
 import os
 
+import mock
 import pytest
 from click.testing import CliRunner
 from shub import exceptions as shub_exceptions
 from shub.image.build import cli
+
+
+@pytest.fixture
+def test_mock():
+    """Mock for shub image test command"""
+    with mock.patch('shub.image.build.test_cmd') as m:
+        yield m
 
 
 def test_cli(docker_client_mock, project_dir, test_mock):
