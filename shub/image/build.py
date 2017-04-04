@@ -1,16 +1,13 @@
 import os
 import re
-import warnings
 
 import click
 
 from shub import exceptions as shub_exceptions
 from shub.config import load_shub_config
 from shub.deploy import list_targets
-from shub.deploy import _create_default_setup_py
 from shub.image import utils
 from shub.image.test import test_cmd
-from shub.utils import closest_file, get_config
 
 
 SHORT_HELP = 'Build release image.'
@@ -48,7 +45,6 @@ def build_cmd(target, version, skip_tests):
     project_dir = utils.get_project_dir()
     config = load_shub_config()
     image = config.get_image(target)
-    _create_setup_py_if_not_exists()
     image_name = utils.format_image_name(image, version)
     if not os.path.exists(os.path.join(project_dir, 'Dockerfile')):
         raise shub_exceptions.BadParameterException(
@@ -69,17 +65,3 @@ def build_cmd(target, version, skip_tests):
     # Test the image content after building it
     if not skip_tests:
         test_cmd(target, version)
-
-
-def _create_setup_py_if_not_exists():
-    closest = closest_file('scrapy.cfg')
-    # create default setup.py only if scrapy.cfg is found, otherwise
-    # consider it as a non-scrapy/non-python project
-    if not closest:
-        warnings.warn("scrapy.cfg is not found")
-        return
-    with utils.remember_cwd():
-        os.chdir(os.path.dirname(closest))
-        if not os.path.exists('setup.py'):
-            settings = get_config().get('settings', 'default')
-            _create_default_setup_py(settings=settings)

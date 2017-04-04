@@ -24,7 +24,8 @@ from shub.config import load_shub_config, update_yaml_dict
 from shub.exceptions import (InvalidAuthException, NotFoundException,
                              RemoteErrorException, ShubException)
 from shub.utils import (closest_file, get_config, inside_project,
-                        make_deploy_request, run_python)
+                        make_deploy_request, run_python,
+                        create_default_setup_py)
 
 
 HELP = """
@@ -54,20 +55,6 @@ Or build an egg without deploying:
 """
 
 SHORT_HELP = "Deploy Scrapy project to Scrapy Cloud"
-
-
-_SETUP_PY_TEMPLATE = """\
-# Automatically created by: shub deploy
-
-from setuptools import setup, find_packages
-
-setup(
-    name         = 'project',
-    version      = '1.0',
-    packages     = find_packages(),
-    entry_points = {'scrapy': ['settings = %(settings)s']},
-)
-"""
 
 
 def list_targets(ctx, param, value):
@@ -166,20 +153,12 @@ def _upload_egg(endpoint, eggpath, project, version, auth, verbose, keep_log,
 
 
 def _build_egg():
-    closest = closest_file('scrapy.cfg')
-    os.chdir(os.path.dirname(closest))
-    if not os.path.exists('setup.py'):
-        settings = get_config().get('settings', 'default')
-        _create_default_setup_py(settings=settings)
+    settings = get_config().get('settings', 'default')
+    create_default_setup_py(settings=settings)
     d = tempfile.mkdtemp(prefix="shub-deploy-")
     run_python(['setup.py', 'clean', '-a', 'bdist_egg', '-d', d])
     egg = glob.glob(os.path.join(d, '*.egg'))[0]
     return egg, d
-
-
-def _create_default_setup_py(**kwargs):
-    with open('setup.py', 'w') as f:
-        f.write(_SETUP_PY_TEMPLATE % kwargs)
 
 
 def _has_project_access(project, endpoint, apikey):

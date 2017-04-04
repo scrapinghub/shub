@@ -94,7 +94,8 @@ def cli(project, base_image, base_deps, add_deps, requirements):
     dockefile_path = os.path.join(project_dir, 'Dockerfile')
     if os.path.exists(dockefile_path):
         raise shub_exceptions.ShubException('Found a Dockerfile in the project directory, aborting')
-    settings_module = scrapy_config.get('settings', project)
+    settings_module = scrapy_config.get('settings', 'default')
+    shub_utils.create_default_setup_py(settings=settings_module)
     values = {
         'base_image':   base_image,
         'system_deps':  _format_system_deps(base_deps, add_deps),
