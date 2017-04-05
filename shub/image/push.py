@@ -63,8 +63,7 @@ def push_cmd(target, version, username, password, email, apikey, insecure, skip_
     click.echo("Pushing {} to the registry.".format(image_name))
     events = client.push(image_name, stream=True, decode=True,
                          insecure_registry=not bool(username))
-    ctx = click.get_current_context(True)
-    if ctx and ctx.params.get('verbose'):
+    if utils.is_verbose():
         push_progress_cls = _LoggedPushProgress
     else:
         push_progress_cls = _PushProgress
