@@ -1,10 +1,13 @@
+# -*- coding: utf-8 -*-
 import os
 
 import mock
 import pytest
 from click.testing import CliRunner
+
 from shub import exceptions as shub_exceptions
 from shub.image.build import cli
+from ..utils import format_expected_progress
 
 
 @pytest.fixture
@@ -25,6 +28,27 @@ def test_cli(docker_client_mock, project_dir, test_mock):
     docker_client_mock.build.assert_called_with(
         decode=True, path=project_dir, tag='registry/user/project:1.0')
     test_mock.assert_called_with("dev", None)
+
+
+def test_cli_with_progress(docker_client_mock, project_dir, test_mock):
+    docker_client_mock.build.return_value = [
+        {"stream": "Step 1/3 : FROM some_image"},
+        {"stream": "some internal actions"},
+        {"stream": "Step 2/3 : RUN cmd1"},
+        {"stream": "some other actions"},
+        {"stream": "Step 3/3 : RUN cmd2"},
+        {"stream": "Successfully built 12345"}
+    ]
+    runner = CliRunner()
+    result = runner.invoke(cli, ["dev"])
+    assert result.exit_code == 0
+    expected = format_expected_progress(
+        'Building registry/user/project:1.0.\n\r'
+        'Steps:   0%|          | 0/1\r'
+        'Steps: 100%|██████████| 3/3\n'
+        'The image registry/user/project:1.0 build is completed.\n'
+    )
+    assert result.output == expected
 
 
 def test_cli_custom_version(docker_client_mock, project_dir, test_mock):

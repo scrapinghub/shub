@@ -1,7 +1,10 @@
+# -*- coding: utf-8 -*-
 from __future__ import absolute_import
+import sys
 import mock
 
 from click.testing import CliRunner
+from tqdm._utils import _supports_unicode
 
 from shub import config
 
@@ -48,3 +51,18 @@ def mock_conf(testcase, target=None, attr=None, conf=None):
     patcher.start()
     testcase.addCleanup(patcher.stop)
     return conf
+
+
+def _is_tqdm_in_ascii_mode():
+    """Small helper deciding about placeholders for tqdm progress bars."""
+    with CliRunner().isolation():
+        return not _supports_unicode(sys.stdout)
+
+
+def format_expected_progress(progress):
+    """Replace unicode symbols in progress string for tqdm in ascii mode."""
+    if _is_tqdm_in_ascii_mode():
+        to_replace = {'█': '#', '▎': '3', '▋': '6'}
+        for sym in to_replace:
+            progress = progress.replace(sym, to_replace[sym])
+    return progress
