@@ -413,7 +413,9 @@ def get_sources(use_closest=True):
                xdg_config_home + '/scrapy.cfg',
                os.path.expanduser('~/.scrapy.cfg')]
     if use_closest:
-        sources.append(closest_file('scrapy.cfg'))
+        closest_scrapy_cfg_path = closest_file('scrapy.cfg')
+        if closest_scrapy_cfg_path:
+            sources.append(closest_scrapy_cfg_path)
     return sources
 
 
