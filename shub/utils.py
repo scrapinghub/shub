@@ -24,6 +24,8 @@ import pip
 import requests
 import yaml
 
+from scrapinghub import Connection, APIError
+
 try:
     from scrapinghub import HubstorageClient
 except ImportError:
@@ -634,3 +636,57 @@ def update_yaml_dict(conf_path=None):
         # Avoid writing "{}"
         if conf:
             yaml.dump(conf, f, default_flow_style=False)
+
+
+def has_project_access(project, endpoint, apikey):
+    """Check whether an API key has access to a given project. May raise
+    InvalidAuthException if the API key is invalid (but not if it is valid but
+    lacks access to the project)"""
+    conn = Connection(apikey, url=endpoint)
+    try:
+        return project in conn.project_ids()
+    except APIError as e:
+        if 'Authentication failed' in str(e):
+            raise InvalidAuthException
+        else:
+            raise RemoteErrorException(str(e))
+
+
+def create_scrapinghub_yml_wizard(conf, target='default'):
+    """
+    Ask user for project ID, ensure they have access to that project, and save
+    it to given ``target`` in local ``scrapinghub.yml`` if desired.
+    """
+    closest_scrapycfg = closest_file('scrapy.cfg')
+    sh_yml_dir = (os.path.dirname(closest_scrapycfg) if closest_scrapycfg
+                  else os.getcwd())
+    closest_sh_yml = os.path.join(sh_yml_dir, 'scrapinghub.yml')
+    # Get default endpoint and API key (meanwhile making sure the user is
+    # logged in)
+    endpoint, apikey = conf.get_endpoint(0), conf.get_apikey(0)
+    project = click.prompt("Target project ID", type=int)
+    if not has_project_access(project, endpoint, apikey):
+        raise InvalidAuthException(
+            "The account you logged in to has no access to project {}. Please "
+            "double-check the project ID and make sure you logged in to the "
+            "correct acount.".format(project),
+        )
+    conf.projects[target] = project
+    if click.confirm("Save as default", default=True):
+        try:
+            with update_yaml_dict(closest_sh_yml) as conf_yml:
+                default_entry = {'default': project}
+                if 'projects' in conf_yml:
+                    conf_yml['projects'].update(default_entry)
+                else:
+                    conf_yml['projects'] = default_entry
+        except Exception:
+            click.echo(
+                "There was an error while trying to write to scrapinghub.yml. "
+                "Could not save project {} as default.".format(project),
+            )
+        else:
+            click.echo(
+                "Project {} was set as default in scrapinghub.yml. You can "
+                "deploy to it via 'shub deploy' from now on.".format(project),
+            )

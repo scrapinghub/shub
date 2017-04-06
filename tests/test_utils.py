@@ -11,20 +11,24 @@ import unittest
 import textwrap
 import time
 
+import click
 import yaml
 
-from mock import Mock, MagicMock, patch
 from click.testing import CliRunner
 from collections import deque
+from mock import Mock, MagicMock, patch
+from scrapinghub import APIError
 
 from shub import utils
-from shub.exceptions import (BadParameterException, NotFoundException,
-                             RemoteErrorException, SubcommandException)
+from shub.exceptions import (
+    BadParameterException, InvalidAuthException, NotFoundException,
+    RemoteErrorException, SubcommandException
+)
 
-from .utils import mock_conf
+from .utils import AssertInvokeRaisesMixin, mock_conf
 
 
-class UtilsTest(unittest.TestCase):
+class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
 
     def setUp(self):
         self.runner = CliRunner()
@@ -433,6 +437,46 @@ class UtilsTest(unittest.TestCase):
                 self.assertEqual(yaml.safe_load(f), DICT_EXPECTED)
                 f.seek(0)
                 self.assertIn("key1: newval1", f.read())
+
+    @patch('shub.utils.Connection')
+    def test_has_project_access(self, mock_conn):
+        mock_conn.return_value.project_ids.side_effect = APIError(
+            'Authentication failed')
+        with self.assertRaises(InvalidAuthException):
+            utils.has_project_access(12345, 'mock_endpoint', 'abcdef')
+        mock_conn.return_value.project_ids.side_effect = APIError(
+            'Random error')
+        with self.assertRaises(RemoteErrorException):
+            utils.has_project_access(12345, 'mock_endpoint', 'abcdef')
+
+    @patch('shub.utils.has_project_access')
+    def test_create_scrapinghub_yml_wizard(self, mock_project_access):
+        conf = mock_conf(self)
+
+        @click.command()
+        def call_wizard():
+            utils.create_scrapinghub_yml_wizard(conf)
+
+        with self.runner.isolated_filesystem():
+            mock_project_access.return_value = False
+            self.assertInvokeRaises(
+                InvalidAuthException, call_wizard, input='99\nn\n')
+            # Don't create scrapinghub.yml if not wished
+            mock_project_access.return_value = True
+            self.runner.invoke(call_wizard, input='99\nn\n')
+            self.assertEqual(conf.projects['default'], 99)
+            self.assertFalse(os.path.exists('scrapinghub.yml'))
+            # Create scrapinghub.yml if wished
+            del conf.projects['default']
+            self.runner.invoke(call_wizard, input='199\n\n')
+            self.assertEqual(conf.projects['default'], 199)
+            self.assertTrue(os.path.exists('scrapinghub.yml'))
+            # Also run wizard when there's a scrapinghub.yml but no default
+            # target
+            del conf.projects['default']
+            conf.projects['prod'] = 299
+            self.runner.invoke(call_wizard, input='399\n\n')
+            self.assertEqual(conf.projects['default'], 399)
 
 
 if __name__ == '__main__':
