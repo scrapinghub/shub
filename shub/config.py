@@ -16,6 +16,8 @@ from shub.utils import (closest_file, get_scrapycfg_targets, get_sources,
                         pwd_hg_version, pwd_git_version, pwd_version)
 
 
+SH_IMAGES_PREFIX = 'images.scrapinghub.com/project/'
+SH_IMAGES_REGISTRY = SH_IMAGES_PREFIX + '{project}'
 GLOBAL_SCRAPINGHUB_YML_PATH = os.path.expanduser("~/.scrapinghub.yml")
 NETRC_PATH = os.path.expanduser('~/_netrc' if os.name == 'nt' else '~/.netrc')
 
@@ -269,10 +271,36 @@ class ShubConfig(object):
             apikey=apikey,
             stack=(self.stacks.get(proj['stack'], proj['stack'])
                    if 'stack' in proj else self.stacks.get('default')),
+            image=self._select_image_for_project(target, proj),
             requirements_file=self.requirements_file,
             version=self.get_version(),
             eggs=self.eggs,
         )
+
+    def _select_image_for_project(self, target, project):
+        """Helper to select image for a project (or its target).
+
+        The select logic is the following:
+        - image defined per project has highest priority,
+        - images section is marked as deprecated, but still in force:
+          if target is defined in images - use a corresponding image,
+        - if image is not defined for project or target, stacks should
+          be used instead
+
+        The function responds with a custom image name string
+        (or None meaning regular stack-based deploy).
+        """
+        if target in self.images and target != 'default':
+            warnings.warn(
+                "Target is found in deprecated `images` section, please "
+                "replace it with global `image` setting or define `image` "
+                "setting for the project.")
+        image = (project['image'] if 'image' in project
+                 else self.images.get(target))
+        # aliases to use internal scrapinghub registry as image storage
+        if image is True or image == 'scrapinghub':
+            image = SH_IMAGES_REGISTRY.format(project=project['id'])
+        return image or None
 
     def get_target(self, target, auth_required=True):
         """Return (project_id, endpoint, apikey) for given target."""
@@ -295,15 +323,12 @@ class ShubConfig(object):
 
     def get_image(self, target):
         """Return image for a given target."""
-        if target not in self.images:
-            raise NotFoundException("Could not find image for %s. Please "
-                                    "define it in your scrapinghub.yml."
-                                    "" % target)
-        return self.images[target]
+        return self.get_target_conf(target, auth_required=False).image
 
 
 Target = namedtuple('Target', ['project_id', 'endpoint', 'apikey', 'stack',
-                               'requirements_file', 'version', 'eggs'])
+                               'image', 'requirements_file', 'version',
+                               'eggs'])
 
 
 MIGRATION_BANNER = """
@@ -457,3 +482,13 @@ def get_version():
     """Load shub configuratoin and return version."""
     conf = load_shub_config()
     return conf.get_version()
+
+
+def list_targets_callback(ctx, param, value):
+    """Click option callback to get targets from config, print it and exit."""
+    if not value:
+        return
+    conf = load_shub_config()
+    for name in conf.projects:
+        click.echo(name)
+    ctx.exit()

@@ -30,6 +30,9 @@ def mock_conf(testcase, target=None, attr=None, conf=None):
             'default': 1,
             'prod': 2,
             'vagrant': 'vagrant/3',
+            'custom1': {'id': 4, 'image': False},
+            'custom2': {'id': 5, 'image': True},
+            'custom3': {'id': 6, 'image': 'custom/image'},
         })
         conf.endpoints.update({
             'vagrant': 'https://vagrant_ep/api/',

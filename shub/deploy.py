@@ -20,12 +20,15 @@ else:
 
 from scrapinghub import Connection, APIError
 
-from shub.config import load_shub_config, update_yaml_dict
+from shub.config import (load_shub_config, update_yaml_dict,
+                         list_targets_callback, SH_IMAGES_PREFIX)
 from shub.exceptions import (InvalidAuthException, NotFoundException,
-                             RemoteErrorException, ShubException)
+                             RemoteErrorException, ShubException,
+                             BadParameterException)
 from shub.utils import (closest_file, get_config, inside_project,
                         make_deploy_request, run_python,
                         create_default_setup_py)
+from shub.image.upload import upload_cmd
 
 
 HELP = """
@@ -57,20 +60,11 @@ Or build an egg without deploying:
 SHORT_HELP = "Deploy Scrapy project to Scrapy Cloud"
 
 
-def list_targets(ctx, param, value):
-    if not value:
-        return
-    conf = load_shub_config()
-    for name in conf.projects:
-        click.echo(name)
-    ctx.exit()
-
-
 @click.command(help=HELP, short_help=SHORT_HELP)
 @click.argument("target", required=False, default="default")
 @click.option("-l", "--list-targets", help="list available targets",
               is_flag=True, is_eager=True, expose_value=False,
-              callback=list_targets)
+              callback=list_targets_callback)
 @click.option("-V", "--version", help="the version to use for deploying")
 @click.option("-d", "--debug", help="debug mode (do not remove build dir)",
               is_flag=True)
@@ -80,6 +74,19 @@ def list_targets(ctx, param, value):
               is_flag=True)
 @click.option("-k", "--keep-log", help="keep the deploy log", is_flag=True)
 def cli(target, version, debug, egg, build_egg, verbose, keep_log):
+    conf, image = load_shub_config(), None
+    if target in conf.projects:
+        image = conf.get_target_conf(target).image
+    if not image:
+        deploy_cmd(target, version, debug, egg, build_egg, verbose, keep_log)
+    elif image.startswith(SH_IMAGES_PREFIX):
+        upload_cmd(target, version)
+    else:
+        raise BadParameterException("Please use `shub image` commands to work"
+                                    " with custom Docker registries.")
+
+
+def deploy_cmd(target, version, debug, egg, build_egg, verbose, keep_log):
     if not inside_project():
         raise NotFoundException("No Scrapy project found in this location.")
     tmpdir = None

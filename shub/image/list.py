@@ -6,8 +6,7 @@ from six import binary_type
 from six.moves.urllib.parse import urljoin
 
 from shub import exceptions as shub_exceptions
-from shub.config import load_shub_config
-from shub.deploy import list_targets
+from shub.config import load_shub_config, list_targets_callback
 from shub.image import utils
 
 
@@ -36,7 +35,7 @@ shub utils itself).
 @click.argument("target", required=False, default="default")
 @click.option("-l", "--list-targets", help="list available targets",
               is_flag=True, is_eager=True, expose_value=False,
-              callback=list_targets)
+              callback=list_targets_callback)
 @click.option("-d", "--debug", help="debug mode", is_flag=True,
               callback=utils.deprecate_debug_parameter)
 @click.option("-v", "--verbose", is_flag=True, help="stream logs to console")
@@ -52,31 +51,17 @@ def list_cmd_full(target, silent, version):
     image = config.get_image(target)
     version = version or config.get_version()
     image_name = utils.format_image_name(image, version)
-    project, endpoint, apikey = None, None, None
-    try:
-        target_conf = config.get_target_conf(target)
-    except shub_exceptions.BadParameterException as exc:
-        if 'Could not find target' not in exc.message:
-            raise
-        if not silent:
-            click.echo(
-                "Not found project for target {}, "
-                "not getting project settings from Dash.".format(target))
-    else:
-        project = target_conf.project_id
-        endpoint = target_conf.endpoint
-        apikey = target_conf.apikey
-    spiders = list_cmd(image_name, project, endpoint, apikey)
-    for spider in spiders:
+    target_conf = config.get_target_conf(target)
+    for spider in list_cmd(image_name,
+                           target_conf.project_id,
+                           target_conf.endpoint,
+                           target_conf.apikey):
         click.echo(spider)
 
 
 def list_cmd(image_name, project, endpoint, apikey):
     """Short version of list cmd to use with deploy cmd."""
-
-    settings = {}
-    if project:
-        settings = _get_project_settings(project, endpoint, apikey)
+    settings = _get_project_settings(project, endpoint, apikey)
 
     # Run a local docker container to run list-spiders cmd
     status_code, logs = _run_list_cmd(project, image_name, settings)

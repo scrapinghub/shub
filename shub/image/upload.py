@@ -1,6 +1,6 @@
 import click
 
-from shub.deploy import list_targets
+from shub.config import list_targets_callback
 from shub.image import build
 from shub.image import push
 from shub.image import deploy
@@ -20,7 +20,7 @@ Obviously it accepts all the options for the commands above.
 @click.argument("target", required=False, default="default")
 @click.option("-l", "--list-targets", help="list available targets",
               is_flag=True, is_eager=True, expose_value=False,
-              callback=list_targets)
+              callback=list_targets_callback)
 @click.option("-d", "--debug", help="debug mode", is_flag=True,
               callback=utils.deprecate_debug_parameter)
 @click.option("-v", "--verbose", is_flag=True,
@@ -35,6 +35,12 @@ Obviously it accepts all the options for the commands above.
 @click.option("-S", "--skip-tests", help="skip testing image", is_flag=True)
 def cli(target, debug, verbose, version, username, password, email,
         apikey, insecure, async, skip_tests):
+    upload_cmd(target, version, username, password, email, apikey, insecure,
+               async, skip_tests)
+
+
+def upload_cmd(target, version, username=None, password=None, email=None,
+               apikey=None, insecure=False, async=False, skip_tests=False):
     build.build_cmd(target, version, skip_tests)
     # skip tests for push command anyway because they run in build command if not skipped
     push.push_cmd(target, version, username, password, email, apikey,

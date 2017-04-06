@@ -11,7 +11,7 @@ from mock import patch
 
 from shub import deploy
 from shub.exceptions import InvalidAuthException, NotFoundException, \
-    ShubException
+    ShubException, BadParameterException
 
 from .utils import AssertInvokeRaisesMixin, mock_conf
 
@@ -105,6 +105,25 @@ class DeployTest(AssertInvokeRaisesMixin, unittest.TestCase):
             self.conf.projects['prod'] = 299
             self.runner.invoke(deploy.cli, input='399\n\n')
             self.assertEqual(self.conf.projects['default'], 399)
+
+    @patch('shub.deploy.deploy_cmd')
+    def test_custom_deploy_disabled(self, mock_deploy_cmd):
+        with self.runner.isolated_filesystem():
+            self._make_project()
+            self.runner.invoke(deploy.cli, ('custom1',))
+        self.assertTrue(mock_deploy_cmd.called)
+
+    @patch('shub.deploy.upload_cmd')
+    def test_custom_deploy_default(self, mock_upload_cmd):
+        with self.runner.isolated_filesystem():
+            self._make_project()
+            self.runner.invoke(deploy.cli, ('custom2',))
+        self.assertEqual(mock_upload_cmd.call_args[0], ('custom2', None))
+
+    def test_custom_deploy_bad_registry(self):
+        with self.runner.isolated_filesystem():
+            self._make_project()
+            self.assertInvokeRaises(BadParameterException, deploy.cli, ('custom3',))
 
 
 class DeployFilesTest(unittest.TestCase):

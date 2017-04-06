@@ -10,8 +10,7 @@ import requests
 from retrying import retry
 from six.moves.urllib.parse import urljoin
 
-from shub.config import load_shub_config
-from shub.deploy import list_targets
+from shub.config import load_shub_config, list_targets_callback
 from shub.exceptions import ShubException
 from shub.image import utils
 from shub.image import list as list_mod
@@ -44,7 +43,7 @@ Does a simple POST request to Dash API with given parameters
 @click.argument("target", required=False, default="default")
 @click.option("-l", "--list-targets", help="list available targets",
               is_flag=True, is_eager=True, expose_value=False,
-              callback=list_targets)
+              callback=list_targets_callback)
 @click.option("-d", "--debug", help="debug mode", is_flag=True,
               callback=utils.deprecate_debug_parameter)
 @click.option("-v", "--verbose", is_flag=True,

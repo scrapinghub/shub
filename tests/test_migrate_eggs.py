@@ -46,6 +46,7 @@ class MigrateEggsTest(unittest.TestCase):
             endpoint='endpoint1',
             apikey='apikey1',
             stack='',
+            image='',
             requirements_file='',
             version='',
             eggs=[],
