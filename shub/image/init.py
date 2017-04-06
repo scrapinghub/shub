@@ -22,17 +22,8 @@ RUN python setup.py install
 """.format(docker_app_dir=DOCKER_APP_DIR)
 
 DEFAULT_BASE_IMAGE = "scrapinghub/scrapinghub-stack-scrapy:1.3"
-BASE_PYTHON_DEPS = [
-    'BeautifulSoup==3.2.0',
-    'MySQL-python==1.2.3',
+RECOMMENDED_PYTHON_DEPS = [
     'guppy==0.1.10',
-    'ipython==5.3.0',
-    'numpy==1.12.1',
-    'pika==0.10.0',
-    'psycopg2==2.7.1',
-    'pymongo==3.4.0',
-    'setproctitle==1.1.10',
-    'slybot==0.12.1',
 ]
 
 SHORT_HELP = "Create Dockerfile for existing Scrapy project."
@@ -64,7 +55,7 @@ def list_recommended_python_reqs(ctx, param, value):
     if not value:
         return
     click.echo("Recommended Python deps list:")
-    for dep in BASE_PYTHON_DEPS:
+    for dep in RECOMMENDED_PYTHON_DEPS:
         click.echo('- {}'.format(dep))
     ctx.exit()
 
@@ -162,7 +153,7 @@ def _format_requirements(project_dir, requirements):
     else:
         # let's create requirements.txt with base dependencies
         with open(rel_reqs_path, 'w') as reqs_file:
-            reqs_file.writelines("%s\n" % l for l in BASE_PYTHON_DEPS)
+            reqs_file.writelines("%s\n" % l for l in RECOMMENDED_PYTHON_DEPS)
         click.echo('Created base requirements.txt in project dir.')
     rows = [
         'COPY ./{} {}/requirements.txt'.format(rel_reqs_path, DOCKER_APP_DIR),
