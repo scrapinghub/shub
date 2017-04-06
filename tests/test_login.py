@@ -15,6 +15,7 @@ from .utils import AssertInvokeRaisesMixin
 VALID_KEY = 32 * '1'
 
 
+@patch('shub.login.GLOBAL_SCRAPINGHUB_YML_PATH', new='.scrapinghub.yml')
 @patch('shub.config.GLOBAL_SCRAPINGHUB_YML_PATH', new='.scrapinghub.yml')
 @patch('shub.config.NETRC_PATH', new='.netrc')
 @patch('shub.config.get_sources', new=MagicMock(return_value=[]))

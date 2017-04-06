@@ -20,14 +20,14 @@ else:
 
 from scrapinghub import Connection, APIError
 
-from shub.config import (load_shub_config, update_yaml_dict,
-                         list_targets_callback, SH_IMAGES_REGISTRY)
+from shub.config import (list_targets_callback, load_shub_config,
+                         SH_IMAGES_REGISTRY)
 from shub.exceptions import (InvalidAuthException, NotFoundException,
                              RemoteErrorException, ShubException,
                              BadParameterException)
-from shub.utils import (closest_file, get_config, inside_project,
-                        make_deploy_request, run_python,
-                        create_default_setup_py)
+from shub.utils import (closest_file, create_default_setup_py, get_config,
+                        inside_project, make_deploy_request, run_python,
+                        update_yaml_dict)
 from shub.image.upload import upload_cmd
 
 

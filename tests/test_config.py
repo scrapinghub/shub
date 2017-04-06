@@ -13,7 +13,7 @@ from click.testing import CliRunner
 
 from shub.config import (get_target, get_target_conf, get_version,
                          load_shub_config, ShubConfig, Target,
-                         update_yaml_dict, SH_IMAGES_REPOSITORY)
+                         SH_IMAGES_REPOSITORY)
 from shub.exceptions import (BadParameterException, BadConfigException,
                              ConfigParseException, MissingAuthException,
                              NotFoundException)
@@ -807,30 +807,6 @@ class LoadShubConfigTest(unittest.TestCase):
 
 
 class ConfigHelpersTest(unittest.TestCase):
-
-    def test_update_yaml_dict(self):
-        YAML_BEFORE = textwrap.dedent("""\
-            a:
-              unrelated: dict
-            b:
-              key1: val1
-              key2: val2
-        """)
-        DICT_EXPECTED = {
-            'a': {'unrelated': 'dict'},
-            'b': {'key1': 'newval1', 'key2': 'val2', 'key3': 'val3'}
-        }
-        runner = CliRunner()
-        with runner.isolated_filesystem():
-            with open('conf.yml', 'w') as f:
-                f.write(YAML_BEFORE)
-            with update_yaml_dict('conf.yml') as conf:
-                conf['b']['key1'] = 'newval1'
-                conf['b']['key3'] = 'val3'
-            with open('conf.yml', 'r') as f:
-                self.assertEqual(yaml.safe_load(f), DICT_EXPECTED)
-                f.seek(0)
-                self.assertIn("key1: newval1", f.read())
 
     @mock.patch('shub.config.load_shub_config')
     def test_get_target_version(self, mock_lsh):
