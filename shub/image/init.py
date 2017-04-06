@@ -21,6 +21,7 @@ COPY . {docker_app_dir}
 RUN python setup.py install
 """.format(docker_app_dir=DOCKER_APP_DIR)
 
+DEFAULT_BASE_IMAGE = "scrapinghub/scrapinghub-stack-scrapy:1.3"
 BASE_PYTHON_DEPS = [
     'BeautifulSoup==3.2.0',
     'MySQL-python==1.2.3',
@@ -82,7 +83,7 @@ def _deprecate_base_deps_parameter(ctx, param, value):
               help="list recommended python requirements")
 @click.option("--project", default="default",
               help="project name to get settings module from scrapy.cfg")
-@click.option("--base-image", default="scrapinghub/scrapinghub-stack-scrapy:1.3",
+@click.option("--base-image", default=DEFAULT_BASE_IMAGE,
               help="base docker image name")
 @click.option("--base-deps", default='',
               help="[DEPRECATED] a comma-separated list with base system dependencies",
@@ -99,6 +100,9 @@ def cli(project, base_image, base_deps, add_deps, requirements):
             'Cannot find Scrapy project settings. Please ensure that current directory '
             'contains scrapy.cfg with settings section, see example at '
             'https://doc.scrapy.org/en/latest/topics/commands.html#default-structure-of-scrapy-projects')  # NOQA
+    dockefile_path = os.path.join(project_dir, 'Dockerfile')
+    if os.path.exists(dockefile_path):
+        raise shub_exceptions.ShubException('Found a Dockerfile in the project directory, aborting')
     settings_module = scrapy_config.get('settings', project)
     values = {
         'base_image':   base_image,
@@ -110,13 +114,9 @@ def cli(project, base_image, base_deps, add_deps, requirements):
     source = Template(DOCKERFILE_TEMPLATE)
     results = source.substitute(values)
     results = results.replace('\n\n', '\n')
-
-    click.echo("The following Dockerfile will be created:\n{}".format(results))
-    dockefile_path = os.path.join(project_dir, 'Dockerfile')
-    if click.confirm("Save to {}?".format(dockefile_path)):
-        with open(dockefile_path, 'w') as dockerfile:
-            dockerfile.write(results)
-        click.echo('Saved.')
+    with open(dockefile_path, 'w') as dockerfile:
+        dockerfile.write(results)
+    click.echo("Dockerfile is saved to {}".format(dockefile_path))
 
 
 def _format_system_deps(base_deps, add_deps):

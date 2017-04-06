@@ -13,19 +13,6 @@ from shub.image.init import _wrap
 from .utils import add_fake_requirements
 
 
-BASE_DOCKERFILE = """\
-FROM scrapinghub/scrapinghub-stack-scrapy:1.3
-ENV TERM xterm
-ENV SCRAPY_SETTINGS_MODULE test.settings
-RUN mkdir -p /app
-WORKDIR /app
-COPY ./requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
-COPY . /app
-RUN python setup.py install
-"""
-
-
 @pytest.fixture
 def project_dir(project_dir):
     """Overriden project_dir fixture without Dockerfile"""
@@ -35,11 +22,14 @@ def project_dir(project_dir):
 
 
 def test_cli_default_settings(project_dir):
+    dockerfile_path = os.path.join(project_dir, 'Dockerfile')
+    assert not os.path.exists(dockerfile_path)
     runner = CliRunner()
-    result = runner.invoke(cli, [], input='no\n')
+    result = runner.invoke(cli, [])
     assert result.exit_code == 0
-    assert BASE_DOCKERFILE in result.output
-    assert not os.path.exists(os.path.join(project_dir, 'Dockerfile'))
+    msg = 'Dockerfile is saved to {}'.format(dockerfile_path)
+    assert msg in result.output
+    assert os.path.exists(dockerfile_path)
 
 
 @pytest.mark.usefixtures('project_dir')
@@ -50,12 +40,16 @@ def test_cli_list_recommended_reqs():
     assert "Recommended Python deps list:" in result.output
 
 
-def test_cli_store_dockerfile(project_dir):
+def test_cli_abort_if_dockerfile_exists(project_dir):
+    dockerfile_path = os.path.join(project_dir, 'Dockerfile')
+    open(dockerfile_path, 'w').close()
     runner = CliRunner()
     result = runner.invoke(cli, [], input='yes\n')
-    assert result.exit_code == 0
-    assert BASE_DOCKERFILE in result.output
+    assert result.exit_code == 1
+    assert 'Found a Dockerfile in the project directory, aborting' in result.output
     assert os.path.exists(os.path.join(project_dir, 'Dockerfile'))
+    with open(dockerfile_path) as f:
+        assert f.read() == ''
 
 
 def test_wrap():
