@@ -4,5 +4,6 @@ PyYAML
 requests
 retrying
 six
+tqdm
 
 scrapinghub>=1.9.0
