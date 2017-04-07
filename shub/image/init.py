@@ -6,7 +6,6 @@ import click
 
 from shub import exceptions as shub_exceptions
 from shub import utils as shub_utils
-from shub.image import utils
 
 
 DOCKER_APP_DIR = '/app'
@@ -84,13 +83,14 @@ def _deprecate_base_deps_parameter(ctx, param, value):
 @click.option("--requirements", default="requirements.txt",
               help="path to requirements.txt")
 def cli(project, base_image, base_deps, add_deps, requirements):
-    project_dir = utils.get_project_dir()
+    closest_scrapy_cfg = shub_utils.closest_file('scrapy.cfg')
     scrapy_config = shub_utils.get_config()
-    if not scrapy_config.has_option('settings', project):
+    if not closest_scrapy_cfg or not scrapy_config.has_option('settings', project):
         raise shub_exceptions.BadConfigException(
             'Cannot find Scrapy project settings. Please ensure that current directory '
             'contains scrapy.cfg with settings section, see example at '
             'https://doc.scrapy.org/en/latest/topics/commands.html#default-structure-of-scrapy-projects')  # NOQA
+    project_dir = os.path.dirname(closest_scrapy_cfg)
     dockefile_path = os.path.join(project_dir, 'Dockerfile')
     if os.path.exists(dockefile_path):
         raise shub_exceptions.ShubException('Found a Dockerfile in the project directory, aborting')
