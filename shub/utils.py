@@ -665,38 +665,63 @@ def get_project_dir():
         "Dockerfile in this directory or any of the parent directories.")
 
 
-def create_scrapinghub_yml_wizard(conf, target='default'):
+def create_scrapinghub_yml_wizard(conf, target='default', image=False):
     """
     Ask user for project ID, ensure they have access to that project, and save
     it to given ``target`` in local ``scrapinghub.yml`` if desired.
     """
     closest_sh_yml = os.path.join(get_project_dir(), 'scrapinghub.yml')
-    # Get default endpoint and API key (meanwhile making sure the user is
-    # logged in)
-    endpoint, apikey = conf.get_endpoint(0), conf.get_apikey(0)
-    project = click.prompt("Target project ID", type=int)
-    if not has_project_access(project, endpoint, apikey):
-        raise InvalidAuthException(
-            "The account you logged in to has no access to project {}. Please "
-            "double-check the project ID and make sure you logged in to the "
-            "correct acount.".format(project),
-        )
-    conf.projects[target] = project
-    if click.confirm("Save as default", default=True):
+    project = None
+    if target not in conf.projects:
+        # Get default endpoint and API key (meanwhile making sure the user is
+        # logged in)
+        endpoint, apikey = conf.get_endpoint(0), conf.get_apikey(0)
+        project = click.prompt("Target project ID", type=int)
+        if not has_project_access(project, endpoint, apikey):
+            raise InvalidAuthException(
+                "The account you logged in to has no access to project {}. "
+                "Please double-check the project ID and make sure you logged "
+                "in to the correct acount.".format(project),
+            )
+        # XXX: Save {'id': project} once we normalize project config on loading
+        conf.projects[target] = project
+    if image and not conf.get_target_conf(target).image:
+        repository = click.prompt(
+            "Image repository (leave empty to use Scrapinghub's repository)",
+            default=True, show_default=False)
+        if target == 'default':
+            conf.images[target] = repository
+        else:
+            # XXX: Remove once we normalize project config on loading
+            if not isinstance(conf.projects[target], dict):
+                conf.projects[target] = {'id': conf.projects[target]}
+            conf.projects[target]['image'] = repository
+    # Image repositories are always saved
+    if image or click.confirm("Save as default", default=True):
         try:
-            with update_yaml_dict(closest_sh_yml) as conf_yml:
-                default_entry = {'default': project}
-                if 'projects' in conf_yml:
-                    conf_yml['projects'].update(default_entry)
+            # XXX: Don't save the global config to not leak any configuration
+            #      options from the global config file into the project-
+            #      specific one. Instead, load only the local settings, then
+            #      update these
+            # XXX: Runtime import to avoid circular dependency
+            from shub.config import load_shub_config
+            local_conf = load_shub_config(load_global=False, load_env=False)
+            if project:
+                local_conf.projects[target] = project
+            if image:
+                if target == 'default':
+                    local_conf.images[target] = repository
                 else:
-                    conf_yml['projects'] = default_entry
-        except Exception:
+                    # XXX: Remove once we normalize project config on loading
+                    if not isinstance(local_conf.projects[target], dict):
+                        local_conf.projects[target] = {
+                            'id': local_conf.projects[target]}
+                    local_conf.projects[target].update({'image': repository})
+            local_conf.save(closest_sh_yml)
+        except Exception as e:
             click.echo(
-                "There was an error while trying to write to scrapinghub.yml. "
-                "Could not save project {} as default.".format(project),
+                "There was an error while trying to write to scrapinghub.yml: "
+                "{}".format(e),
             )
         else:
-            click.echo(
-                "Project {} was set as default in scrapinghub.yml. You can "
-                "deploy to it via 'shub deploy' from now on.".format(project),
-            )
+            click.echo("Saved to %s." % closest_sh_yml)

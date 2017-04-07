@@ -429,6 +429,29 @@ class ShubConfigTest(unittest.TestCase):
             # Make sure it is readable again
             ShubConfig().load_file('scrapinghub.yml')
 
+    def test_save_partial_options(self):
+        OLD_YML = """\
+        projects:
+            default: 12345
+            prod: 33333
+        stack: custom-stack
+        """
+        with CliRunner().isolated_filesystem():
+            with open('conf.yml', 'w') as f:
+                f.write(textwrap.dedent(OLD_YML))
+            conf = ShubConfig()
+            conf.load_file('conf.yml')
+            del conf.projects['prod']
+            del conf.stacks['default']
+            conf.save('conf.yml', options=['projects'])
+            with open('conf.yml', 'r') as f:
+                self.assertEqual(
+                    yaml.load(f),
+                    {'project': 12345, 'stack': 'custom-stack'})
+            conf.save('conf.yml')
+            with open('conf.yml', 'r') as f:
+                self.assertEqual(yaml.load(f), {'project': 12345})
+
     def test_normalized_projects(self):
         expected_projects = {
             'shproj': _project_dict(123),

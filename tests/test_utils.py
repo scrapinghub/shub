@@ -20,6 +20,7 @@ from mock import Mock, MagicMock, patch
 from scrapinghub import APIError
 
 from shub import utils
+from shub.config import ShubConfig
 from shub.exceptions import (
     BadParameterException, InvalidAuthException, NotFoundException,
     RemoteErrorException, SubcommandException
@@ -472,6 +473,7 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
     @patch('shub.utils.has_project_access')
     def test_create_scrapinghub_yml_wizard(self, mock_project_access):
         conf = mock_conf(self)
+        del conf.projects['default']
 
         @click.command()
         def call_wizard():
@@ -498,6 +500,60 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
             conf.projects['prod'] = 299
             self.runner.invoke(call_wizard, input='399\n\n')
             self.assertEqual(conf.projects['default'], 399)
+
+    @patch('shub.utils.has_project_access', return_value=True)
+    def test_deploy_wizard_set_image(self, mock_project_access):
+        conf = mock_conf(self)
+
+        @click.command()
+        def call_wizard():
+            utils.create_scrapinghub_yml_wizard(conf, image=True)
+
+        with self.runner.isolated_filesystem():
+            open('scrapy.cfg', 'w').close()
+            self.assertFalse(os.path.exists('scrapinghub.yml'))
+            self.runner.invoke(call_wizard, input='user/repo\n')
+            self.assertEqual(conf.images['default'], 'user/repo')
+            self.assertTrue(os.path.exists('scrapinghub.yml'))
+
+            del conf.images['default']
+            self.runner.invoke(call_wizard, input='\n')
+            self.assertEqual(conf.images['default'], True)
+
+            del conf.projects['default']
+            del conf.images['default']
+            self.runner.invoke(call_wizard, input='12345\nuser/repo\n')
+            self.assertEqual(conf.projects['default'], 12345)
+            self.assertEqual(conf.images['default'], 'user/repo')
+
+    @patch('shub.utils.has_project_access', return_value=True)
+    def test_deploy_wizard_does_not_leak_global_conf(self, mock_proj_access):
+        global_conf = ShubConfig()
+        global_conf.projects = {'prod': 33333}
+        global_conf.apikeys = {'default': 'abc'}
+
+        @click.command()
+        def call_wizard():
+            utils.create_scrapinghub_yml_wizard(global_conf, image=use_image)
+
+        with self.runner.isolated_filesystem():
+            open('scrapy.cfg', 'w').close()
+
+            use_image = False
+            self.assertFalse(os.path.exists('scrapinghub.yml'))
+            self.runner.invoke(call_wizard, input='99999\n\n')
+            self.assertEqual(global_conf.projects['default'], 99999)
+            with open('scrapinghub.yml', 'r') as f:
+                self.assertEqual(f.read(), "project: 99999\n")
+
+            os.remove('scrapinghub.yml')
+            use_image = True
+            del global_conf.projects['default']
+            self.runner.invoke(call_wizard, input='99999\n\n\n')
+            self.assertEqual(global_conf.projects['default'], 99999)
+            self.assertEqual(global_conf.images['default'], True)
+            with utils.update_yaml_dict('scrapinghub.yml') as local_conf:
+                self.assertEqual(local_conf, {'project': 99999, 'image': True})
 
 
 if __name__ == '__main__':

@@ -165,7 +165,7 @@ class ShubConfig(object):
             self._load_scrapycfg_target(tname, t)
         self._check_endpoints()
 
-    def save(self, path=None):
+    def save(self, path=None, options=None):
         def _project_id_as_int(project):
             """Copy project and return it with the ID casted to int to make
             sure it is exported as "123" and not "'123'"
@@ -184,7 +184,9 @@ class ShubConfig(object):
             return project
 
         with update_yaml_dict(path) as yml:
-            for option, shortcut in self.SHORTCUTS.items():
+            options = options or list(self.SHORTCUTS)
+            for option in options:
+                shortcut = self.SHORTCUTS[option]
                 conf = getattr(self, option)
                 if option == 'endpoints' and conf == ShubConfig().endpoints:
                     # Don't write default endpoint
