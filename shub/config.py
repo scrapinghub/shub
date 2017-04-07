@@ -168,8 +168,10 @@ class ShubConfig(object):
                     conf = {k: _project_id_as_int(v) for k, v in conf.items()}
                 if list(conf.keys()) == ['default']:
                     yml[shortcut] = conf['default']
+                    yml.pop(option, None)
                 else:
                     yml[option] = conf
+                    yml.pop(shortcut, None)
             if self.version != 'AUTO':
                 yml['version'] = self.version
             if self.eggs:
