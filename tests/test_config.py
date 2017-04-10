@@ -392,6 +392,43 @@ class ShubConfigTest(unittest.TestCase):
             with open('conf.yml', 'r') as f:
                 self.assertEqual(yaml.load(f), expected_yml_dict)
 
+    def test_save_shortcut_updated(self):
+        OLD_YML = """\
+        projects:
+            default: 12345
+            prod: 33333
+        """
+        runner = CliRunner()
+        with runner.isolated_filesystem():
+            with open('scrapinghub.yml', 'w') as f:
+                f.write(textwrap.dedent(OLD_YML))
+            conf = ShubConfig()
+            conf.load_file('scrapinghub.yml')
+            del conf.projects['prod']
+            print(conf.projects)
+            conf.save('scrapinghub.yml')
+            with open('scrapinghub.yml', 'r') as f:
+                new_yml = yaml.safe_load(f)
+            # Should not contain 'projects'
+            self.assertEqual(new_yml, {'project': 12345})
+
+            conf = ShubConfig()
+            conf.load_file('scrapinghub.yml')
+            # Should also work in reverse
+            conf.projects['prod'] = 33333
+            conf.save('scrapinghub.yml')
+            with open('scrapinghub.yml', 'r') as f:
+                new_yml = yaml.safe_load(f)
+            # Should not contain 'project' singleton
+            self.assertEqual(
+                new_yml,
+                {'projects': {'default': 12345, 'prod': 33333}},
+            )
+
+            # Make sure it is readable again
+            ShubConfig().load_file('scrapinghub.yml')
+
+
     def test_normalized_projects(self):
         expected_projects = {
             'shproj': _project_dict(123),
