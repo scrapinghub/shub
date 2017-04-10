@@ -62,9 +62,9 @@ SHORT_HELP = "Deploy Scrapy project to Scrapy Cloud"
 
 @click.command(help=HELP, short_help=SHORT_HELP)
 @click.argument("target", required=False, default="default")
-@click.option("-l", "--list-targets", help="list available targets",
-              is_flag=True, is_eager=True, expose_value=False,
-              callback=list_targets_callback)
+@click.option("-l", "--list-targets", is_flag=True, is_eager=True,
+              expose_value=False, callback=list_targets_callback,
+              help="List available project names defined in your config")
 @click.option("-V", "--version", help="the version to use for deploying")
 @click.option("-d", "--debug", help="debug mode (do not remove build dir)",
               is_flag=True)
