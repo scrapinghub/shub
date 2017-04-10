@@ -39,6 +39,38 @@ FALLBACK_ENCODING = 'utf-8'
 STDOUT_ENCODING = sys.stdout.encoding or FALLBACK_ENCODING
 LAST_N_LOGS = 30
 
+_SETUP_PY_TEMPLATE = """\
+# Automatically created by: shub deploy
+
+from setuptools import setup, find_packages
+
+setup(
+    name         = 'project',
+    version      = '1.0',
+    packages     = find_packages(),
+    entry_points = {'scrapy': ['settings = %(settings)s']},
+)
+"""
+
+
+@contextlib.contextmanager
+def remember_cwd():
+    current_dir = os.getcwd()
+    try:
+        yield
+    finally:
+        os.chdir(current_dir)
+
+
+def create_default_setup_py(**kwargs):
+    closest = closest_file('scrapy.cfg')
+    with remember_cwd():
+        os.chdir(os.path.dirname(closest))
+        if not os.path.exists('setup.py'):
+            with open('setup.py', 'w') as f:
+                f.write(_SETUP_PY_TEMPLATE % kwargs)
+            click.echo("Created setup.py at {}".format(os.getcwd()))
+
 
 def make_deploy_request(url, data, files, auth, verbose, keep_log):
     last_logs = deque(maxlen=LAST_N_LOGS)

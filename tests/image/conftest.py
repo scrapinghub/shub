@@ -4,8 +4,9 @@ import pytest
 
 from .utils import (
     FakeProjectDirectory, add_scrapy_fake_config, add_sh_fake_config,
-    add_fake_dockerfile
+    add_fake_dockerfile, add_fake_setup_py,
 )
+
 
 @pytest.fixture
 def docker_client_mock():
@@ -23,4 +24,5 @@ def project_dir():
         add_scrapy_fake_config(tmpdir)
         add_sh_fake_config(tmpdir)
         add_fake_dockerfile(tmpdir)
+        add_fake_setup_py(tmpdir)
         yield tmpdir

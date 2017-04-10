@@ -1,7 +1,6 @@
 import os
 import re
 import click
-import contextlib
 
 import yaml
 from tqdm import tqdm
@@ -43,15 +42,6 @@ def deprecate_debug_parameter(ctx, param, value):
         click.echo("WARNING: -d/--debug parameter is deprecated. "
                    "Please use -v/--verbose parameter instead.",
                    err=True)
-
-
-@contextlib.contextmanager
-def remember_cwd():
-    current_dir = os.getcwd()
-    try:
-        yield
-    finally:
-        os.chdir(current_dir)
 
 
 def get_project_dir():

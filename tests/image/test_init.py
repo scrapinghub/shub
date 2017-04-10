@@ -16,8 +16,7 @@ from .utils import add_fake_requirements
 @pytest.fixture
 def project_dir(project_dir):
     """Overriden project_dir fixture without Dockerfile"""
-    dockerfile_path = os.path.join(project_dir, 'Dockerfile')
-    os.remove(dockerfile_path)
+    os.remove(os.path.join(project_dir, 'Dockerfile'))
     return project_dir
 
 
@@ -50,6 +49,15 @@ def test_cli_abort_if_dockerfile_exists(project_dir):
     assert os.path.exists(os.path.join(project_dir, 'Dockerfile'))
     with open(dockerfile_path) as f:
         assert f.read() == ''
+
+
+def test_cli_create_setup_py(project_dir):
+    setup_py_path = os.path.join(project_dir, 'setup.py')
+    os.remove(setup_py_path)
+    runner = CliRunner()
+    result = runner.invoke(cli, [], input='yes\n')
+    assert result.exit_code == 0
+    assert os.path.isfile(setup_py_path)
 
 
 def test_wrap():
