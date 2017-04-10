@@ -635,7 +635,7 @@ def update_yaml_dict(conf_path=None):
     with open(conf_path, 'w') as f:
         # Avoid writing "{}"
         if conf:
-            yaml.dump(conf, f, default_flow_style=False)
+            yaml.safe_dump(conf, f, default_flow_style=False)
 
 
 def has_project_access(project, endpoint, apikey):
