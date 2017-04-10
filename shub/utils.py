@@ -15,7 +15,7 @@ from distutils.spawn import find_executable
 from distutils.version import LooseVersion, StrictVersion
 from glob import glob
 from importlib import import_module
-from tempfile import NamedTemporaryFile
+from tempfile import NamedTemporaryFile, TemporaryFile
 from six.moves.urllib.parse import urljoin
 
 import click
@@ -183,22 +183,21 @@ def run_cmd(*args, **kwargs):
 
     Raises SubcommandException on non-zero exit codes or other subprocess
     errors."""
-    if sys.version_info >= (3, 5):
-        kwargs.setdefault('stderr', subprocess.PIPE)
-
     def _clean(s):
         return s.decode(STDOUT_ENCODING).replace(os.linesep, '\n').strip('\n')
 
-    try:
-        return _clean(subprocess.check_output(*args, **kwargs))
-    except subprocess.CalledProcessError as e:
-        stderr = ""
-        if sys.version_info >= (3, 5) and e.stderr:
-            stderr = "\n\nSTDERR\n------\n%s" % _clean(e.stderr)
-        raise SubcommandException(
-            "Error while calling subcommand: %s\n\n"
-            "COMMAND OUTPUT\n--------------\n%s"
-            "%s" % (e, _clean(e.output), stderr))
+    with TemporaryFile() as tmpfile:
+        kwargs.setdefault('stderr', tmpfile)
+        try:
+            return _clean(subprocess.check_output(*args, **kwargs))
+        except subprocess.CalledProcessError as e:
+            msg = ("Error while calling subcommand: %s\n\nCOMMAND OUTPUT\n"
+                   "--------------\n%s" % (e, _clean(e.output)))
+            tmpfile.seek(0)
+            e.stderr = _clean(tmpfile.read())
+            if e.stderr:
+                msg += "\n\nSTDERR\n------\n%s" % e.stderr
+            raise SubcommandException(msg)
 
 
 def pwd_version():
