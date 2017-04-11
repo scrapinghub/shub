@@ -56,6 +56,7 @@ def build_cmd(target, version, skip_tests):
         build_progress_cls = _LoggedBuildProgress
     else:
         build_progress_cls = _BuildProgress
+    click.echo("Building {}.".format(image_name))
     events = client.build(path=project_dir, tag=image_name, decode=True)
     build_progress = build_progress_cls(events)
     build_progress.show()
