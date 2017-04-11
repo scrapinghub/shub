@@ -205,7 +205,26 @@ def valid_spiders(buf):
     return sorted(filter(_VALIDSPIDERNAME.match, buf.splitlines()))
 
 
+class BaseProgress(object):
+    """Small helper class to track progress.
+
+    Base implementation stores events iterator and walks through it with
+    show() method, handle_event() logic depends on operation and should
+    be implemented in child classes.
+    """
+    def __init__(self, events):
+        self.events = events
+
+    def show(self):
+        for event in self.events:
+            self.handle_event(event)
+
+    def handle_event(self, event):
+        raise NotImplemented("Please implement this method in child classes.")
+
+
 class ProgressBar(tqdm):
+    """Fixed version of tqdm.tqdm progress bar."""
 
     def moveto(self, *args, **kwargs):
         super(ProgressBar, self).moveto(*args, **kwargs)
@@ -214,6 +233,10 @@ class ProgressBar(tqdm):
 
 
 def create_progress_bar(total, desc, **kwargs):
+    """Helper creating a progress bar instance for a given parameters set.
+
+    The bar should be closed by calling close() method.
+    """
     return ProgressBar(
         total=total,
         desc=desc,

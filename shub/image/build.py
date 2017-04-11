@@ -66,18 +66,11 @@ def build_cmd(target, version, skip_tests):
         test_cmd(target, version)
 
 
-class _LoggedBuildProgress(object):
+class _LoggedBuildProgress(utils.BaseProgress):
     """Visualize build progress in verbose mode.
 
     Output all the events received from the docker daemon.
     """
-    def __init__(self, events):
-        self.events = events
-
-    def show(self):
-        for event in self.events:
-            self.handle_event(event)
-
     def handle_event(self, event):
         if 'stream' in event:
             self.handle_stream_event(event)

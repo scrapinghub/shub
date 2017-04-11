@@ -84,19 +84,11 @@ def _execute_push_login(client, image, username, password, email):
     click.echo("Login to {} succeeded.".format(registry))
 
 
-class _LoggedPushProgress(object):
+class _LoggedPushProgress(utils.BaseProgress):
     """Visualize push progress in verbose mode.
 
     Output all the events received from the docker daemon.
     """
-
-    def __init__(self, push_events):
-        self.push_events = push_events
-
-    def show(self):
-        for event in self.push_events:
-            self.handle_event(event)
-
     def handle_event(self, event):
         if 'status' in event:
             self.handle_status_event(event)
