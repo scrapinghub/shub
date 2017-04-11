@@ -1,5 +1,6 @@
 import os
 import re
+import sys
 import click
 
 import yaml
@@ -210,3 +211,18 @@ class ProgressBar(tqdm):
         super(ProgressBar, self).moveto(*args, **kwargs)
         if hasattr(self.fp, 'flush'):
             self.fp.flush()
+
+
+def create_progress_bar(total, desc, **kwargs):
+    return ProgressBar(
+        total=total,
+        desc=desc,
+        # XXX: click.get_text_stream or click.get_binary_stream don't
+        # work well with tqdm on Windows and Python 3
+        file=sys.stdout,
+        # helps to update bars on resizing terminal
+        dynamic_ncols=True,
+        # miniters improves progress on erratic updates caused by network
+        miniters=1,
+        **kwargs
+    )

@@ -1,4 +1,3 @@
-import sys
 from collections import OrderedDict
 
 import click
@@ -162,7 +161,7 @@ class _PushProgress(_LoggedPushProgress):
             bar.close()
 
     def _create_total_bar(self):
-        return self._create_bar(
+        return utils.create_progress_bar(
             total=1,
             desc='total',
             # don't need rate here, let's simplify the bar
@@ -170,25 +169,11 @@ class _PushProgress(_LoggedPushProgress):
         )
 
     def _create_bar_per_layer(self, layer_id, total):
-        return self._create_bar(
+        return utils.create_progress_bar(
             total=total,
             desc=layer_id,
             unit='B',
             unit_scale=True,
             # don't need estimates here, keep only rate
             bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{rate_fmt}]',
-        )
-
-    def _create_bar(self, total, desc, **kwargs):
-        return utils.ProgressBar(
-            total=total,
-            desc=desc,
-            # XXX: click.get_text_stream or click.get_binary_stream don't work well with tqdm
-            # on Windows and Python 3
-            file=sys.stdout,
-            # helps to update bars on resizing terminal
-            dynamic_ncols=True,
-            # miniters improves progress on erratic updates caused by network
-            miniters=1,
-            **kwargs
         )

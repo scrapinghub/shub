@@ -1,6 +1,5 @@
 import os
 import re
-import sys
 
 import click
 from tqdm import tqdm
@@ -82,24 +81,13 @@ def _create_or_update_progress_bar(bar, event, verbose):
     if step_row:
         step_id, total = [int(val) for val in step_row.groups()]
         if not bar:
-            bar = _create_progress_bar(total)
+            bar = utils.create_progress_bar(
+                total=total,
+                desc='layers',
+                # don't need rate here, let's simplify the bar
+                bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt}',
+            )
         # ignore onbuild sub-steps
         if step_id > bar.pos and bar.total == total:
             bar.update()
     return bar
-
-
-def _create_progress_bar(total):
-    return tqdm(
-        total=total,
-        desc='layers',
-        # XXX: click.get_text_stream or click.get_binary_stream don't
-        # work well with tqdm on Windows and Python 3
-        file=sys.stdout,
-        # helps to update bars on resizing terminal
-        dynamic_ncols=True,
-        # miniters improves progress on erratic updates caused by network
-        miniters=1,
-        # don't need rate here, let's simplify the bar
-        bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt}',
-    )
