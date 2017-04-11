@@ -29,6 +29,49 @@ def test_cli_with_apikey_login(docker_client_mock, test_mock):
 
 
 @pytest.mark.usefixtures('project_dir')
+def test_cli_with_progress(docker_client_mock, test_mock):
+    docker_client_mock.login.return_value = {"Status": "Login Succeeded"}
+    docker_client_mock.push.return_value = [
+        {"status": "The push refers to a repository [some/image]"},
+        {"status": "Preparing", "progressDetail": {}, "id": "abc"},
+        {"status": "Preparing", "progressDetail": {}, "id": "def"},
+        {"status": "Preparing", "progressDetail": {}, "id": "egh"},
+        {"status": "Waiting", "progressDetail": {}, "id": "abc"},
+        {"status": "Waiting", "progressDetail": {}, "id": "egh"},
+        {"status": "Pushing", "progressDetail": {"current": 512, "total": 24803}, "id": "abc"},
+        {"status": "Layer already exists", "progressDetail": {}, "id": "def"},
+        {"status": "Pushing", "progressDetail": {"current": 57344, "total": 26348}, "id": "egh"},
+        {"status": "Pushing", "progressDetail": {"current": 24805, "total": 24803}, "id": "abc"},
+        {"status": "Pushed", "progressDetail": {}, "id": "abc"},
+        {"status": "Successfully pushed"}
+    ]
+    runner = CliRunner()
+    result = runner.invoke(cli, ["dev", "--version", "test"])
+    assert result.exit_code == 0
+    import re
+    assert re.match(
+        'Login to registry succeeded.\n'
+        'Pushing registry/user/project:test to the registry.\n\r'
+        'Layers:   0%|          | 0/1\r          \r'
+        'Layers:   0%|          | 0/1\r          \r'
+        'Layers:   0%|          | 0/2\r          \r'
+        'Layers:   0%|          | 0/3\r          \r'
+        'Layers:   0%|          | 0/3\r          \r'
+        'Layers:   0%|          | 0/3\n\r'
+        'abc:   0%|          | 0.00/24.8K [?B/s]\x1b[A\r'
+        '          \r'
+        'Layers:   0%|          | 0/3\n\n\r'
+        'egh:   0%|          | 0.00/26.3K [?B/s]\x1b[A\x1b[A\r'
+        '          \r'
+        'Layers:  33%|███▎      | 1/3\r'
+        'Layers:  67%|██████▋   | 2/3\n\r'
+        'abc: 100%|██████████| 24.8K/24.8K [[.0-9]MB/s]\n\r'
+        'egh: 100%|██████████| 26.3K/26.3K [[.0-9]MB/s]\n'
+        'The image registry/user/project:test pushed successfully.\n',
+        result.output)
+
+
+@pytest.mark.usefixtures('project_dir')
 def test_cli_with_custom_login(docker_client_mock, test_mock):
     docker_client_mock.login.return_value = {"Status": "Login Succeeded"}
     docker_client_mock.push.return_value = [
