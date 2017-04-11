@@ -90,13 +90,9 @@ class _LoggedPushProgress(utils.BaseProgress):
     Output all the events received from the docker daemon.
     """
     def handle_event(self, event):
+        super(_LoggedPushProgress, self).handle_event(event)
         if 'status' in event:
             self.handle_status_event(event)
-        if 'error' in event:
-            click.echo("Error {}: {}".format(event['error'],
-                                             event['errorDetail']))
-            raise shub_exceptions.RemoteErrorException(
-                "Docker push operation failed")
 
     def handle_status_event(self, event):
         msg = "Logs:{} {}".format(event['status'], event.get('progress'))
@@ -155,7 +151,7 @@ class _PushProgress(_LoggedPushProgress):
     def _create_total_bar(self):
         return utils.create_progress_bar(
             total=1,
-            desc='total',
+            desc='Total',
             # don't need rate here, let's simplify the bar
             bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt}'
         )

@@ -2,7 +2,6 @@ import os
 import re
 
 import click
-from tqdm import tqdm
 
 from shub import exceptions as shub_exceptions
 from shub.config import load_shub_config
@@ -25,8 +24,8 @@ provided, the tool uses VCS-based stamp over project directory (the same as
 shub utils itself).
 """
 
-BUILD_STEP_REGEX = re.compile(r'Step (\d+)/(\d+) :*')
-BUILT_REGEX = re.compile(r'Successfully built ([0-9a-f]+)')
+BUILD_STEP_REGEX = re.compile(r'Step (\d+)/(\d+) :.*')
+BUILD_SUCCESS_REGEX = re.compile(r'Successfully built ([0-9a-f]+)')
 
 
 @click.command(help=HELP, short_help=SHORT_HELP)
@@ -72,13 +71,9 @@ class _LoggedBuildProgress(utils.BaseProgress):
     Output all the events received from the docker daemon.
     """
     def handle_event(self, event):
+        super(_LoggedBuildProgress, self).handle_event(event)
         if 'stream' in event:
             self.handle_stream_event(event)
-        if 'error' in event:
-            tqdm.write("Error {}: {}".format(event['error'],
-                                             event['errorDetail']))
-            raise shub_exceptions.RemoteErrorException(
-                "Build image operation failed")
 
     def handle_stream_event(self, event):
         utils.debug_log("{}".format(event['stream'][:-1]))
@@ -92,7 +87,12 @@ class _BuildProgress(_LoggedBuildProgress):
 
     def __init__(self, events):
         super(_BuildProgress, self).__init__(events)
-        self.bar = None
+        self.bar = utils.create_progress_bar(
+            total=1,
+            desc='Steps',
+            # don't need rate here, let's simplify the bar
+            bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt}',
+        )
         self.is_built = False
 
     def show(self):
@@ -104,20 +104,14 @@ class _BuildProgress(_LoggedBuildProgress):
                 "Build image operation failed")
 
     def handle_stream_event(self, event):
-        if BUILT_REGEX.search(event['stream']):
+        if BUILD_SUCCESS_REGEX.search(event['stream']):
             self.is_built = True
             return
         step_row = BUILD_STEP_REGEX.match(event['stream'])
         if not step_row:
             return
         step_id, total = [int(val) for val in step_row.groups()]
-        if not self.bar:
-            self.bar = utils.create_progress_bar(
-                total=total,
-                desc='layers',
-                # don't need rate here, let's simplify the bar
-                bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt}',
-            )
+        self.bar.total = max(self.bar.total, total)
         # ignore onbuild sub-steps
-        if step_id > self.bar.pos and self.bar.total == total:
+        if step_id > self.bar.n and self.bar.total == total:
             self.bar.update()

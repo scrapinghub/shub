@@ -9,7 +9,7 @@ from tqdm import tqdm
 from shub import config as shub_config
 from shub import utils as shub_utils
 from shub.exceptions import (ShubException, NotFoundException,
-                             BadConfigException)
+                             BadConfigException, RemoteErrorException)
 
 
 DEFAULT_DOCKER_VERSION = '1.17'
@@ -209,8 +209,7 @@ class BaseProgress(object):
     """Small helper class to track progress.
 
     Base implementation stores events iterator and walks through it with
-    show() method, handle_event() logic depends on operation and should
-    be implemented in child classes.
+    show() method, handle_event() logic mostly depends on operation.
     """
     def __init__(self, events):
         self.events = events
@@ -220,7 +219,10 @@ class BaseProgress(object):
             self.handle_event(event)
 
     def handle_event(self, event):
-        raise NotImplemented("Please implement this method in child classes.")
+        if 'error' in event:
+            tqdm.write("Error {}: {}".format(event['error'],
+                                             event['errorDetail']))
+            raise RemoteErrorException("Docker operation failed")
 
 
 class ProgressBar(tqdm):
