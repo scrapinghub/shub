@@ -21,7 +21,7 @@ else:
 from scrapinghub import Connection, APIError
 
 from shub.config import (load_shub_config, update_yaml_dict,
-                         list_targets_callback, SH_IMAGES_PREFIX)
+                         list_targets_callback, SH_IMAGES_REGISTRY)
 from shub.exceptions import (InvalidAuthException, NotFoundException,
                              RemoteErrorException, ShubException,
                              BadParameterException)
@@ -79,11 +79,12 @@ def cli(target, version, debug, egg, build_egg, verbose, keep_log):
         image = conf.get_target_conf(target).image
     if not image:
         deploy_cmd(target, version, debug, egg, build_egg, verbose, keep_log)
-    elif image.startswith(SH_IMAGES_PREFIX):
+    elif image.startswith(SH_IMAGES_REGISTRY):
         upload_cmd(target, version)
     else:
-        raise BadParameterException("Please use `shub image` commands to work"
-                                    " with custom Docker registries.")
+        raise BadParameterException(
+            "Please use `shub image` commands to work with Docker registries "
+            "other than Scrapinghub default registry.")
 
 
 def deploy_cmd(target, version, debug, egg, build_egg, verbose, keep_log):

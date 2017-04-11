@@ -13,7 +13,7 @@ from click.testing import CliRunner
 
 from shub.config import (get_target, get_target_conf, get_version,
                          load_shub_config, ShubConfig, Target,
-                         update_yaml_dict, SH_IMAGES_REGISTRY)
+                         update_yaml_dict, SH_IMAGES_REPOSITORY)
 from shub.exceptions import (BadParameterException, BadConfigException,
                              ConfigParseException, MissingAuthException,
                              NotFoundException)
@@ -429,7 +429,6 @@ class ShubConfigTest(unittest.TestCase):
             # Make sure it is readable again
             ShubConfig().load_file('scrapinghub.yml')
 
-
     def test_normalized_projects(self):
         expected_projects = {
             'shproj': _project_dict(123),
@@ -455,8 +454,9 @@ class ShubConfigTest(unittest.TestCase):
         self.conf.load("""
             projects:
                 default: 123
-                stackproj:
-                    id: 321
+                stacks-implicit: 321
+                stacks-explicit:
+                    id: 322
                     image: false
                 devel:
                     id: 456
@@ -473,13 +473,16 @@ class ShubConfigTest(unittest.TestCase):
                 deprecated: old/style
         """)
         self.assertEqual(self.conf.get_image('default'),
-                         SH_IMAGES_REGISTRY.format(project=123))
-        self.assertEqual(self.conf.get_image('stackproj'), None)
+                         SH_IMAGES_REPOSITORY.format(project=123))
+        with self.assertRaises(NotFoundException):
+            self.conf.get_image('stacks-implicit')
+        with self.assertRaises(BadParameterException):
+            self.conf.get_image('stacks-explicit')
         # check that aliases work as expected
         self.assertEqual(self.conf.get_image('devel'),
-                         SH_IMAGES_REGISTRY.format(project=456))
+                         SH_IMAGES_REPOSITORY.format(project=456))
         self.assertEqual(self.conf.get_image('sh-alias'),
-                         SH_IMAGES_REGISTRY.format(project=654))
+                         SH_IMAGES_REPOSITORY.format(project=654))
         # check if custom image is respected
         self.assertEqual(self.conf.get_image('custom'), 'user/repo')
         # check for backward compatibility

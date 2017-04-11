@@ -16,8 +16,8 @@ from shub.utils import (closest_file, get_scrapycfg_targets, get_sources,
                         pwd_hg_version, pwd_git_version, pwd_version)
 
 
-SH_IMAGES_PREFIX = 'images.scrapinghub.com/project/'
-SH_IMAGES_REGISTRY = SH_IMAGES_PREFIX + '{project}'
+SH_IMAGES_REGISTRY = 'images.scrapinghub.com'
+SH_IMAGES_REPOSITORY = SH_IMAGES_REGISTRY + '/project/{project}'
 GLOBAL_SCRAPINGHUB_YML_PATH = os.path.expanduser("~/.scrapinghub.yml")
 NETRC_PATH = os.path.expanduser('~/_netrc' if os.name == 'nt' else '~/.netrc')
 
@@ -80,6 +80,13 @@ class ShubConfig(object):
                 option_conf = getattr(self, option)
                 yaml_option_conf = yaml_cfg.get(option, {})
                 option_conf.update(yaml_option_conf)
+                if option == 'images' and yaml_option_conf:
+                    click.echo(
+                        "Images section is deprecated, please replace it with "
+                        "global `image` setting or define `image` setting for "
+                        "the project.",
+                        err=True
+                    )
                 if shortcut in yaml_cfg:
                     # We explicitly check yaml_option_conf and not option_conf.
                     # It is okay to set conflicting defaults if they are in
@@ -288,19 +295,13 @@ class ShubConfig(object):
           be used instead
 
         The function responds with a custom image name string
-        (or None meaning regular stack-based deploy).
+        (or None/False meaning regular stack-based deploy).
         """
-        if target in self.images and target != 'default':
-            warnings.warn(
-                "Target is found in deprecated `images` section, please "
-                "replace it with global `image` setting or define `image` "
-                "setting for the project.")
-        image = (project['image'] if 'image' in project
-                 else self.images.get(target))
+        image = project.get('image', self.images.get(target))
         # aliases to use internal scrapinghub registry as image storage
         if image is True or image == 'scrapinghub':
-            image = SH_IMAGES_REGISTRY.format(project=project['id'])
-        return image or None
+            image = SH_IMAGES_REPOSITORY.format(project=project['id'])
+        return image
 
     def get_target(self, target, auth_required=True):
         """Return (project_id, endpoint, apikey) for given target."""
@@ -323,7 +324,23 @@ class ShubConfig(object):
 
     def get_image(self, target):
         """Return image for a given target."""
-        return self.get_target_conf(target, auth_required=False).image
+        target_conf = self.get_target_conf(target, auth_required=False)
+        project, image = target_conf.project_id, target_conf.image
+        if image is None:
+            raise NotFoundException(
+                "Could not find image for project '{}'. Please define it "
+                "in your scrapinghub.yml.".format(target))
+        elif image is False:
+            raise BadParameterException(
+                "Using custom images is disabled for the project '{}'. "
+                "Please enable it in your scrapinghub.yml.".format(target))
+        default_image = SH_IMAGES_REPOSITORY.format(project=project)
+        if image.startswith(SH_IMAGES_REGISTRY) and image != default_image:
+            click.echo(
+                "Found wrong SH repository for project '{}': expected {}.\n  "
+                "Please use aliases `True` or `scrapinghub` to fix it in your "
+                "config.".format(target, default_image), err=True)
+        return image
 
 
 Target = namedtuple('Target', ['project_id', 'endpoint', 'apikey', 'stack',
