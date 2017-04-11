@@ -151,7 +151,7 @@ class _PushProgress(_LoggedPushProgress):
     def _create_total_bar(self):
         return utils.create_progress_bar(
             total=1,
-            desc='Total',
+            desc='Layers',
             # don't need rate here, let's simplify the bar
             bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt}'
         )
