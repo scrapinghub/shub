@@ -439,6 +439,30 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
                 f.seek(0)
                 self.assertIn("key1: newval1", f.read())
 
+    def test_update_yaml_dict_handles_file_errors(self):
+        with CliRunner().isolated_filesystem():
+            self.assertFalse(os.path.isfile('didnt_exist.yml'))
+            with utils.update_yaml_dict('didnt_exist.yml') as conf:
+                pass
+            self.assertTrue(os.path.isfile('didnt_exist.yml'))
+
+            os.mkdir('a_directory')
+            with self.assertRaises(IOError):
+                with utils.update_yaml_dict('a_directory'):
+                    pass
+
+    @patch('shub.config.GLOBAL_SCRAPINGHUB_YML_PATH', 'global.yml')
+    def test_update_yaml_dict_uses_global_by_default(self):
+        @click.command()
+        def call_update_yaml_dict():
+            with utils.update_yaml_dict():
+                pass
+
+        runner = CliRunner()
+        with runner.isolated_filesystem():
+            result = runner.invoke(call_update_yaml_dict)
+        assert 'deprecated' in result.output
+
     @patch('shub.utils.Connection')
     def test_has_project_access(self, mock_conn):
         mock_conn.return_value.project_ids.side_effect = APIError(

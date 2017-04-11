@@ -117,6 +117,9 @@ class DeployTest(AssertInvokeRaisesMixin, unittest.TestCase):
             self.runner.invoke(deploy.cli)
             self.assertFalse(mock_wizard.called)
             del self.conf.projects['default']
+            self.runner.invoke(deploy.cli)
+            self.assertTrue(mock_wizard.called)
+            mock_wizard.reset_mock()
             # Don't call when non-default target was supplied
             self.runner.invoke(deploy.cli, 'not-default')
             self.assertFalse(mock_wizard.called)
