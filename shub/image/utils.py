@@ -1,5 +1,6 @@
 import os
 import re
+import sys
 import click
 
 import yaml
@@ -8,7 +9,7 @@ from tqdm import tqdm
 from shub import config as shub_config
 from shub import utils as shub_utils
 from shub.exceptions import (ShubException, NotFoundException,
-                             BadConfigException)
+                             BadConfigException, RemoteErrorException)
 
 
 DEFAULT_DOCKER_VERSION = '1.17'
@@ -30,10 +31,13 @@ You can learn about Docker at https://www.docker.com/.
 """
 
 
-def debug_log(msg):
+def is_verbose():
     ctx = click.get_current_context(True)
-    # FIXME remove check of debug param as it's deprecated
-    if ctx and (ctx.params.get('verbose') or ctx.params.get('debug')):
+    return ctx and (ctx.params.get('verbose') or ctx.params.get('debug'))
+
+
+def debug_log(msg):
+    if is_verbose():
         click.echo(msg)
 
 
@@ -42,6 +46,7 @@ def deprecate_debug_parameter(ctx, param, value):
         click.echo("WARNING: -d/--debug parameter is deprecated. "
                    "Please use -v/--verbose parameter instead.",
                    err=True)
+        return value
 
 
 def get_project_dir():
@@ -200,9 +205,49 @@ def valid_spiders(buf):
     return sorted(filter(_VALIDSPIDERNAME.match, buf.splitlines()))
 
 
+class BaseProgress(object):
+    """Small helper class to track progress.
+
+    Base implementation stores events iterator and walks through it with
+    show() method, handle_event() logic mostly depends on operation.
+    """
+    def __init__(self, events):
+        self.events = events
+
+    def show(self):
+        for event in self.events:
+            self.handle_event(event)
+
+    def handle_event(self, event):
+        if 'error' in event:
+            tqdm.write("Error {}: {}".format(event['error'],
+                                             event['errorDetail']))
+            raise RemoteErrorException("Docker operation failed")
+
+
 class ProgressBar(tqdm):
+    """Fixed version of tqdm.tqdm progress bar."""
 
     def moveto(self, *args, **kwargs):
         super(ProgressBar, self).moveto(*args, **kwargs)
         if hasattr(self.fp, 'flush'):
             self.fp.flush()
+
+
+def create_progress_bar(total, desc, **kwargs):
+    """Helper creating a progress bar instance for a given parameters set.
+
+    The bar should be closed by calling close() method.
+    """
+    return ProgressBar(
+        total=total,
+        desc=desc,
+        # XXX: click.get_text_stream or click.get_binary_stream don't
+        # work well with tqdm on Windows and Python 3
+        file=sys.stdout,
+        # helps to update bars on resizing terminal
+        dynamic_ncols=True,
+        # miniters improves progress on erratic updates caused by network
+        miniters=1,
+        **kwargs
+    )

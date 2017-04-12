@@ -1,4 +1,3 @@
-import sys
 from collections import OrderedDict
 
 import click
@@ -63,8 +62,7 @@ def push_cmd(target, version, username, password, email, apikey, insecure, skip_
     click.echo("Pushing {} to the registry.".format(image_name))
     events = client.push(image_name, stream=True, decode=True,
                          insecure_registry=not bool(username))
-    ctx = click.get_current_context(True)
-    if ctx and ctx.params.get('verbose'):
+    if utils.is_verbose():
         push_progress_cls = _LoggedPushProgress
     else:
         push_progress_cls = _PushProgress
@@ -86,27 +84,15 @@ def _execute_push_login(client, image, username, password, email):
     click.echo("Login to {} succeeded.".format(registry))
 
 
-class _LoggedPushProgress(object):
+class _LoggedPushProgress(utils.BaseProgress):
     """Visualize push progress in verbose mode.
 
     Output all the events received from the docker daemon.
     """
-
-    def __init__(self, push_events):
-        self.push_events = push_events
-
-    def show(self):
-        for event in self.push_events:
-            self.handle_event(event)
-
     def handle_event(self, event):
+        super(_LoggedPushProgress, self).handle_event(event)
         if 'status' in event:
             self.handle_status_event(event)
-        if 'error' in event:
-            click.echo("Error {}: {}".format(event['error'],
-                                             event['errorDetail']))
-            raise shub_exceptions.RemoteErrorException(
-                "Docker push operation failed")
 
     def handle_status_event(self, event):
         msg = "Logs:{} {}".format(event['status'], event.get('progress'))
@@ -163,33 +149,19 @@ class _PushProgress(_LoggedPushProgress):
             bar.close()
 
     def _create_total_bar(self):
-        return self._create_bar(
+        return utils.create_progress_bar(
             total=1,
-            desc='total',
+            desc='Layers',
             # don't need rate here, let's simplify the bar
             bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt}'
         )
 
     def _create_bar_per_layer(self, layer_id, total):
-        return self._create_bar(
+        return utils.create_progress_bar(
             total=total,
             desc=layer_id,
             unit='B',
             unit_scale=True,
             # don't need estimates here, keep only rate
             bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{rate_fmt}]',
-        )
-
-    def _create_bar(self, total, desc, **kwargs):
-        return utils.ProgressBar(
-            total=total,
-            desc=desc,
-            # XXX: click.get_text_stream or click.get_binary_stream don't work well with tqdm
-            # on Windows and Python 3
-            file=sys.stdout,
-            # helps to update bars on resizing terminal
-            dynamic_ncols=True,
-            # miniters improves progress on erratic updates caused by network
-            miniters=1,
-            **kwargs
         )
