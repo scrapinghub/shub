@@ -11,7 +11,8 @@ import yaml
 
 from shub.exceptions import (BadParameterException, BadConfigException,
                              ConfigParseException, MissingAuthException,
-                             NotFoundException)
+                             NotFoundException, ShubDeprecationWarning,
+                             print_warning)
 from shub.utils import (closest_file, get_scrapycfg_targets, get_sources,
                         pwd_hg_version, pwd_git_version, pwd_version)
 
@@ -20,6 +21,7 @@ SH_IMAGES_REGISTRY = 'images.scrapinghub.com'
 SH_IMAGES_REPOSITORY = SH_IMAGES_REGISTRY + '/project/{project}'
 GLOBAL_SCRAPINGHUB_YML_PATH = os.path.expanduser("~/.scrapinghub.yml")
 NETRC_PATH = os.path.expanduser('~/_netrc' if os.name == 'nt' else '~/.netrc')
+CONFIG_DOCS_LINK = "https://shub.readthedocs.io/en/stable/configuration.html"
 
 
 class ShubConfig(object):
@@ -64,10 +66,9 @@ class ShubConfig(object):
                     err=True
                 )
             if parsed.scheme == 'http':
-                click.echo(
-                    'WARNING: Endpoint "%s" is still using HTTP. '
-                    'Please change it to HTTPS if possible.' % endpoint,
-                    err=True
+                print_warning(
+                    'Endpoint "%s" is still using HTTP. '
+                    'Please change it to HTTPS if possible.' % endpoint
                 )
 
     def load(self, stream):
@@ -81,11 +82,12 @@ class ShubConfig(object):
                 yaml_option_conf = yaml_cfg.get(option, {})
                 option_conf.update(yaml_option_conf)
                 if option == 'images' and yaml_option_conf:
-                    click.echo(
+                    print_warning(
                         "Images section is deprecated, please replace it with "
                         "global `image` setting or define `image` setting for "
-                        "the project.",
-                        err=True
+                        "the project.\n  Check for additional details in {}."
+                        .format(CONFIG_DOCS_LINK),
+                        category=ShubDeprecationWarning
                     )
                 if shortcut in yaml_cfg:
                     # We explicitly check yaml_option_conf and not option_conf.
@@ -336,10 +338,10 @@ class ShubConfig(object):
                 "Please enable it in your scrapinghub.yml.".format(target))
         default_image = SH_IMAGES_REPOSITORY.format(project=project)
         if image.startswith(SH_IMAGES_REGISTRY) and image != default_image:
-            click.echo(
+            raise BadParameterException(
                 "Found wrong SH repository for project '{}': expected {}.\n  "
                 "Please use aliases `True` or `scrapinghub` to fix it in your "
-                "config.".format(target, default_image), err=True)
+                "config.".format(target, default_image))
         return image
 
 

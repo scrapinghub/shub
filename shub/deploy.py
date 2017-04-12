@@ -188,7 +188,10 @@ def _deploy_wizard(conf, target='default'):
     closest_scrapycfg = closest_file('scrapy.cfg')
     # Double-checking to make deploy_wizard() independent of cli()
     if not closest_scrapycfg:
-        raise NotFoundException("No Scrapy project found in this location.")
+        raise NotFoundException(
+            "Cannot deploy project: failed to find Scrapy project and "
+            "custom images are not configured in scrapinghub.yml."
+        )
     closest_sh_yml = os.path.join(os.path.dirname(closest_scrapycfg),
                                   'scrapinghub.yml')
     # Get default endpoint and API key (meanwhile making sure the user is

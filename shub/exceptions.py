@@ -6,6 +6,10 @@ https://www.freebsd.org/cgi/man.cgi?query=sysexits&sektion=3
 """
 
 from __future__ import absolute_import
+
+import sys
+import warnings
+
 from click import BadParameter, ClickException
 
 
@@ -63,3 +67,32 @@ class RemoteErrorException(ShubException):
     exit_code = 76  # EX_PROTOCOL
     # Should be initialised with more specific message
     default_msg = "Remote error."
+
+
+class ShubWarning(Warning):
+    """Base class for custom warnings."""
+
+
+class ShubDeprecationWarning(ShubWarning):
+    """Warning category for deprecated features, since the default
+    DeprecationWarning is silenced on Python 2.7+
+    """
+
+
+def print_warning(msg, category=ShubWarning):
+    """Helper to use Python warnings with custom formatter."""
+
+    def custom_showwarning(message, *args, **kwargs):
+        # ignore everything except the message
+        try:
+            sys.stderr.write("WARNING: " + str(message) + '\n')
+        # stderr is invalid - this warning just gets lost
+        except (IOError, UnicodeError):
+            pass
+
+    old_showwarning = warnings.showwarning
+    try:
+        warnings.showwarning = custom_showwarning
+        warnings.warn(msg, category=category)
+    finally:
+        warnings.formatwarning = old_showwarning
