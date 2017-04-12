@@ -15,8 +15,8 @@ from click.testing import CliRunner
 from collections import deque
 
 from shub import utils
-from shub.exceptions import BadParameterException, NotFoundException
-from shub.exceptions import RemoteErrorException
+from shub.exceptions import (BadParameterException, NotFoundException,
+                             RemoteErrorException, SubcommandException)
 
 from .utils import mock_conf
 
@@ -49,6 +49,18 @@ class UtilsTest(unittest.TestCase):
         mock_fe.return_value = None
         with self.assertRaises(NotFoundException):
             utils.find_exe('python')
+
+    def test_run_cmd_captures_stderr(self):
+        cmd = [
+            'python', '-c',
+            # The next two lines are ONE list element (no comma)
+            'from __future__ import print_function; import sys; '
+            'print("Hello", file=sys.stderr)',
+        ]
+        self.assertEqual(utils.run_cmd(cmd), '')
+        with self.assertRaisesRegexp(SubcommandException, 'STDERR[\s-]+Hello'):
+            cmd[-1] += '; sys.exit(99)'
+            utils.run_cmd(cmd)
 
     def test_pwd_git_version_without_git(self):
         # Change into test dir to make sure we're within a repo
