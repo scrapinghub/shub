@@ -127,15 +127,17 @@ class _PushProgress(_LoggedPushProgress):
             self.total_bar.update()
         # `pushing` events represents actual push process per layer
         elif event.get('status') == 'Pushing' and progress:
-            progress_total = progress.get('total', 0)
             progress_current = progress.get('current', 0)
+            progress_total = max(progress.get('total', 0), progress_current)
             if layer_id not in self.layers_bars:
+                if not progress_total:
+                    return
                 # create a progress bar per pushed layer
                 self.layers_bars[layer_id] = self._create_bar_per_layer(
-                    layer_id, progress_total)
+                    layer_id, progress_total, progress_current)
             bar = self.layers_bars[layer_id]
             bar.total = max(bar.total, progress_total)
-            bar.update(max(min(bar.total, progress_current) - bar.n, 0))
+            bar.update(max(progress_current - bar.n, 0))
 
     def _add_layer(self, layer_id):
         self.layers.add(layer_id)
@@ -156,10 +158,11 @@ class _PushProgress(_LoggedPushProgress):
             bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt}'
         )
 
-    def _create_bar_per_layer(self, layer_id, total):
+    def _create_bar_per_layer(self, layer_id, total, initial):
         return utils.create_progress_bar(
-            total=total,
             desc=layer_id,
+            total=total,
+            initial=initial,
             unit='B',
             unit_scale=True,
             # don't need estimates here, keep only rate

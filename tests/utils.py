@@ -62,7 +62,7 @@ def _is_tqdm_in_ascii_mode():
 def format_expected_progress(progress):
     """Replace unicode symbols in progress string for tqdm in ascii mode."""
     if _is_tqdm_in_ascii_mode():
-        to_replace = {'█': '#', '▎': '3', '▋': '6'}
+        to_replace = {'█': '#', '▏': '2', '▎': '3', '▌': '5', '▋': '6'}
         for sym in to_replace:
             progress = progress.replace(sym, to_replace[sym])
     return progress
