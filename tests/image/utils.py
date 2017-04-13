@@ -6,10 +6,12 @@ from contextlib import contextmanager
 
 SH_CONFIG_FILE = """
 projects:
-  dev: 12345
-images:
-  dev: registry/user/project
-  xyz: registry/xyz/project
+  dev:
+    id: 12345
+    image: registry/user/project
+  xyz:
+    id: 32167
+    image: images.scrapinghub.com/project/32167
 endpoints:
   dev: https://dash-fake
 apikeys:

@@ -4,8 +4,7 @@ import re
 import click
 
 from shub import exceptions as shub_exceptions
-from shub.config import load_shub_config
-from shub.deploy import list_targets
+from shub.config import load_shub_config, list_targets_callback
 from shub.image import utils
 from shub.image.test import test_cmd
 
@@ -30,9 +29,9 @@ BUILD_SUCCESS_REGEX = re.compile(r'Successfully built ([0-9a-f]+)')
 
 @click.command(help=HELP, short_help=SHORT_HELP)
 @click.argument("target", required=False, default="default")
-@click.option("-l", "--list-targets", help="list available targets",
-              is_flag=True, is_eager=True, expose_value=False,
-              callback=list_targets)
+@click.option("-l", "--list-targets", is_flag=True, is_eager=True,
+              expose_value=False, callback=list_targets_callback,
+              help="List available project names defined in your config")
 @click.option("-d", "--debug", help="debug mode", is_flag=True,
               callback=utils.deprecate_debug_parameter)
 @click.option("-v", "--verbose", is_flag=True,

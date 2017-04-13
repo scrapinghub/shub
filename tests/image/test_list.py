@@ -14,25 +14,8 @@ class TestListCli(TestCase):
     def test_cli_no_sh_config(self):
         runner = CliRunner()
         result = runner.invoke(cli, ["dev", "-v", "--version", "test"])
-        assert result.exit_code == 69
-        assert 'Could not find image for dev' in result.output
-
-    @mock.patch('shub.image.utils.get_docker_client')
-    @mock.patch('requests.get')
-    def test_cli_no_project(self, get_mocked, get_client_mock):
-        client_mock = mock.Mock()
-        client_mock.create_container.return_value = {'Id': '1234'}
-        client_mock.wait.return_value = 0
-        client_mock.logs.return_value = b'abc\ndef'
-        get_client_mock.return_value = client_mock
-
-        with FakeProjectDirectory() as tmpdir:
-            add_sh_fake_config(tmpdir)
-            runner = CliRunner()
-            result = runner.invoke(cli, ["xyz", "--version", "test"])
-            assert result.exit_code == 0
-            assert result.output.endswith('abc\ndef\n')
-        assert not get_mocked.called
+        assert result.exit_code == 64
+        assert 'Could not find target "dev"' in result.output
 
     @mock.patch('shub.image.utils.get_docker_client')
     @mock.patch('requests.get')

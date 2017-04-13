@@ -13,7 +13,7 @@ from click.testing import CliRunner
 
 from shub.config import (get_target, get_target_conf, get_version,
                          load_shub_config, ShubConfig, Target,
-                         update_yaml_dict)
+                         update_yaml_dict, SH_IMAGES_REPOSITORY)
 from shub.exceptions import (BadParameterException, BadConfigException,
                              ConfigParseException, MissingAuthException,
                              NotFoundException)
@@ -61,7 +61,7 @@ def _project_dict(proj_id, endpoint='default', extra=None):
     return projd
 
 
-def _target(id, endpoint=None, apikey=None, stack=None,
+def _target(id, endpoint=None, apikey=None, stack=None, image=None,
             requirements_file='requirements.txt', version='1.0', eggs=None):
     if eggs is None:
         eggs = ['./egg1.egg', './egg2.egg']
@@ -70,6 +70,7 @@ def _target(id, endpoint=None, apikey=None, stack=None,
         endpoint=endpoint or ShubConfig.DEFAULT_ENDPOINT,
         apikey=apikey,
         stack=stack,
+        image=image,
         requirements_file=requirements_file,
         version=version,
         eggs=eggs
@@ -428,7 +429,6 @@ class ShubConfigTest(unittest.TestCase):
             # Make sure it is readable again
             ShubConfig().load_file('scrapinghub.yml')
 
-
     def test_normalized_projects(self):
         expected_projects = {
             'shproj': _project_dict(123),
@@ -451,8 +451,78 @@ class ShubConfigTest(unittest.TestCase):
                          self.conf.get_project('external/123'))
 
     def test_get_image(self):
-        self.assertRaises(NotFoundException, self.conf.get_image, 'test')
-        assert self.conf.get_image('dev') == 'registry/user/project'
+        self.conf.load("""
+            projects:
+                default: 123
+                stacks-explicit:
+                    id: 322
+                    image: false
+                devel:
+                    id: 456
+                    image: true
+                sh-alias:
+                    id: 654
+                    image: scrapinghub
+                custom:
+                    id: 789
+                    image: user/repo
+                deprecated: 987
+            image: true
+            images:
+                deprecated: old/style
+        """)
+        self.assertEqual(self.conf.get_image('default'),
+                         SH_IMAGES_REPOSITORY.format(project=123))
+        with self.assertRaises(BadParameterException):
+            self.conf.get_image('stacks-explicit')
+        # check that aliases work as expected
+        self.assertEqual(self.conf.get_image('devel'),
+                         SH_IMAGES_REPOSITORY.format(project=456))
+        self.assertEqual(self.conf.get_image('sh-alias'),
+                         SH_IMAGES_REPOSITORY.format(project=654))
+        # check if custom image is respected
+        self.assertEqual(self.conf.get_image('custom'), 'user/repo')
+        # check for backward compatibility
+        self.assertEqual(self.conf.get_image('deprecated'), 'old/style')
+
+    def test_get_image_not_found(self):
+        self.conf.load("""
+            projects:
+                default: 123
+        """)
+        with self.assertRaises(NotFoundException):
+            self.conf.get_image('default')
+
+    def test_get_image_mismatch_project(self):
+        self.conf.load("""
+            projects:
+                prod: 123
+                develop: 321
+                success: 456
+            images:
+                prod: images.scrapinghub.com/wrong-prefix/123
+                develop: images.scrapinghub.com/project/123
+                success: images.scrapinghub.com/project/456
+        """)
+        with self.assertRaises(BadParameterException):
+            self.conf.get_image('prod')
+        with self.assertRaises(BadParameterException):
+            self.conf.get_image('develop')
+        self.assertEqual(self.conf.get_image('success'),
+                         SH_IMAGES_REPOSITORY.format(project=456))
+
+    def test_get_image_ambigious(self):
+        with self.assertRaises(BadParameterException):
+            self.conf.load("""
+                projects:
+                    default:
+                        id: 123
+                    stacks:
+                        id: 322
+                        stack: scrapy:1.2
+                images:
+                    default: custom/image
+            """)
 
     def test_get_target_conf(self):
         self.assertEqual(

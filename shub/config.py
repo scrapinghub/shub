@@ -11,13 +11,17 @@ import yaml
 
 from shub.exceptions import (BadParameterException, BadConfigException,
                              ConfigParseException, MissingAuthException,
-                             NotFoundException)
+                             NotFoundException, ShubDeprecationWarning,
+                             print_warning)
 from shub.utils import (closest_file, get_scrapycfg_targets, get_sources,
                         pwd_hg_version, pwd_git_version, pwd_version)
 
 
+SH_IMAGES_REGISTRY = 'images.scrapinghub.com'
+SH_IMAGES_REPOSITORY = SH_IMAGES_REGISTRY + '/project/{project}'
 GLOBAL_SCRAPINGHUB_YML_PATH = os.path.expanduser("~/.scrapinghub.yml")
 NETRC_PATH = os.path.expanduser('~/_netrc' if os.name == 'nt' else '~/.netrc')
+CONFIG_DOCS_LINK = "https://shub.readthedocs.io/en/stable/configuration.html"
 
 
 class ShubConfig(object):
@@ -62,14 +66,15 @@ class ShubConfig(object):
                     err=True
                 )
             if parsed.scheme == 'http':
-                click.echo(
-                    'WARNING: Endpoint "%s" is still using HTTP. '
-                    'Please change it to HTTPS if possible.' % endpoint,
-                    err=True
+                print_warning(
+                    'Endpoint "%s" is still using HTTP. '
+                    'Please change it to HTTPS if possible.' % endpoint
                 )
 
     def load(self, stream):
         """Load Scrapinghub configuration from stream."""
+        # flag to mark if images/default was used in the config file
+        check_default_image_scope = False
         try:
             yaml_cfg = yaml.safe_load(stream)
             if not yaml_cfg:
@@ -78,6 +83,16 @@ class ShubConfig(object):
                 option_conf = getattr(self, option)
                 yaml_option_conf = yaml_cfg.get(option, {})
                 option_conf.update(yaml_option_conf)
+                if option == 'images' and yaml_option_conf:
+                    print_warning(
+                        "Images section is deprecated, please replace it with "
+                        "global `image` setting or define `image` setting for "
+                        "the project.\n  Check for additional details in {}."
+                        .format(CONFIG_DOCS_LINK),
+                        category=ShubDeprecationWarning
+                    )
+                    if 'default' in yaml_option_conf:
+                        check_default_image_scope = True
                 if shortcut in yaml_cfg:
                     # We explicitly check yaml_option_conf and not option_conf.
                     # It is okay to set conflicting defaults if they are in
@@ -97,6 +112,16 @@ class ShubConfig(object):
         except (yaml.YAMLError, AttributeError):
             # AttributeError: stream is valid YAML but not dictionary-like
             raise ConfigParseException
+        # fail if `projects` section has keys not found in `images`
+        if (check_default_image_scope and
+                not set(self.projects).issubset(set(self.images))):
+            raise BadParameterException(
+                    "Found ambigious configuration: default image has global "
+                    "scope now, but some projects were not using custom "
+                    "images and can be broken now. Please fix your config by "
+                    "replacing `images` section with `image` settings. Check "
+                    "for additional details in {}".format(CONFIG_DOCS_LINK)
+                )
         self._check_endpoints()
 
     def load_file(self, filename):
@@ -269,10 +294,31 @@ class ShubConfig(object):
             apikey=apikey,
             stack=(self.stacks.get(proj['stack'], proj['stack'])
                    if 'stack' in proj else self.stacks.get('default')),
+            image=self._select_image_for_project(target, proj),
             requirements_file=self.requirements_file,
             version=self.get_version(),
             eggs=self.eggs,
         )
+
+    def _select_image_for_project(self, target, project):
+        """Helper to select image for a project (or its target).
+
+        The select logic is the following:
+        - image defined per project has highest priority,
+        - images section is marked as deprecated, but still in force:
+          if target is defined in images - use a corresponding image,
+        - if image is not defined, but there's a default image set by
+          image or images/default settings - use it.
+
+        The function responds with a custom image name string
+        (or None/False meaning regular stack-based deploy).
+        """
+        image = project.get('image', self.images.get(
+            target, self.images.get('default')))
+        # aliases to use internal scrapinghub registry as image storage
+        if image is True or image == 'scrapinghub':
+            image = SH_IMAGES_REPOSITORY.format(project=project['id'])
+        return image
 
     def get_target(self, target, auth_required=True):
         """Return (project_id, endpoint, apikey) for given target."""
@@ -295,15 +341,28 @@ class ShubConfig(object):
 
     def get_image(self, target):
         """Return image for a given target."""
-        if target not in self.images:
-            raise NotFoundException("Could not find image for %s. Please "
-                                    "define it in your scrapinghub.yml."
-                                    "" % target)
-        return self.images[target]
+        target_conf = self.get_target_conf(target, auth_required=False)
+        project, image = target_conf.project_id, target_conf.image
+        if image is None:
+            raise NotFoundException(
+                "Could not find image for project '{}'. Please define it "
+                "in your scrapinghub.yml.".format(target))
+        elif image is False:
+            raise BadParameterException(
+                "Using custom images is disabled for the project '{}'. "
+                "Please enable it in your scrapinghub.yml.".format(target))
+        default_image = SH_IMAGES_REPOSITORY.format(project=project)
+        if image.startswith(SH_IMAGES_REGISTRY) and image != default_image:
+            raise BadParameterException(
+                "Found wrong SH repository for project '{}': expected {}.\n  "
+                "Please use aliases `True` or `scrapinghub` to fix it in your "
+                "config.".format(target, default_image))
+        return image
 
 
 Target = namedtuple('Target', ['project_id', 'endpoint', 'apikey', 'stack',
-                               'requirements_file', 'version', 'eggs'])
+                               'image', 'requirements_file', 'version',
+                               'eggs'])
 
 
 MIGRATION_BANNER = """
@@ -457,3 +516,13 @@ def get_version():
     """Load shub configuratoin and return version."""
     conf = load_shub_config()
     return conf.get_version()
+
+
+def list_targets_callback(ctx, param, value):
+    """Click option callback to get targets from config, print it and exit."""
+    if not value:
+        return
+    conf = load_shub_config()
+    for name in conf.projects:
+        click.echo(name)
+    ctx.exit()
