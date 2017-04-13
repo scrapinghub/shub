@@ -1,10 +1,15 @@
 # -*- coding: utf-8 -*-
-import re
+import inspect
+from functools import wraps
+
 import mock
 import pytest
 from click.testing import CliRunner
+
 from shub import exceptions as shub_exceptions
 from shub.image.push import cli
+from shub.image.utils import ProgressBar
+
 from ..utils import format_expected_progress
 
 
@@ -13,6 +18,25 @@ def test_mock():
     """Mock for shub image test command"""
     with mock.patch('shub.image.push.test_cmd') as m:
         yield m
+
+
+@pytest.fixture(autouse=True)
+def monkeypatch_bar_rate(monkeypatch):
+    args, _, _, _ = inspect.getargspec(ProgressBar.format_meter)
+    rate_arg_idx = args.index('rate')
+
+    def override_rate(func):
+
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            args = list(args)
+            args[rate_arg_idx] = 10 ** 6
+            return func(*args, **kwargs)
+
+        return wrapper
+
+    monkeypatch.setattr('shub.image.utils.ProgressBar.format_meter',
+                        staticmethod(override_rate(ProgressBar.format_meter)))
 
 
 @pytest.mark.usefixtures('project_dir')
@@ -31,8 +55,8 @@ def test_cli_with_apikey_login(docker_client_mock, test_mock):
     test_mock.assert_called_with("dev", "test")
 
 
-@pytest.mark.usefixtures('project_dir')
-def test_cli_with_progress(docker_client_mock, test_mock):
+@pytest.mark.usefixtures('project_dir', 'test_mock')
+def test_cli_with_progress(docker_client_mock):
     docker_client_mock.login.return_value = {"Status": "Login Succeeded"}
     docker_client_mock.push.return_value = [
         {"status": "The push refers to a repository [some/image]"},
@@ -52,25 +76,72 @@ def test_cli_with_progress(docker_client_mock, test_mock):
     runner = CliRunner()
     result = runner.invoke(cli, ["dev", "--version", "test"])
     assert result.exit_code == 0
-    assert result.output.startswith(
+    expected = format_expected_progress(
         'Login to registry succeeded.\n'
         'Pushing registry/user/project:test to the registry.\n\r'
+        'Layers:   0%|          | 0/1\r          \r'
+        'Layers:   0%|          | 0/1\r          \r'
+        'Layers:   0%|          | 0/2\r          \r'
+        'Layers:   0%|          | 0/3\r          \r'
+        'Layers:   0%|          | 0/3\r          \r'
+        'Layers:   0%|          | 0/3\n\r'
+        'abc:   2%|▏         | 512/24.8K [1.00MB/s]\x1b[A\r          \r'
+        'Layers:   0%|          | 0/3\n\n\r'
+        'egh: 100%|██████████| 57.3K/57.3K [1.00MB/s]\x1b[A\x1b[A\r          \r'
+        'Layers:  33%|███▎      | 1/3\r          \r'
+        'Layers:  67%|██████▋   | 2/3\r'
+        'Layers: 100%|██████████| 3/3\n\r'
+        'abc: 100%|██████████| 24.8K/24.8K [1.00MB/s]\n\n'
+        'The image registry/user/project:test pushed successfully.\n'
     )
-    # the following string is regexp because push tqdm speed estimation
-    # depends on time and always different
+    assert expected in result.output
+
+
+@pytest.mark.usefixtures('project_dir', 'test_mock')
+def test_progress_no_total(docker_client_mock):
+    docker_client_mock.login.return_value = {"Status": "Login Succeeded"}
+    docker_client_mock.push.return_value = [
+        {"status": "The push refers to a repository [some/image]"},
+        {"status": "Preparing", "progressDetail": {}, "id": "abc"},
+        {"status": "Preparing", "progressDetail": {}, "id": "def"},
+        {"status": "Preparing", "progressDetail": {}, "id": "egh"},
+        {"status": "Preparing", "progressDetail": {}, "id": "xyz"},
+        {"status": "Waiting", "progressDetail": {}, "id": "abc"},
+        {"status": "Waiting", "progressDetail": {}, "id": "egh"},
+        {"status": "Waiting", "progressDetail": {}, "id": "xyz"},
+        {"status": "Pushing", "progressDetail": {"current": 512}, "id": "abc"},
+        {"status": "Layer already exists", "progressDetail": {}, "id": "def"},
+        {"status": "Pushing", "progressDetail": {"current": 57344}, "id": "egh"},
+        {"status": "Pushing", "progressDetail": {"current": 0}, "id": "xyz"},
+        {"status": "Pushed", "progressDetail": {}, "id": "egh"},
+        {"status": "Pushing", "progressDetail": {"current": 24805}, "id": "abc"},
+        {"status": "Pushed", "progressDetail": {}, "id": "abc"},
+        {"status": "Pushed", "progressDetail": {}, "id": "xyz"},
+        {"status": "Successfully pushed"}
+    ]
+    runner = CliRunner()
+    result = runner.invoke(cli, ["dev", "--version", "test"])
+    assert result.exit_code == 0
     expected = format_expected_progress(
-        'Layers:  33%\|███▎      \| 1/3\r          \r'
-        'Layers:  67%\|██████▋   \| 2/3\r'
-        'Layers: 100%\|██████████\| 3/3\n\r'
-        'abc: 100%\|██████████\| 24.8K/24.8K \[[?.0-9]*[KM]?B/s\]\n\r'
-        'egh: 100%\|██████████\| 26.3K/26.3K \[[?.0-9]*[KM]?B/s\]\n'
-        'The image registry/user/project:test pushed successfully\.\n'
+        'Layers:   0%|          | 0/1\r          \r'
+        'Layers:   0%|          | 0/1\r          \r'
+        'Layers:   0%|          | 0/2\r          \r'
+        'Layers:   0%|          | 0/3\r          \r'
+        'Layers:   0%|          | 0/4\r          \r'
+        'Layers:   0%|          | 0/4\r          \r'
+        'Layers:   0%|          | 0/4\r          \r'
+        'Layers:   0%|          | 0/4\n\r'
+        'abc: 100%|██████████| 512/512 [1.00MB/s]\x1b[A\r          \r'
+        'Layers:   0%|          | 0/4\n\n\r'
+        'egh: 100%|██████████| 57.3K/57.3K [1.00MB/s]\x1b[A\x1b[A\r          \r'
+        'Layers:  25%|██▌       | 1/4\r          \r'
+        'Layers:  50%|█████     | 2/4\r          \r'
+        'Layers:  75%|███████▌  | 3/4\r'
+        'Layers: 100%|██████████| 4/4\n\r'
+        'abc: 100%|██████████| 24.8K/24.8K [1.00MB/s]\n\n'
+        'The image registry/user/project:test pushed successfully.\n'
     )
-    matched = re.search(expected, result.output)
-    assert matched
-    # to make sure the test regexp below is correct
-    assert matched.group(0).startswith('Layers:  33%')
-    assert matched.group(0).endswith('pushed successfully.\n')
+    assert expected in result.output
 
 
 @pytest.mark.usefixtures('project_dir')
