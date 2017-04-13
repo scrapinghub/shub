@@ -31,7 +31,8 @@ Obviously it accepts all the options for the commands above.
 @click.option("--email", help="docker registry email")
 @click.option("--apikey", help="SH apikey to use built-in registry")
 @click.option("--insecure", is_flag=True, help="use insecure registry")
-@click.option("--async", is_flag=True, help="enable asynchronous mode")
+@click.option("--async", is_flag=True, help="[DEPRECATED] enable asynchronous mode",
+              callback=utils.deprecate_async_parameter)
 @click.option("-S", "--skip-tests", help="skip testing image", is_flag=True)
 def cli(target, debug, verbose, version, username, password, email,
         apikey, insecure, async, skip_tests):

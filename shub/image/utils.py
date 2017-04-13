@@ -1,15 +1,17 @@
 import os
 import re
 import sys
-import click
 
+import click
 import yaml
 from tqdm import tqdm
 
 from shub import config as shub_config
 from shub import utils as shub_utils
-from shub.exceptions import (ShubException, NotFoundException,
-                             BadConfigException, RemoteErrorException)
+from shub.exceptions import (
+    ShubException, NotFoundException, BadConfigException, RemoteErrorException,
+    ShubDeprecationWarning, print_warning
+)
 
 
 DEFAULT_DOCKER_VERSION = '1.17'
@@ -43,10 +45,16 @@ def debug_log(msg):
 
 def deprecate_debug_parameter(ctx, param, value):
     if value:
-        click.echo("WARNING: -d/--debug parameter is deprecated. "
-                   "Please use -v/--verbose parameter instead.",
-                   err=True)
-        return value
+        print_warning("-d/--debug parameter is deprecated. "
+                      "Please use -v/--verbose parameter instead.",
+                      ShubDeprecationWarning)
+    return value
+
+
+def deprecate_async_parameter(ctx, param, value):
+    if value:
+        print_warning("--async parameter is deprecated.", ShubDeprecationWarning)
+    return value
 
 
 def get_project_dir():
