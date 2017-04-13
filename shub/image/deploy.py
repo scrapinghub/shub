@@ -79,7 +79,8 @@ def deploy_cmd(target, version, username, password, email,
         target_conf.project_id, version, image_name, endpoint, apikey,
         username, password, email)
 
-    utils.debug_log('Deploy with params: {}'.format(params))
+    click.echo("Deploying {}".format(image_name))
+    utils.debug_log('Deploy parameters: {}'.format(params))
     req = requests.post(
         urljoin(endpoint, '/api/releases/deploy.json'),
         data=params,
@@ -87,43 +88,29 @@ def deploy_cmd(target, version, username, password, email,
         timeout=300,
         allow_redirects=False
     )
-    try:
-        req.raise_for_status()
-    except requests.exceptions.HTTPError:
-        _handle_deploy_errors(req)
-
-    click.echo("Deploy task results: {}".format(req))
+    if req.status_code == 400:
+        reason = req.json().get('non_field_errors')
+        raise ShubException('\n'.join(reason) if reason else req.text)
+    req.raise_for_status()
     status_url = req.headers['location']
-
     status_id = utils.store_status_url(
         status_url, limit=STORE_N_LAST_STATUS_URLS)
     click.echo(
         "You can check deploy results later with "
         "'shub image check --id {}'.".format(status_id))
-
+    if async:
+        return
     click.echo("Deploy results:")
-    actual_state = _check_status_url(status_url)
-    click.echo(" {}".format(actual_state))
-
-    if not async:
-        status = actual_state['status']
-        while status in SYNC_DEPLOY_WAIT_STATUSES:
-            time.sleep(SYNC_DEPLOY_REFRESH_TIMEOUT)
-            actual_state = _check_status_url(status_url)
-            if actual_state['status'] != status:
-                click.echo(" {}".format(actual_state))
-                status = actual_state['status']
-
-
-def _handle_deploy_errors(request):
-    content = request.json()
-    if request.status_code == 400 and content:
-        reason = content.get('non_field_errors')
-        if reason:
-            raise ShubException('\n'.join(reason))
-        else:
-            raise ShubException(request.content)
-    raise
+    prev_status = None
+    while True:
+        deploy_state = _check_status_url(status_url)
+        status = deploy_state['status']
+        if status != prev_status:
+            click.echo("{}".format(deploy_state))
+            prev_status = status
+        if status not in SYNC_DEPLOY_WAIT_STATUSES:
+            break
+        time.sleep(SYNC_DEPLOY_REFRESH_TIMEOUT)
 
 
 def _retry_on_requests_error(exception):
