@@ -48,7 +48,7 @@ def test_cli_with_progress(docker_client_mock, project_dir, test_mock):
         'Steps: 100%|██████████| 3/3\n'
         'The image registry/user/project:1.0 build is completed.\n'
     )
-    assert result.output == expected
+    assert expected in result.output
 
 
 def test_cli_custom_version(docker_client_mock, project_dir, test_mock):
