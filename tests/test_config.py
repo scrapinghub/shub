@@ -454,7 +454,6 @@ class ShubConfigTest(unittest.TestCase):
         self.conf.load("""
             projects:
                 default: 123
-                stacks-implicit: 321
                 stacks-explicit:
                     id: 322
                     image: false
@@ -474,8 +473,6 @@ class ShubConfigTest(unittest.TestCase):
         """)
         self.assertEqual(self.conf.get_image('default'),
                          SH_IMAGES_REPOSITORY.format(project=123))
-        with self.assertRaises(NotFoundException):
-            self.conf.get_image('stacks-implicit')
         with self.assertRaises(BadParameterException):
             self.conf.get_image('stacks-explicit')
         # check that aliases work as expected
@@ -487,6 +484,45 @@ class ShubConfigTest(unittest.TestCase):
         self.assertEqual(self.conf.get_image('custom'), 'user/repo')
         # check for backward compatibility
         self.assertEqual(self.conf.get_image('deprecated'), 'old/style')
+
+    def test_get_image_not_found(self):
+        self.conf.load("""
+            projects:
+                default: 123
+        """)
+        with self.assertRaises(NotFoundException):
+            self.conf.get_image('default')
+
+    def test_get_image_mismatch_project(self):
+        self.conf.load("""
+            projects:
+                prod: 123
+                develop: 321
+                success: 456
+            images:
+                prod: images.scrapinghub.com/wrong-prefix/123
+                develop: images.scrapinghub.com/project/123
+                success: images.scrapinghub.com/project/456
+        """)
+        with self.assertRaises(BadParameterException):
+            self.conf.get_image('prod')
+        with self.assertRaises(BadParameterException):
+            self.conf.get_image('develop')
+        self.assertEqual(self.conf.get_image('success'),
+                         SH_IMAGES_REPOSITORY.format(project=456))
+
+    def test_get_image_ambigious(self):
+        with self.assertRaises(BadParameterException):
+            self.conf.load("""
+                projects:
+                    default:
+                        id: 123
+                    stacks:
+                        id: 322
+                        stack: scrapy:1.2
+                images:
+                    default: custom/image
+            """)
 
     def test_get_target_conf(self):
         self.assertEqual(

@@ -73,6 +73,8 @@ class ShubConfig(object):
 
     def load(self, stream):
         """Load Scrapinghub configuration from stream."""
+        # flag to mark if images/default was used in the config file
+        check_default_image_scope = False
         try:
             yaml_cfg = yaml.safe_load(stream)
             if not yaml_cfg:
@@ -89,6 +91,8 @@ class ShubConfig(object):
                         .format(CONFIG_DOCS_LINK),
                         category=ShubDeprecationWarning
                     )
+                    if 'default' in yaml_option_conf:
+                        check_default_image_scope = True
                 if shortcut in yaml_cfg:
                     # We explicitly check yaml_option_conf and not option_conf.
                     # It is okay to set conflicting defaults if they are in
@@ -108,6 +112,16 @@ class ShubConfig(object):
         except (yaml.YAMLError, AttributeError):
             # AttributeError: stream is valid YAML but not dictionary-like
             raise ConfigParseException
+        # fail if `projects` section has keys not found in `images`
+        if (check_default_image_scope and
+                not set(self.projects).issubset(set(self.images))):
+            raise BadParameterException(
+                    "Found ambigious configuration: default image has global "
+                    "scope now, but some projects were not using custom "
+                    "images and can be broken now. Please fix your config by "
+                    "replacing `images` section with `image` settings. Check "
+                    "for additional details in {}".format(CONFIG_DOCS_LINK)
+                )
         self._check_endpoints()
 
     def load_file(self, filename):
@@ -293,13 +307,14 @@ class ShubConfig(object):
         - image defined per project has highest priority,
         - images section is marked as deprecated, but still in force:
           if target is defined in images - use a corresponding image,
-        - if image is not defined for project or target, stacks should
-          be used instead
+        - if image is not defined, but there's a default image set by
+          image or images/default settings - use it.
 
         The function responds with a custom image name string
         (or None/False meaning regular stack-based deploy).
         """
-        image = project.get('image', self.images.get(target))
+        image = project.get('image', self.images.get(
+            target, self.images.get('default')))
         # aliases to use internal scrapinghub registry as image storage
         if image is True or image == 'scrapinghub':
             image = SH_IMAGES_REPOSITORY.format(project=project['id'])

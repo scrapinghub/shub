@@ -6,6 +6,7 @@ from __future__ import absolute_import
 import unittest
 import os
 
+import pytest
 from click.testing import CliRunner
 from mock import patch
 
@@ -71,6 +72,12 @@ class DeployTest(AssertInvokeRaisesMixin, unittest.TestCase):
         self.assertIn(self.conf.endpoints['vagrant'], url)
         self.assertEqual(data, {'project': 456, 'version': 'version'})
         self.assertEqual(auth, (self.conf.apikeys['vagrant'], ''))
+
+    def test_deploy_list_targets(self):
+        with self.runner.isolated_filesystem():
+            self._make_project()
+            result = self.runner.invoke(deploy.cli, ('--list-targets',))
+            assert result.exit_code == 0
 
     @patch('shub.deploy.make_deploy_request')
     @patch('shub.deploy._has_project_access')
