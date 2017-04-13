@@ -303,3 +303,9 @@ if not on_rtd:  # only import and set the theme if we're building docs locally
     html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 
 # otherwise, readthedocs.org uses their theme by default, no need to specify it
+
+
+# Wrap text in tables
+# https://github.com/snide/sphinx_rtd_theme/issues/117#issuecomment-41571653
+def setup(app):
+    app.add_stylesheet("theme_overrides.css")
