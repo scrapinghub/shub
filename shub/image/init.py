@@ -149,8 +149,8 @@ def _format_requirements(project_dir, requirements):
     if os.path.isfile(rel_reqs_path):
         if rel_reqs_path.startswith('../'):
             raise shub_exceptions.BadParameterException(
-                "requirements file must be inside your project directory"
-                "(it's a demand of docker itself)")
+                "Requirements file must be inside your project directory, "
+                "otherwise it will not be included in the Docker build context.")
     else:
         # let's create requirements.txt with base dependencies
         with open(rel_reqs_path, 'w') as reqs_file:

@@ -50,8 +50,11 @@ def build_cmd(target, version, skip_tests):
     image = config.get_image(target)
     image_name = utils.format_image_name(image, version)
     if not os.path.exists(os.path.join(project_dir, 'Dockerfile')):
-        raise shub_exceptions.BadParameterException(
-            "Dockerfile is not found, please use shub image 'init' command")
+        raise shub_exceptions.NotFoundException(
+            "Dockerfile is not found and it is required because project '{}' is configured "
+            "to deploy Docker images. Please add a Dockerfile that will be used to build "
+            "the image and retry this command. If you want to migrate an existing Scrapy project "
+            "you can use `shub image init` command to create a Dockerfile.".format(target))
     if utils.is_verbose():
         build_progress_cls = _LoggedBuildProgress
     else:

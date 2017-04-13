@@ -72,7 +72,7 @@ def test_cli_no_dockerfile(docker_client_mock, project_dir):
     os.remove(os.path.join(project_dir, 'Dockerfile'))
     runner = CliRunner()
     result = runner.invoke(cli, ["dev"])
-    assert result.exit_code == shub_exceptions.BadParameterException.exit_code
+    assert result.exit_code == shub_exceptions.NotFoundException.exit_code
 
 
 @pytest.mark.usefixtures('project_dir')
