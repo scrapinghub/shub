@@ -538,11 +538,7 @@ def latest_github_release(force_update=False, timeout=1., cache=None):
                                   'last_release.txt')
     today = datetime.date.today().toordinal()
     if not force_update and os.path.isfile(cache):
-        with open(cache, 'r') as f:
-            try:
-                release_data = json.load(f)
-            except Exception:
-                release_data = {}
+        release_data = read_release_data(cache)
         # Check for equality (and not smaller or equal) so we don't get thrown
         # off track if the clock was ever misconfigured and a future date was
         # saved
@@ -561,6 +557,16 @@ def latest_github_release(force_update=False, timeout=1., cache=None):
             json.dump(release_data, f)
     except Exception:
         pass
+    return release_data
+
+
+def read_release_data(cache):
+    """Read release data from file. Returns empty dict if data is missing."""
+    with open(cache, 'r') as f:
+        try:
+            release_data = json.load(f)
+        except ValueError:
+            release_data = {}
     return release_data
 
 
