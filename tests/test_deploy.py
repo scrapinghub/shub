@@ -11,6 +11,7 @@ from click.testing import CliRunner
 from mock import patch
 
 from shub import deploy
+from shub.config import ShubConfig
 from shub.exceptions import InvalidAuthException, NotFoundException, \
     ShubException, BadParameterException
 
@@ -78,6 +79,34 @@ class DeployTest(AssertInvokeRaisesMixin, unittest.TestCase):
             self._make_project()
             result = self.runner.invoke(deploy.cli, ('--list-targets',))
             assert result.exit_code == 0
+
+    @patch('shub.deploy.create_scrapinghub_yml_wizard')
+    def test_call_wizard(self, mock_wizard):
+        conf = ShubConfig()
+        with self.runner.isolated_filesystem():
+            with self.assertRaises(NotFoundException):
+                deploy._call_wizard(conf)
+
+            open('scrapy.cfg', 'w').close()
+            deploy._call_wizard(conf)
+            mock_wizard.assert_called_with(conf, image=False)
+            mock_wizard.reset_mock()
+
+            open('Dockerfile', 'w').close()
+            with patch('shub.deploy.click.confirm') as mock_confirm:
+                mock_confirm.return_value = False
+                deploy._call_wizard(conf)
+                mock_wizard.assert_called_with(conf, image=False)
+                mock_wizard.reset_mock()
+                mock_confirm.return_value = True
+                deploy._call_wizard(conf)
+                mock_wizard.assert_called_with(conf, image=True)
+                mock_wizard.reset_mock()
+
+            os.remove('scrapy.cfg')
+            deploy._call_wizard(conf)
+            mock_wizard.assert_called_with(conf, image=True)
+            mock_wizard.reset_mock()
 
     @patch('shub.deploy.make_deploy_request')
     @patch('shub.deploy.create_scrapinghub_yml_wizard')

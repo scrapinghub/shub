@@ -35,8 +35,7 @@ class ShubEndToEndTests(unittest.TestCase):
     def test_deploy_isnt_broken(self):
         output = self.run_subcmd('deploy')
         error = 'Unexpected output: %s' % output
-        self.assertTrue('No Scrapy project found in this location' in output,
-                        error)
+        self.assertTrue('Cannot find project' in output, error)
 
     def test_fetch_eggs_isnt_broken(self):
         output = self.run_subcmd('fetch-eggs')
