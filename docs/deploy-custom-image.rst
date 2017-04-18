@@ -364,6 +364,10 @@ Use the Docker registry in insecure mode.
 
 .. function:: --async
 
+.. warning::
+
+    Deploy in asynchronous mode is deprecated.
+
 Make deploy asynchronous. When enabled, the tool will exit as soon as the deploy is started in background. You can then check the status of your deploy task periodically via the :ref:`check <commands-check>` command.
 
 **Default value**: ``False``
@@ -379,9 +383,9 @@ Increase the tool's verbosity.
 ::
 
     $ shub image deploy --target private --version 1.0.4 \
-    --username johndoe --password johndoepwd --async
+    --username johndoe --password johndoepwd
 
-This command will deploy the image from the ``private`` target, using user credentials passed as parameters and exit as soon as the deploy process starts (``--async``).
+This command will deploy the image from the ``private`` target, using user credentials passed as parameters.
 
 
 .. _commands-upload:
@@ -410,6 +414,10 @@ The ``upload`` command accepts the same parameters as the :ref:`deploy <commands
 check
 -----
 This command checks the status of your deployment and is useful when you do the deploy in asynchronous mode.
+
+.. warning::
+
+    Deploy in asynchronous mode is deprecated.
 
 By default, the ``check`` command will return results from the last deploy.
 

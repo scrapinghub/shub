@@ -7,7 +7,6 @@ import subprocess
 import sys
 import re
 import time
-import warnings
 
 from collections import deque
 from six.moves.configparser import SafeConfigParser
@@ -32,7 +31,7 @@ import shub
 from shub.compat import to_native_str
 from shub.exceptions import (BadParameterException, InvalidAuthException,
                              NotFoundException, RemoteErrorException,
-                             SubcommandException)
+                             SubcommandException, print_warning)
 
 SCRAPY_CFG_FILE = os.path.expanduser("~/.scrapy.cfg")
 FALLBACK_ENCODING = 'utf-8'
@@ -422,7 +421,7 @@ def inside_project():
         try:
             import_module(scrapy_module)
         except ImportError as exc:
-            warnings.warn("Cannot import scrapy settings module %s: %s"
+            print_warning("Cannot import scrapy settings module %s: %s"
                           "" % (scrapy_module, exc))
         else:
             return True

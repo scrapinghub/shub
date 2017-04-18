@@ -54,7 +54,8 @@ Does a simple POST request to Dash API with given parameters
 @click.option("--email", help="docker registry email")
 @click.option("--apikey", help="SH apikey to use built-in registry")
 @click.option("--insecure", is_flag=True, help="use insecure registry")
-@click.option("--async", is_flag=True, help="enable asynchronous mode")
+@click.option("--async", is_flag=True, help="[DEPRECATED] enable asynchronous mode",
+              callback=utils.deprecate_async_parameter)
 def cli(target, debug, verbose, version, username, password, email,
         apikey, insecure, async):
     deploy_cmd(target, version, username, password, email,
