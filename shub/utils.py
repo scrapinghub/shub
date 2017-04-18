@@ -652,15 +652,25 @@ def has_project_access(project, endpoint, apikey):
             raise RemoteErrorException(str(e))
 
 
+def get_project_dir():
+    """Get the path to the closest directory that contains either
+    ``scrapinghub.yml``. ``scrapy.cfg``, or ``Dockerfile`` (in this priority).
+    """
+    for filename in ['scrapinghub.yml', 'scrapy.cfg', 'Dockerfile']:
+        closest = closest_file(filename)
+        if closest:
+            return os.path.dirname(closest)
+    raise NotFoundException(
+        "Cannot find project: There is no scrapinghub.yml, scrapy.cfg, or "
+        "Dockerfile in this directory or any of the parent directories.")
+
+
 def create_scrapinghub_yml_wizard(conf, target='default'):
     """
     Ask user for project ID, ensure they have access to that project, and save
     it to given ``target`` in local ``scrapinghub.yml`` if desired.
     """
-    closest_scrapycfg = closest_file('scrapy.cfg')
-    sh_yml_dir = (os.path.dirname(closest_scrapycfg) if closest_scrapycfg
-                  else os.getcwd())
-    closest_sh_yml = os.path.join(sh_yml_dir, 'scrapinghub.yml')
+    closest_sh_yml = os.path.join(get_project_dir(), 'scrapinghub.yml')
     # Get default endpoint and API key (meanwhile making sure the user is
     # logged in)
     endpoint, apikey = conf.get_endpoint(0), conf.get_apikey(0)

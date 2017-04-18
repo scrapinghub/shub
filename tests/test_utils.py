@@ -449,6 +449,26 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
         with self.assertRaises(RemoteErrorException):
             utils.has_project_access(12345, 'mock_endpoint', 'abcdef')
 
+    def test_get_project_dir(self):
+        with CliRunner().isolated_filesystem() as basepath:
+            os.makedirs('a/b/c')
+            os.chdir('a/b/c')
+            with self.assertRaises(NotFoundException):
+                utils.get_project_dir()
+            open(os.path.join(basepath, 'Dockerfile'), 'w').close()
+            self.assertEqual(utils.get_project_dir(), basepath)
+            # scrapy.cfg takes precedence over Dockerfile
+            open(os.path.join(basepath, 'a', 'scrapy.cfg'), 'w').close()
+            self.assertEqual(
+                utils.get_project_dir(),
+                os.path.join(basepath, 'a'))
+            # scrapinghub.yml takes precedence over both
+            open(os.path.join(basepath, 'a', 'b', 'scrapinghub.yml'), 'w'
+                 ).close()
+            self.assertEqual(
+                utils.get_project_dir(),
+                os.path.join(basepath, 'a', 'b'))
+
     @patch('shub.utils.has_project_access')
     def test_create_scrapinghub_yml_wizard(self, mock_project_access):
         conf = mock_conf(self)
@@ -458,6 +478,7 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
             utils.create_scrapinghub_yml_wizard(conf)
 
         with self.runner.isolated_filesystem():
+            open('scrapy.cfg', 'w').close()
             mock_project_access.return_value = False
             self.assertInvokeRaises(
                 InvalidAuthException, call_wizard, input='99\nn\n')
