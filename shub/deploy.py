@@ -75,7 +75,7 @@ SHORT_HELP = "Deploy Scrapy project to Scrapy Cloud"
 @click.option("-k", "--keep-log", help="keep the deploy log", is_flag=True)
 def cli(target, version, debug, egg, build_egg, verbose, keep_log):
     conf, image = load_shub_config(), None
-    if target in conf.projects:
+    if target != 'default':
         image = conf.get_target_conf(target).image
     if not image:
         deploy_cmd(target, version, debug, egg, build_egg, verbose, keep_log)
