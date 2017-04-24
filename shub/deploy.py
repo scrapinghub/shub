@@ -111,8 +111,6 @@ def _call_wizard(conf):
 
 def deploy_cmd(target, version, debug, egg, build_egg, verbose, keep_log,
                conf=None):
-    if not inside_project():
-        raise NotFoundException("No Scrapy project found in this location.")
     tmpdir = None
     try:
         if build_egg:
@@ -182,6 +180,8 @@ def _upload_egg(endpoint, eggpath, project, version, auth, verbose, keep_log,
 
 
 def _build_egg():
+    if not inside_project():
+        raise NotFoundException("No Scrapy project found in this location.")
     settings = get_config().get('settings', 'default')
     create_default_setup_py(settings=settings)
     d = tempfile.mkdtemp(prefix="shub-deploy-")
