@@ -507,22 +507,17 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
             open('scrapy.cfg', 'w').close()
             mock_project_access.return_value = False
             self.assertInvokeRaises(
-                InvalidAuthException, call_wizard, input='99\nn\n')
-            # Don't create scrapinghub.yml if not wished
+                InvalidAuthException, call_wizard, input='99\n')
+            # Create scrapinghub.yml
             mock_project_access.return_value = True
-            self.runner.invoke(call_wizard, input='99\nn\n')
-            self.assertEqual(conf.projects['default'], 99)
-            self.assertFalse(os.path.exists('scrapinghub.yml'))
-            # Create scrapinghub.yml if wished
-            del conf.projects['default']
-            self.runner.invoke(call_wizard, input='199\n\n')
+            self.runner.invoke(call_wizard, input='199\n')
             self.assertEqual(conf.projects['default'], 199)
             self.assertTrue(os.path.exists('scrapinghub.yml'))
             # Also run wizard when there's a scrapinghub.yml but no default
             # target
             del conf.projects['default']
             conf.projects['prod'] = 299
-            self.runner.invoke(call_wizard, input='399\n\n')
+            self.runner.invoke(call_wizard, input='399\n')
             self.assertEqual(conf.projects['default'], 399)
 
     @patch('shub.utils.has_project_access', return_value=True)
@@ -565,7 +560,7 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
 
             use_image = False
             self.assertFalse(os.path.exists('scrapinghub.yml'))
-            self.runner.invoke(call_wizard, input='99999\n\n')
+            self.runner.invoke(call_wizard, input='99999\n')
             self.assertEqual(global_conf.projects['default'], 99999)
             with open('scrapinghub.yml', 'r') as f:
                 self.assertEqual(f.read(), "project: 99999\n")
@@ -573,7 +568,7 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
             os.remove('scrapinghub.yml')
             use_image = True
             del global_conf.projects['default']
-            self.runner.invoke(call_wizard, input='99999\n\n\n')
+            self.runner.invoke(call_wizard, input='99999\n\n')
             self.assertEqual(global_conf.projects['default'], 99999)
             self.assertEqual(global_conf.images['default'], True)
             with utils.update_yaml_dict('scrapinghub.yml') as local_conf:
