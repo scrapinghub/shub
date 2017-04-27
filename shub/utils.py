@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 import contextlib
 import datetime
+import errno
 import json
 import os
 import subprocess
@@ -20,6 +21,9 @@ from six.moves.urllib.parse import urljoin
 import click
 import pip
 import requests
+import yaml
+
+from scrapinghub import Connection, APIError
 
 try:
     from scrapinghub import HubstorageClient
@@ -600,3 +604,123 @@ def download_from_pypi(dest, pkg=None, reqfile=None, extra_args=None):
     with patch_sys_executable():
         pip.main([cmd, '-d', dest, '--no-deps'] + no_wheel + extra_args +
                  target)
+
+
+@contextlib.contextmanager
+def update_yaml_dict(conf_path=None):
+    """
+    Context manager for updating a YAML file. Key ordering and comments are not
+    preserved.
+    """
+    if not conf_path:
+        click.secho("Using update_yaml_dict without path is deprecated. Import"
+                    " GLOBAL_SCRAPINGHUB_YML_PATH from shub.config",
+                    fg='yellow')
+        from shub.config import GLOBAL_SCRAPINGHUB_YML_PATH
+        conf_path = GLOBAL_SCRAPINGHUB_YML_PATH
+    try:
+        with open(conf_path, 'r') as f:
+            conf = yaml.safe_load(f) or {}
+    except IOError as e:
+        if e.errno != errno.ENOENT:
+            raise
+        conf = {}
+    # Code inside context manager is executed after this yield
+    yield conf
+    # Avoid writing "key: {}"
+    for key in list(conf):
+        if conf[key] == {}:
+            del conf[key]
+    with open(conf_path, 'w') as f:
+        # Avoid writing "{}"
+        if conf:
+            yaml.safe_dump(conf, f, default_flow_style=False)
+
+
+def has_project_access(project, endpoint, apikey):
+    """Check whether an API key has access to a given project. May raise
+    InvalidAuthException if the API key is invalid (but not if it is valid but
+    lacks access to the project)"""
+    conn = Connection(apikey, url=endpoint)
+    try:
+        return project in conn.project_ids()
+    except APIError as e:
+        if 'Authentication failed' in str(e):
+            raise InvalidAuthException
+        else:
+            raise RemoteErrorException(str(e))
+
+
+def get_project_dir():
+    """Get the path to the closest directory that contains either
+    ``scrapinghub.yml``. ``scrapy.cfg``, or ``Dockerfile`` (in this priority).
+    """
+    for filename in ['scrapinghub.yml', 'scrapy.cfg', 'Dockerfile']:
+        closest = closest_file(filename)
+        if closest:
+            return os.path.dirname(closest)
+    raise NotFoundException(
+        "Cannot find project: There is no scrapinghub.yml, scrapy.cfg, or "
+        "Dockerfile in this directory or any of the parent directories.")
+
+
+def create_scrapinghub_yml_wizard(conf, target='default', image=False):
+    """
+    Ask user for project ID, ensure they have access to that project, and save
+    it to given ``target`` in local ``scrapinghub.yml`` if desired.
+    """
+    closest_sh_yml = os.path.join(get_project_dir(), 'scrapinghub.yml')
+    project = None
+    if target not in conf.projects:
+        # Get default endpoint and API key (meanwhile making sure the user is
+        # logged in)
+        endpoint, apikey = conf.get_endpoint(0), conf.get_apikey(0)
+        project = click.prompt("Target project ID", type=int)
+        if not has_project_access(project, endpoint, apikey):
+            raise InvalidAuthException(
+                "The account you logged in to has no access to project {}. "
+                "Please double-check the project ID and make sure you logged "
+                "in to the correct acount.".format(project),
+            )
+        # XXX: Save {'id': project} once we normalize project config on loading
+        conf.projects[target] = project
+    if image and not conf.get_target_conf(target).image:
+        repository = click.prompt(
+            "Image repository (leave empty to use Scrapinghub's repository)",
+            default=True, show_default=False)
+        if target == 'default':
+            conf.images[target] = repository
+        else:
+            # XXX: Remove once we normalize project config on loading
+            if not isinstance(conf.projects[target], dict):
+                conf.projects[target] = {'id': conf.projects[target]}
+            conf.projects[target]['image'] = repository
+    # Image repositories are always saved
+    if image or click.confirm("Save as default", default=True):
+        try:
+            # XXX: Don't save the global config to not leak any configuration
+            #      options from the global config file into the project-
+            #      specific one. Instead, load only the local settings, then
+            #      update these
+            # XXX: Runtime import to avoid circular dependency
+            from shub.config import load_shub_config
+            local_conf = load_shub_config(load_global=False, load_env=False)
+            if project:
+                local_conf.projects[target] = project
+            if image:
+                if target == 'default':
+                    local_conf.images[target] = repository
+                else:
+                    # XXX: Remove once we normalize project config on loading
+                    if not isinstance(local_conf.projects[target], dict):
+                        local_conf.projects[target] = {
+                            'id': local_conf.projects[target]}
+                    local_conf.projects[target].update({'image': repository})
+            local_conf.save(closest_sh_yml)
+        except Exception as e:
+            click.echo(
+                "There was an error while trying to write to scrapinghub.yml: "
+                "{}".format(e),
+            )
+        else:
+            click.echo("Saved to %s." % closest_sh_yml)

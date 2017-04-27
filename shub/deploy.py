@@ -17,17 +17,13 @@ except ImportError:
 else:
     _2 = setuptools.msvc  # NOQA
 
-
-from scrapinghub import Connection, APIError
-
-from shub.config import (load_shub_config, update_yaml_dict,
-                         list_targets_callback, SH_IMAGES_REGISTRY)
-from shub.exceptions import (InvalidAuthException, NotFoundException,
-                             RemoteErrorException, ShubException,
-                             BadParameterException)
-from shub.utils import (closest_file, get_config, inside_project,
-                        make_deploy_request, run_python,
-                        create_default_setup_py)
+from shub.config import (list_targets_callback, load_shub_config,
+                         SH_IMAGES_REGISTRY)
+from shub.exceptions import (BadParameterException, NotFoundException,
+                             ShubException)
+from shub.utils import (create_default_setup_py, create_scrapinghub_yml_wizard,
+                        get_config, get_project_dir, inside_project,
+                        make_deploy_request, run_python)
 from shub.image.upload import upload_cmd
 
 
@@ -75,10 +71,13 @@ SHORT_HELP = "Deploy Scrapy project to Scrapy Cloud"
 @click.option("-k", "--keep-log", help="keep the deploy log", is_flag=True)
 def cli(target, version, debug, egg, build_egg, verbose, keep_log):
     conf, image = load_shub_config(), None
+    if not build_egg and target == 'default' and target not in conf.projects:
+        _call_wizard(conf)
     if target in conf.projects:
         image = conf.get_target_conf(target).image
     if not image:
-        deploy_cmd(target, version, debug, egg, build_egg, verbose, keep_log)
+        deploy_cmd(target, version, debug, egg, build_egg, verbose, keep_log,
+                   conf=conf)
     elif image.startswith(SH_IMAGES_REGISTRY):
         upload_cmd(target, version)
     else:
@@ -87,9 +86,31 @@ def cli(target, version, debug, egg, build_egg, verbose, keep_log):
             "other than Scrapinghub default registry.")
 
 
-def deploy_cmd(target, version, debug, egg, build_egg, verbose, keep_log):
-    if not inside_project():
-        raise NotFoundException("No Scrapy project found in this location.")
+def _call_wizard(conf):
+    """Call the onboarding wizard, figuring out if we should ask about image
+    configuration based on the existence of a Dockerfile.
+
+    If there is a scrapy.cfg and a Dockerfile, ask if it should be deployed as
+    custom image. If there is a Dockerfile but no scrapy.cfg, always assume it
+    should be deployed as custom image.
+    """
+    image_wizard = False
+    project_dir = get_project_dir()
+    has_scrapy_cfg = os.path.isfile(os.path.join(project_dir, 'scrapy.cfg'))
+    has_dockerfile = os.path.isfile(os.path.join(project_dir, 'Dockerfile'))
+    if has_scrapy_cfg and has_dockerfile:
+        image_wizard = click.confirm(
+            "You have a Dockerfile in your project directory. Would "
+            "you like to deploy it as custom image?", default=True)
+    elif has_dockerfile:
+        image_wizard = True
+    else:
+        image_wizard = False
+    create_scrapinghub_yml_wizard(conf, image=image_wizard)
+
+
+def deploy_cmd(target, version, debug, egg, build_egg, verbose, keep_log,
+               conf=None):
     tmpdir = None
     try:
         if build_egg:
@@ -97,9 +118,7 @@ def deploy_cmd(target, version, debug, egg, build_egg, verbose, keep_log):
             click.echo("Writing egg to %s" % build_egg)
             shutil.copyfile(egg, build_egg)
         else:
-            conf = load_shub_config()
-            if target == 'default' and target not in conf.projects:
-                _deploy_wizard(conf)
+            conf = conf or load_shub_config()
             targetconf = conf.get_target_conf(target)
             version = version or targetconf.version
             auth = (targetconf.apikey, '')
@@ -161,65 +180,11 @@ def _upload_egg(endpoint, eggpath, project, version, auth, verbose, keep_log,
 
 
 def _build_egg():
+    if not inside_project():
+        raise NotFoundException("No Scrapy project found in this location.")
     settings = get_config().get('settings', 'default')
     create_default_setup_py(settings=settings)
     d = tempfile.mkdtemp(prefix="shub-deploy-")
     run_python(['setup.py', 'clean', '-a', 'bdist_egg', '-d', d])
     egg = glob.glob(os.path.join(d, '*.egg'))[0]
     return egg, d
-
-
-def _has_project_access(project, endpoint, apikey):
-    conn = Connection(apikey, url=endpoint)
-    try:
-        return project in conn.project_ids()
-    except APIError as e:
-        if 'Authentication failed' in e.message:
-            raise InvalidAuthException
-        else:
-            raise RemoteErrorException(e.message)
-
-
-def _deploy_wizard(conf, target='default'):
-    """
-    Ask user for project ID, ensure they have access to that project, and save
-    it to given ``target`` in local ``scrapinghub.yml`` if desired.
-    """
-    closest_scrapycfg = closest_file('scrapy.cfg')
-    # Double-checking to make deploy_wizard() independent of cli()
-    if not closest_scrapycfg:
-        raise NotFoundException(
-            "Cannot deploy project: failed to find Scrapy project and "
-            "custom images are not configured in scrapinghub.yml."
-        )
-    closest_sh_yml = os.path.join(os.path.dirname(closest_scrapycfg),
-                                  'scrapinghub.yml')
-    # Get default endpoint and API key (meanwhile making sure the user is
-    # logged in)
-    endpoint, apikey = conf.get_endpoint(0), conf.get_apikey(0)
-    project = click.prompt("Target project ID", type=int)
-    if not _has_project_access(project, endpoint, apikey):
-        raise InvalidAuthException(
-            "The account you logged in to has no access to project {}. Please "
-            "double-check the project ID and make sure you logged in to the "
-            "correct acount.".format(project),
-        )
-    conf.projects[target] = project
-    if click.confirm("Save as default", default=True):
-        try:
-            with update_yaml_dict(closest_sh_yml) as conf_yml:
-                default_entry = {'default': project}
-                if 'projects' in conf_yml:
-                    conf_yml['projects'].update(default_entry)
-                else:
-                    conf_yml['projects'] = default_entry
-        except Exception:
-            click.echo(
-                "There was an error while trying to write to scrapinghub.yml. "
-                "Could not save project {} as default.".format(project),
-            )
-        else:
-            click.echo(
-                "Project {} was set as default in scrapinghub.yml. You can "
-                "deploy to it via 'shub deploy' from now on.".format(project),
-            )

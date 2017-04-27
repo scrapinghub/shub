@@ -8,20 +8,28 @@ import os
 import stat
 import sys
 import unittest
+import textwrap
 import time
 
-from mock import Mock, MagicMock, patch
+import click
+import yaml
+
 from click.testing import CliRunner
 from collections import deque
+from mock import Mock, MagicMock, patch
+from scrapinghub import APIError
 
 from shub import utils
-from shub.exceptions import (BadParameterException, NotFoundException,
-                             RemoteErrorException, SubcommandException)
+from shub.config import ShubConfig
+from shub.exceptions import (
+    BadParameterException, InvalidAuthException, NotFoundException,
+    RemoteErrorException, SubcommandException
+)
 
-from .utils import mock_conf
+from .utils import AssertInvokeRaisesMixin, mock_conf
 
 
-class UtilsTest(unittest.TestCase):
+class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
 
     def setUp(self):
         self.runner = CliRunner()
@@ -406,6 +414,170 @@ class UtilsTest(unittest.TestCase):
                                   rsp=rsp, verbose=True)
         self.assertEqual(last_logs, [
             b"line1", b'{"status":"ok","fieldK":"fieldV"}'])
+
+    def test_update_yaml_dict(self):
+        YAML_BEFORE = textwrap.dedent("""\
+            a:
+              unrelated: dict
+            b:
+              key1: val1
+              key2: val2
+        """)
+        DICT_EXPECTED = {
+            'a': {'unrelated': 'dict'},
+            'b': {'key1': 'newval1', 'key2': 'val2', 'key3': 'val3'}
+        }
+        runner = CliRunner()
+        with runner.isolated_filesystem():
+            with open('conf.yml', 'w') as f:
+                f.write(YAML_BEFORE)
+            with utils.update_yaml_dict('conf.yml') as conf:
+                conf['b']['key1'] = 'newval1'
+                conf['b']['key3'] = 'val3'
+            with open('conf.yml', 'r') as f:
+                self.assertEqual(yaml.safe_load(f), DICT_EXPECTED)
+                f.seek(0)
+                self.assertIn("key1: newval1", f.read())
+
+    def test_update_yaml_dict_handles_file_errors(self):
+        with CliRunner().isolated_filesystem():
+            self.assertFalse(os.path.isfile('didnt_exist.yml'))
+            with utils.update_yaml_dict('didnt_exist.yml') as conf:
+                pass
+            self.assertTrue(os.path.isfile('didnt_exist.yml'))
+
+            os.mkdir('a_directory')
+            with self.assertRaises(IOError):
+                with utils.update_yaml_dict('a_directory'):
+                    pass
+
+    @patch('shub.config.GLOBAL_SCRAPINGHUB_YML_PATH', 'global.yml')
+    def test_update_yaml_dict_uses_global_by_default(self):
+        @click.command()
+        def call_update_yaml_dict():
+            with utils.update_yaml_dict():
+                pass
+
+        runner = CliRunner()
+        with runner.isolated_filesystem():
+            result = runner.invoke(call_update_yaml_dict)
+        assert 'deprecated' in result.output
+
+    @patch('shub.utils.Connection')
+    def test_has_project_access(self, mock_conn):
+        mock_conn.return_value.project_ids.side_effect = APIError(
+            'Authentication failed')
+        with self.assertRaises(InvalidAuthException):
+            utils.has_project_access(12345, 'mock_endpoint', 'abcdef')
+        mock_conn.return_value.project_ids.side_effect = APIError(
+            'Random error')
+        with self.assertRaises(RemoteErrorException):
+            utils.has_project_access(12345, 'mock_endpoint', 'abcdef')
+
+    def test_get_project_dir(self):
+        with CliRunner().isolated_filesystem() as basepath:
+            os.makedirs('a/b/c')
+            os.chdir('a/b/c')
+            with self.assertRaises(NotFoundException):
+                utils.get_project_dir()
+            open(os.path.join(basepath, 'Dockerfile'), 'w').close()
+            self.assertEqual(utils.get_project_dir(), basepath)
+            # scrapy.cfg takes precedence over Dockerfile
+            open(os.path.join(basepath, 'a', 'scrapy.cfg'), 'w').close()
+            self.assertEqual(
+                utils.get_project_dir(),
+                os.path.join(basepath, 'a'))
+            # scrapinghub.yml takes precedence over both
+            open(os.path.join(basepath, 'a', 'b', 'scrapinghub.yml'), 'w'
+                 ).close()
+            self.assertEqual(
+                utils.get_project_dir(),
+                os.path.join(basepath, 'a', 'b'))
+
+    @patch('shub.utils.has_project_access')
+    def test_create_scrapinghub_yml_wizard(self, mock_project_access):
+        conf = mock_conf(self)
+        del conf.projects['default']
+
+        @click.command()
+        def call_wizard():
+            utils.create_scrapinghub_yml_wizard(conf)
+
+        with self.runner.isolated_filesystem():
+            open('scrapy.cfg', 'w').close()
+            mock_project_access.return_value = False
+            self.assertInvokeRaises(
+                InvalidAuthException, call_wizard, input='99\nn\n')
+            # Don't create scrapinghub.yml if not wished
+            mock_project_access.return_value = True
+            self.runner.invoke(call_wizard, input='99\nn\n')
+            self.assertEqual(conf.projects['default'], 99)
+            self.assertFalse(os.path.exists('scrapinghub.yml'))
+            # Create scrapinghub.yml if wished
+            del conf.projects['default']
+            self.runner.invoke(call_wizard, input='199\n\n')
+            self.assertEqual(conf.projects['default'], 199)
+            self.assertTrue(os.path.exists('scrapinghub.yml'))
+            # Also run wizard when there's a scrapinghub.yml but no default
+            # target
+            del conf.projects['default']
+            conf.projects['prod'] = 299
+            self.runner.invoke(call_wizard, input='399\n\n')
+            self.assertEqual(conf.projects['default'], 399)
+
+    @patch('shub.utils.has_project_access', return_value=True)
+    def test_deploy_wizard_set_image(self, mock_project_access):
+        conf = mock_conf(self)
+
+        @click.command()
+        def call_wizard():
+            utils.create_scrapinghub_yml_wizard(conf, image=True)
+
+        with self.runner.isolated_filesystem():
+            open('scrapy.cfg', 'w').close()
+            self.assertFalse(os.path.exists('scrapinghub.yml'))
+            self.runner.invoke(call_wizard, input='user/repo\n')
+            self.assertEqual(conf.images['default'], 'user/repo')
+            self.assertTrue(os.path.exists('scrapinghub.yml'))
+
+            del conf.images['default']
+            self.runner.invoke(call_wizard, input='\n')
+            self.assertEqual(conf.images['default'], True)
+
+            del conf.projects['default']
+            del conf.images['default']
+            self.runner.invoke(call_wizard, input='12345\nuser/repo\n')
+            self.assertEqual(conf.projects['default'], 12345)
+            self.assertEqual(conf.images['default'], 'user/repo')
+
+    @patch('shub.utils.has_project_access', return_value=True)
+    def test_deploy_wizard_does_not_leak_global_conf(self, mock_proj_access):
+        global_conf = ShubConfig()
+        global_conf.projects = {'prod': 33333}
+        global_conf.apikeys = {'default': 'abc'}
+
+        @click.command()
+        def call_wizard():
+            utils.create_scrapinghub_yml_wizard(global_conf, image=use_image)
+
+        with self.runner.isolated_filesystem():
+            open('scrapy.cfg', 'w').close()
+
+            use_image = False
+            self.assertFalse(os.path.exists('scrapinghub.yml'))
+            self.runner.invoke(call_wizard, input='99999\n\n')
+            self.assertEqual(global_conf.projects['default'], 99999)
+            with open('scrapinghub.yml', 'r') as f:
+                self.assertEqual(f.read(), "project: 99999\n")
+
+            os.remove('scrapinghub.yml')
+            use_image = True
+            del global_conf.projects['default']
+            self.runner.invoke(call_wizard, input='99999\n\n\n')
+            self.assertEqual(global_conf.projects['default'], 99999)
+            self.assertEqual(global_conf.images['default'], True)
+            with utils.update_yaml_dict('scrapinghub.yml') as local_conf:
+                self.assertEqual(local_conf, {'project': 99999, 'image': True})
 
 
 if __name__ == '__main__':

@@ -1,7 +1,8 @@
 from __future__ import absolute_import
 import click
 
-from shub.config import load_shub_config, update_yaml_dict
+from shub.config import load_shub_config, GLOBAL_SCRAPINGHUB_YML_PATH
+from shub.utils import update_yaml_dict
 
 
 HELP = """
@@ -19,5 +20,5 @@ def cli():
         click.echo("You are not logged in.")
         return 0
 
-    with update_yaml_dict() as conf:
+    with update_yaml_dict(GLOBAL_SCRAPINGHUB_YML_PATH) as conf:
         del conf['apikeys']['default']

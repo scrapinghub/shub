@@ -11,6 +11,7 @@ from click.testing import CliRunner
 from mock import patch
 
 from shub import deploy
+from shub.config import ShubConfig
 from shub.exceptions import InvalidAuthException, NotFoundException, \
     ShubException, BadParameterException
 
@@ -79,39 +80,49 @@ class DeployTest(AssertInvokeRaisesMixin, unittest.TestCase):
             result = self.runner.invoke(deploy.cli, ('--list-targets',))
             assert result.exit_code == 0
 
+    @patch('shub.deploy.create_scrapinghub_yml_wizard')
+    def test_call_wizard(self, mock_wizard):
+        conf = ShubConfig()
+        with self.runner.isolated_filesystem():
+            with self.assertRaises(NotFoundException):
+                deploy._call_wizard(conf)
+
+            open('scrapy.cfg', 'w').close()
+            deploy._call_wizard(conf)
+            mock_wizard.assert_called_with(conf, image=False)
+            mock_wizard.reset_mock()
+
+            open('Dockerfile', 'w').close()
+            with patch('shub.deploy.click.confirm') as mock_confirm:
+                mock_confirm.return_value = False
+                deploy._call_wizard(conf)
+                mock_wizard.assert_called_with(conf, image=False)
+                mock_wizard.reset_mock()
+                mock_confirm.return_value = True
+                deploy._call_wizard(conf)
+                mock_wizard.assert_called_with(conf, image=True)
+                mock_wizard.reset_mock()
+
+            os.remove('scrapy.cfg')
+            deploy._call_wizard(conf)
+            mock_wizard.assert_called_with(conf, image=True)
+            mock_wizard.reset_mock()
+
     @patch('shub.deploy.make_deploy_request')
-    @patch('shub.deploy._has_project_access')
-    def test_deploy_wizard(self, mock_project_access, mock_deploy_req):
+    @patch('shub.deploy.create_scrapinghub_yml_wizard')
+    def test_calls_scrapinghub_yml_wizard(self, mock_wizard, mock_deploy_req):
         with self.runner.isolated_filesystem():
             self._make_project()
-            with patch('shub.deploy._deploy_wizard') as mock_wizard:
-                # Don't call when 'default' defined in the global conf
-                self.runner.invoke(deploy.cli)
-                self.assertFalse(mock_wizard.called)
-                del self.conf.projects['default']
-                # Don't call when non-default target was supplied
-                self.runner.invoke(deploy.cli, 'not-default')
-                self.assertFalse(mock_wizard.called)
-            # Wizard is live from here on
-            mock_project_access.return_value = False
-            self.assertInvokeRaises(InvalidAuthException, deploy.cli,
-                                    input='99\nn\n')
-            # Don't create scrapinghub.yml if not wished
-            mock_project_access.return_value = True
-            self.runner.invoke(deploy.cli, input='99\nn\n')
-            self.assertEqual(self.conf.projects['default'], 99)
-            self.assertFalse(os.path.exists('scrapinghub.yml'))
-            # Create scrapinghub.yml if wished
+            # Don't call when 'default' defined in the global conf
+            self.runner.invoke(deploy.cli)
+            self.assertFalse(mock_wizard.called)
             del self.conf.projects['default']
-            self.runner.invoke(deploy.cli, input='199\n\n')
-            self.assertEqual(self.conf.projects['default'], 199)
-            self.assertTrue(os.path.exists('scrapinghub.yml'))
-            # Also run wizard when there's a scrapinghub.yml but no default
-            # target
-            del self.conf.projects['default']
-            self.conf.projects['prod'] = 299
-            self.runner.invoke(deploy.cli, input='399\n\n')
-            self.assertEqual(self.conf.projects['default'], 399)
+            self.runner.invoke(deploy.cli)
+            self.assertTrue(mock_wizard.called)
+            mock_wizard.reset_mock()
+            # Don't call when non-default target was supplied
+            self.runner.invoke(deploy.cli, 'not-default')
+            self.assertFalse(mock_wizard.called)
 
     @patch('shub.deploy.deploy_cmd')
     def test_custom_deploy_disabled(self, mock_deploy_cmd):

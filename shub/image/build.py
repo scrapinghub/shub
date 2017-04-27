@@ -7,6 +7,7 @@ from shub import exceptions as shub_exceptions
 from shub.config import load_shub_config, list_targets_callback
 from shub.image import utils
 from shub.image.test import test_cmd
+from shub.utils import create_scrapinghub_yml_wizard
 
 
 SHORT_HELP = 'Build release image.'
@@ -43,9 +44,13 @@ def cli(target, debug, verbose, version, skip_tests):
 
 
 def build_cmd(target, version, skip_tests):
+    config = load_shub_config()
+    image_configured = (
+        target in config.projects and config.get_target_conf(target).image)
+    if not target.isdigit() and not image_configured:
+        create_scrapinghub_yml_wizard(config, target=target, image=True)
     client = utils.get_docker_client()
     project_dir = utils.get_project_dir()
-    config = load_shub_config()
     image = config.get_image(target)
     image_name = utils.format_image_name(image, version)
     if not os.path.exists(os.path.join(project_dir, 'Dockerfile')):

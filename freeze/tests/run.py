@@ -48,7 +48,7 @@ def test_version():
 def test_deploy_without_project():
     stdout, stderr = shub('deploy').communicate()
     assert stdout == b''
-    assert b'Error: No Scrapy project found in this location.' in stderr
+    assert b'Cannot find project' in stderr
 
 
 def test_deploy_default_project(apipipe, scrapyproject):
