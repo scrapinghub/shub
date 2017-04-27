@@ -695,32 +695,29 @@ def create_scrapinghub_yml_wizard(conf, target='default', image=False):
             if not isinstance(conf.projects[target], dict):
                 conf.projects[target] = {'id': conf.projects[target]}
             conf.projects[target]['image'] = repository
-    # Image repositories are always saved
-    if image or click.confirm("Save as default", default=True):
-        try:
-            # XXX: Don't save the global config to not leak any configuration
-            #      options from the global config file into the project-
-            #      specific one. Instead, load only the local settings, then
-            #      update these
-            # XXX: Runtime import to avoid circular dependency
-            from shub.config import load_shub_config
-            local_conf = load_shub_config(load_global=False, load_env=False)
-            if project:
-                local_conf.projects[target] = project
-            if image:
-                if target == 'default':
-                    local_conf.images[target] = repository
-                else:
-                    # XXX: Remove once we normalize project config on loading
-                    if not isinstance(local_conf.projects[target], dict):
-                        local_conf.projects[target] = {
-                            'id': local_conf.projects[target]}
-                    local_conf.projects[target].update({'image': repository})
-            local_conf.save(closest_sh_yml)
-        except Exception as e:
-            click.echo(
-                "There was an error while trying to write to scrapinghub.yml: "
-                "{}".format(e),
-            )
-        else:
-            click.echo("Saved to %s." % closest_sh_yml)
+    try:
+        # XXX: Runtime import to avoid circular dependency
+        from shub.config import load_shub_config
+        # Don't save the global config to not leak any configuration options
+        # from the global config file into the project- specific one. Instead,
+        # load only the local settings, then update these
+        local_conf = load_shub_config(load_global=False, load_env=False)
+        if project:
+            local_conf.projects[target] = project
+        if image:
+            if target == 'default':
+                local_conf.images[target] = repository
+            else:
+                # XXX: Remove once we normalize project config on loading
+                if not isinstance(local_conf.projects[target], dict):
+                    local_conf.projects[target] = {
+                        'id': local_conf.projects[target]}
+                local_conf.projects[target].update({'image': repository})
+        local_conf.save(closest_sh_yml)
+    except Exception as e:
+        click.echo(
+            "There was an error while trying to write to %s: %s"
+            "" % (closest_sh_yml, e),
+        )
+    else:
+        click.echo("Saved to %s." % closest_sh_yml)
