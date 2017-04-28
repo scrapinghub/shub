@@ -80,50 +80,6 @@ class DeployTest(AssertInvokeRaisesMixin, unittest.TestCase):
             result = self.runner.invoke(deploy.cli, ('--list-targets',))
             assert result.exit_code == 0
 
-    @patch('shub.deploy.create_scrapinghub_yml_wizard')
-    def test_call_wizard(self, mock_wizard):
-        conf = ShubConfig()
-        with self.runner.isolated_filesystem():
-            with self.assertRaises(NotFoundException):
-                deploy._call_wizard(conf)
-
-            open('scrapy.cfg', 'w').close()
-            deploy._call_wizard(conf)
-            mock_wizard.assert_called_with(conf, image=False)
-            mock_wizard.reset_mock()
-
-            open('Dockerfile', 'w').close()
-            with patch('shub.deploy.click.confirm') as mock_confirm:
-                mock_confirm.return_value = False
-                deploy._call_wizard(conf)
-                mock_wizard.assert_called_with(conf, image=False)
-                mock_wizard.reset_mock()
-                mock_confirm.return_value = True
-                deploy._call_wizard(conf)
-                mock_wizard.assert_called_with(conf, image=True)
-                mock_wizard.reset_mock()
-
-            os.remove('scrapy.cfg')
-            deploy._call_wizard(conf)
-            mock_wizard.assert_called_with(conf, image=True)
-            mock_wizard.reset_mock()
-
-    @patch('shub.deploy.make_deploy_request')
-    @patch('shub.deploy.create_scrapinghub_yml_wizard')
-    def test_calls_scrapinghub_yml_wizard(self, mock_wizard, mock_deploy_req):
-        with self.runner.isolated_filesystem():
-            self._make_project()
-            # Don't call when 'default' defined in the global conf
-            self.runner.invoke(deploy.cli)
-            self.assertFalse(mock_wizard.called)
-            del self.conf.projects['default']
-            self.runner.invoke(deploy.cli)
-            self.assertTrue(mock_wizard.called)
-            mock_wizard.reset_mock()
-            # Don't call when non-default target was supplied
-            self.runner.invoke(deploy.cli, 'not-default')
-            self.assertFalse(mock_wizard.called)
-
     @patch('shub.deploy.deploy_cmd')
     def test_custom_deploy_disabled(self, mock_deploy_cmd):
         with self.runner.isolated_filesystem():
@@ -137,6 +93,13 @@ class DeployTest(AssertInvokeRaisesMixin, unittest.TestCase):
             self._make_project()
             self.runner.invoke(deploy.cli, ('custom2',))
         self.assertEqual(mock_upload_cmd.call_args[0], ('custom2', None))
+
+    @patch('shub.deploy.upload_cmd')
+    def test_custom_deploy_by_id(self, mock_upload_cmd):
+        with self.runner.isolated_filesystem():
+            self._make_project()
+            self.runner.invoke(deploy.cli, ('5',))
+        mock_upload_cmd.assert_called_once_with('5', None)
 
     def test_custom_deploy_bad_registry(self):
         with self.runner.isolated_filesystem():

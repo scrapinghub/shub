@@ -22,8 +22,8 @@ from shub.config import (list_targets_callback, load_shub_config,
 from shub.exceptions import (BadParameterException, NotFoundException,
                              ShubException)
 from shub.utils import (create_default_setup_py, create_scrapinghub_yml_wizard,
-                        get_config, get_project_dir, inside_project,
-                        make_deploy_request, run_python)
+                        get_config, inside_project, make_deploy_request,
+                        run_python)
 from shub.image.upload import upload_cmd
 
 
@@ -71,10 +71,9 @@ SHORT_HELP = "Deploy Scrapy project to Scrapy Cloud"
 @click.option("-k", "--keep-log", help="keep the deploy log", is_flag=True)
 def cli(target, version, debug, egg, build_egg, verbose, keep_log):
     conf, image = load_shub_config(), None
-    if not build_egg and target == 'default' and target not in conf.projects:
-        _call_wizard(conf)
-    if target in conf.projects:
-        image = conf.get_target_conf(target).image
+    if not build_egg:
+        create_scrapinghub_yml_wizard(conf, target=target)
+    image = conf.get_target_conf(target).image
     if not image:
         deploy_cmd(target, version, debug, egg, build_egg, verbose, keep_log,
                    conf=conf)
@@ -84,29 +83,6 @@ def cli(target, version, debug, egg, build_egg, verbose, keep_log):
         raise BadParameterException(
             "Please use `shub image` commands to work with Docker registries "
             "other than Scrapinghub default registry.")
-
-
-def _call_wizard(conf):
-    """Call the onboarding wizard, figuring out if we should ask about image
-    configuration based on the existence of a Dockerfile.
-
-    If there is a scrapy.cfg and a Dockerfile, ask if it should be deployed as
-    custom image. If there is a Dockerfile but no scrapy.cfg, always assume it
-    should be deployed as custom image.
-    """
-    image_wizard = False
-    project_dir = get_project_dir()
-    has_scrapy_cfg = os.path.isfile(os.path.join(project_dir, 'scrapy.cfg'))
-    has_dockerfile = os.path.isfile(os.path.join(project_dir, 'Dockerfile'))
-    if has_scrapy_cfg and has_dockerfile:
-        image_wizard = click.confirm(
-            "You have a Dockerfile in your project directory. Would "
-            "you like to deploy it as custom image?", default=True)
-    elif has_dockerfile:
-        image_wizard = True
-    else:
-        image_wizard = False
-    create_scrapinghub_yml_wizard(conf, image=image_wizard)
 
 
 def deploy_cmd(target, version, debug, egg, build_egg, verbose, keep_log,

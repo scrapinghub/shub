@@ -45,10 +45,7 @@ def cli(target, debug, verbose, version, skip_tests):
 
 def build_cmd(target, version, skip_tests):
     config = load_shub_config()
-    image_configured = (
-        target in config.projects and config.get_target_conf(target).image)
-    if not target.isdigit() and not image_configured:
-        create_scrapinghub_yml_wizard(config, target=target, image=True)
+    create_scrapinghub_yml_wizard(config, target=target, image=True)
     client = utils.get_docker_client()
     project_dir = utils.get_project_dir()
     image = config.get_image(target)
