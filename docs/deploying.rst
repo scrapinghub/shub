@@ -37,6 +37,8 @@ deploying::
     Writing egg to egg_name
 
 
+.. _deploying-dependencies:
+
 Deploying dependencies
 ----------------------
 
@@ -77,6 +79,8 @@ build your own Docker image to be used on Scrapy Cloud. See
 :ref:`deploy-custom-image`.
 
 
+.. _choose-custom-stack:
+
 Choosing a Scrapy Cloud stack
 -----------------------------
 
@@ -99,4 +103,4 @@ It is also possible to define the stack per project for advanced use cases::
         stack: scrapy:1.3-py3
       prod: 33333  # will use Scrapinghub's default stack
 
-.. _`Scrapy Cloud stack`: http://help.scrapinghub.com/scrapy-cloud/scrapy-cloud-stacks
+.. _`Scrapy Cloud stack`: https://helpdesk.scrapinghub.com/support/solutions/articles/22000200402-scrapy-cloud-stacks
