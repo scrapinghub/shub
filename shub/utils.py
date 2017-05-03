@@ -664,30 +664,46 @@ def get_project_dir():
         "Dockerfile in this directory or any of the parent directories.")
 
 
-def create_scrapinghub_yml_wizard(conf, target='default', image=False):
-    """
-    Ask user for project ID, ensure they have access to that project, and save
-    it to given ``target`` in local ``scrapinghub.yml`` if desired.
-    """
-    closest_sh_yml = os.path.join(get_project_dir(), 'scrapinghub.yml')
-    project = None
-    if target not in conf.projects:
-        # Get default endpoint and API key (meanwhile making sure the user is
-        # logged in)
-        endpoint, apikey = conf.get_endpoint(0), conf.get_apikey(0)
+def _get_target_project(conf, target):
+    """Ask for project ID (or use given target if numerical) and confirm that
+    user is logged in and has project access"""
+    # Will raise MissingAuthException if user is not logged in
+    endpoint, apikey = conf.get_endpoint(0), conf.get_apikey(0)
+    if target.isdigit():
+        project = int(target)
+        target = 'default'
+    else:
         project = click.prompt("Target project ID", type=int)
-        if not has_project_access(project, endpoint, apikey):
-            raise InvalidAuthException(
-                "The account you logged in to has no access to project {}. "
-                "Please double-check the project ID and make sure you logged "
-                "in to the correct acount.".format(project),
-            )
+    if not has_project_access(project, endpoint, apikey):
+        raise InvalidAuthException(
+            "The account you logged in to has no access to project {}. "
+            "Please double-check the project ID and make sure you logged "
+            "in to the correct acount.".format(project),
+        )
+    return target, project
+
+
+def _detect_custom_image_project():
+    """Guess if the user may want to deploy a custom image based on the
+    existence of ``scrapy.cfg`` and ``Dockerfile``. If there are both, ask."""
+    project_dir = get_project_dir()
+    has_scrapy_cfg = os.path.exists(os.path.join(project_dir, 'scrapy.cfg'))
+    has_dockerfile = os.path.exists(os.path.join(project_dir, 'Dockerfile'))
+    if has_scrapy_cfg and has_dockerfile:
+        return click.confirm(
+            "You have a Dockerfile in your project directory. Would you like "
+            "to deploy it as custom image?", default=True)
+    elif has_dockerfile:
+        return True
+    return False
+
+
+def _update_conf(conf, target, project, repository):
+    """Update configuration target with given ``project`` and ``repository``"""
+    if project:
         # XXX: Save {'id': project} once we normalize project config on loading
         conf.projects[target] = project
-    if image and not conf.get_target_conf(target).image:
-        repository = click.prompt(
-            "Image repository (leave empty to use Scrapinghub's repository)",
-            default=True, show_default=False)
+    if repository:
         if target == 'default':
             conf.images[target] = repository
         else:
@@ -695,29 +711,74 @@ def create_scrapinghub_yml_wizard(conf, target='default', image=False):
             if not isinstance(conf.projects[target], dict):
                 conf.projects[target] = {'id': conf.projects[target]}
             conf.projects[target]['image'] = repository
+
+
+def _update_conf_file(filename, target, project, repository):
+    """Load the given config file, update ``target`` with the given ``project``
+    and ``repository``, then save it. If the file does not exist, it will be
+    created."""
     try:
         # XXX: Runtime import to avoid circular dependency
-        from shub.config import load_shub_config
-        # Don't save the global config to not leak any configuration options
-        # from the global config file into the project- specific one. Instead,
-        # load only the local settings, then update these
-        local_conf = load_shub_config(load_global=False, load_env=False)
-        if project:
-            local_conf.projects[target] = project
-        if image:
-            if target == 'default':
-                local_conf.images[target] = repository
-            else:
-                # XXX: Remove once we normalize project config on loading
-                if not isinstance(local_conf.projects[target], dict):
-                    local_conf.projects[target] = {
-                        'id': local_conf.projects[target]}
-                local_conf.projects[target].update({'image': repository})
-        local_conf.save(closest_sh_yml)
+        from shub.config import ShubConfig
+        conf = ShubConfig()
+        if os.path.exists(filename):
+            conf.load_file(filename)
+        _update_conf(conf, target, project, repository)
+        conf.save(filename)
     except Exception as e:
         click.echo(
             "There was an error while trying to write to %s: %s"
-            "" % (closest_sh_yml, e),
+            "" % (filename, e),
         )
     else:
-        click.echo("Saved to %s." % closest_sh_yml)
+        click.echo("Saved to %s." % filename)
+
+
+def create_scrapinghub_yml_wizard(conf, target='default', image=None):
+    """
+    Ask user for project ID, ensure they have access to that project, and save
+    it in the local ``scrapinghub.yml``.
+
+    If ``image`` is ``True``, the user will also be asked for the image
+    repository to use. If ``image`` is ``None``, the wizard will ask for a
+    repository if ``Dockerfile`` exists.
+
+    The wizard will only ever ask questions and touch the configuration if at
+    least one of these two conditions is met:
+
+        1. There is no local scrapinghub.yml
+        2. ``image`` is ``True``, and the given ``target`` is defined but has
+           no image repository configured; this will happen when transitioning
+           a previously stack-based project to a custom image-based one, i.e.
+           when you already have a ``scrapinghub.yml`` but now run ``shub image
+           build`` for the first time
+
+    In all other cases, the wizard will return without asking questions and
+    without altering ``conf``.
+    """
+    closest_sh_yml = os.path.join(get_project_dir(), 'scrapinghub.yml')
+    run_wizard = (
+        not os.path.exists(closest_sh_yml) or
+        (image and target in conf.projects
+            and not conf.get_target_conf(target).image)
+    )
+    if not run_wizard:
+        return
+    project = None
+    repository = None
+    if target not in conf.projects and 'default' not in conf.projects:
+        target, project = _get_target_project(conf, target)
+        if target == 'default':
+            click.echo(
+                "Saving project %d as default target. You can deploy to it "
+                "via 'shub deploy' from now on" % project)
+        else:
+            click.echo(
+                "Saving project %d as target '%s'. You can deploy to it via "
+                "'shub deploy %s' from now on" % (project, target, target))
+    if image or (image is None and _detect_custom_image_project()):
+        repository = click.prompt(
+            "Image repository (leave empty to use Scrapinghub's repository)",
+            default=True, show_default=False)
+    _update_conf(conf, target, project, repository)
+    _update_conf_file(closest_sh_yml, target, project, repository)

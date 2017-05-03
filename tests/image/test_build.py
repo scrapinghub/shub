@@ -17,14 +17,6 @@ def test_mock():
         yield m
 
 
-@pytest.fixture
-def wizard_mock():
-    """Mock for shub.utils.create_scrapinghub_yml_wizard"""
-    with mock.patch('shub.utils.create_scrapinghub_yml_wizard') as m,\
-            mock.patch('shub.utils.has_project_access', return_value=True):
-        yield m
-
-
 def test_cli(docker_client_mock, project_dir, test_mock):
     docker_client_mock.build.return_value = [
         {"stream": "all is ok"},
@@ -105,21 +97,3 @@ def test_cli_skip_tests(docker_client_mock, test_mock, project_dir, skip_tests_f
     docker_client_mock.build.assert_called_with(
         decode=True, path=project_dir, tag='registry/user/project:1.0')
     assert test_mock.call_count == 0
-
-
-@pytest.mark.usefixtures('wizard_mock')
-@pytest.mark.usefixtures('test_mock')
-def test_cli_calls_onboarding_wizard(docker_client_mock, project_dir):
-    with open(os.path.join(project_dir, 'scrapinghub.yml'), 'w') as f:
-        f.write('apikey: abcdef')
-    docker_client_mock.build.return_value = [
-        {"stream": "all is ok"},
-        {"stream": "Successfully built 12345"}
-    ]
-    runner = CliRunner()
-    result = runner.invoke(cli, ['12345'])
-    assert result.exit_code == shub_exceptions.NotFoundException.exit_code
-    result = runner.invoke(cli, input='12345\nmyregistry/X/Y\n')
-    assert result.exit_code == 0
-    docker_client_mock.build.assert_called_with(
-        decode=True, path=project_dir, tag='myregistry/X/Y:1.0')

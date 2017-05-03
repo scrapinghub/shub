@@ -22,8 +22,8 @@ from scrapinghub import APIError
 from shub import utils
 from shub.config import ShubConfig
 from shub.exceptions import (
-    BadParameterException, InvalidAuthException, NotFoundException,
-    RemoteErrorException, SubcommandException
+    BadParameterException, InvalidAuthException, MissingAuthException,
+    NotFoundException, RemoteErrorException, SubcommandException
 )
 
 from .utils import AssertInvokeRaisesMixin, mock_conf
@@ -494,85 +494,197 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
                 utils.get_project_dir(),
                 os.path.join(basepath, 'a', 'b'))
 
+
+class OnboardingWizardTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.runner = CliRunner()
+        self.has_project_access = True
+
     @patch('shub.utils.has_project_access')
-    def test_create_scrapinghub_yml_wizard(self, mock_project_access):
-        conf = mock_conf(self)
-        del conf.projects['default']
+    def _test_wizard(self, mock_project_access, conf=None, target='default',
+                     image=None, sh_yml=None, scrapy_cfg=True,
+                     dockerfile=False, **kwargs):
+        if not conf:
+            conf = ShubConfig()
+            conf.apikeys = {'default': 'abcdef'}
+        mock_project_access.return_value = self.has_project_access
 
         @click.command()
         def call_wizard():
-            utils.create_scrapinghub_yml_wizard(conf)
+            utils.create_scrapinghub_yml_wizard(
+                conf, target=target, image=image)
 
         with self.runner.isolated_filesystem():
-            open('scrapy.cfg', 'w').close()
-            mock_project_access.return_value = False
-            self.assertInvokeRaises(
-                InvalidAuthException, call_wizard, input='99\n')
-            # Create scrapinghub.yml
-            mock_project_access.return_value = True
-            self.runner.invoke(call_wizard, input='199\n')
-            self.assertEqual(conf.projects['default'], 199)
-            self.assertTrue(os.path.exists('scrapinghub.yml'))
-            # Also run wizard when there's a scrapinghub.yml but no default
-            # target
-            del conf.projects['default']
-            conf.projects['prod'] = 299
-            self.runner.invoke(call_wizard, input='399\n')
-            self.assertEqual(conf.projects['default'], 399)
+            if scrapy_cfg:
+                open('scrapy.cfg', 'w').close()
+            if dockerfile:
+                open('Dockerfile', 'w').close()
+            if sh_yml:
+                with open('scrapinghub.yml', 'w') as f:
+                    f.write(sh_yml)
+                conf.load_file('scrapinghub.yml')
+            result = self.runner.invoke(call_wizard, **kwargs)
+            if os.path.exists('scrapinghub.yml'):
+                with open('scrapinghub.yml', 'r') as f:
+                    sh_yml = yaml.safe_load(f.read())
+            else:
+                sh_yml = None
+            return result, conf, sh_yml
 
-    @patch('shub.utils.has_project_access', return_value=True)
-    def test_deploy_wizard_set_image(self, mock_project_access):
-        conf = mock_conf(self)
+    def test_outside_of_project(self):
+        result, _, sh_yml = self._test_wizard(scrapy_cfg=False)
+        assert result.exit_code == NotFoundException.exit_code
+        assert sh_yml is None
 
-        @click.command()
-        def call_wizard():
-            utils.create_scrapinghub_yml_wizard(conf, image=True)
+    def test_not_logged_in(self):
+        conf = ShubConfig()
+        result, _, sh_yml = self._test_wizard(conf=conf)
+        assert result.exit_code == MissingAuthException.exit_code
+        assert sh_yml is None
 
-        with self.runner.isolated_filesystem():
-            open('scrapy.cfg', 'w').close()
-            self.assertFalse(os.path.exists('scrapinghub.yml'))
-            self.runner.invoke(call_wizard, input='user/repo\n')
-            self.assertEqual(conf.images['default'], 'user/repo')
-            self.assertTrue(os.path.exists('scrapinghub.yml'))
+    def test_scrapy_project(self):
+        result, conf, sh_yml = self._test_wizard(input='12345\n')
+        assert result.exit_code == 0
+        assert conf.projects == {'default': 12345}
+        assert sh_yml == {'project': 12345}
 
-            del conf.images['default']
-            self.runner.invoke(call_wizard, input='\n')
-            self.assertEqual(conf.images['default'], True)
+    def test_custom_project(self):
+        result, conf, sh_yml = self._test_wizard(
+            scrapy_cfg=False, dockerfile=True, input='12345\n\n')
+        assert result.exit_code == 0
+        assert conf.projects == {'default': 12345}
+        assert conf.images == {'default': True}
+        assert sh_yml == {'project': 12345, 'image': True}
 
-            del conf.projects['default']
-            del conf.images['default']
-            self.runner.invoke(call_wizard, input='12345\nuser/repo\n')
-            self.assertEqual(conf.projects['default'], 12345)
-            self.assertEqual(conf.images['default'], 'user/repo')
+    def test_custom_repository(self):
+        result, conf, sh_yml = self._test_wizard(
+            scrapy_cfg=False, dockerfile=True, input='12345\nrepo\n')
+        assert result.exit_code == 0
+        assert conf.images == {'default': 'repo'}
+        assert sh_yml == {'project': 12345, 'image': 'repo'}
 
-    @patch('shub.utils.has_project_access', return_value=True)
-    def test_deploy_wizard_does_not_leak_global_conf(self, mock_proj_access):
-        global_conf = ShubConfig()
-        global_conf.projects = {'prod': 33333}
-        global_conf.apikeys = {'default': 'abc'}
+    def test_ambiguous_project_not_custom(self):
+        result, conf, sh_yml = self._test_wizard(
+            scrapy_cfg=True, dockerfile=True, input='12345\nn\n')
+        assert result.exit_code == 0
+        assert conf.projects == {'default': 12345}
+        assert not conf.images
+        assert sh_yml == {'project': 12345}
 
-        @click.command()
-        def call_wizard():
-            utils.create_scrapinghub_yml_wizard(global_conf, image=use_image)
+    def test_ambiguous_project_custom(self):
+        result, conf, sh_yml = self._test_wizard(
+            scrapy_cfg=True, dockerfile=True, input='12345\n\n\n')
+        assert result.exit_code == 0
+        assert conf.projects == {'default': 12345}
+        assert conf.images == {'default': True}
+        assert sh_yml == {'project': 12345, 'image': True}
 
-        with self.runner.isolated_filesystem():
-            open('scrapy.cfg', 'w').close()
+    def test_never_ask_for_repository_when_image_false(self):
+        result, conf, _ = self._test_wizard(
+            image=False, scrapy_cfg=False, dockerfile=True, input='12345\n')
+        assert result.exit_code == 0
+        assert 'repository' not in result.output
+        assert not conf.images
 
-            use_image = False
-            self.assertFalse(os.path.exists('scrapinghub.yml'))
-            self.runner.invoke(call_wizard, input='99999\n')
-            self.assertEqual(global_conf.projects['default'], 99999)
-            with open('scrapinghub.yml', 'r') as f:
-                self.assertEqual(f.read(), "project: 99999\n")
+    def test_always_ask_for_repository_when_image_true(self):
+        result, conf, sh_yml = self._test_wizard(
+            image=True, input='12345\nrepo\n')
+        assert result.exit_code == 0
+        assert conf.images == {'default': 'repo'}
+        assert sh_yml == {'project': 12345, 'image': 'repo'}
 
-            os.remove('scrapinghub.yml')
-            use_image = True
-            del global_conf.projects['default']
-            self.runner.invoke(call_wizard, input='99999\n\n')
-            self.assertEqual(global_conf.projects['default'], 99999)
-            self.assertEqual(global_conf.images['default'], True)
-            with utils.update_yaml_dict('scrapinghub.yml') as local_conf:
-                self.assertEqual(local_conf, {'project': 99999, 'image': True})
+    def test_skip_on_existing_scrapinghub_yml_and_not_image(self):
+        original_sh_yml = 'project: 12345\n'
+        result, conf, sh_yml = self._test_wizard(sh_yml=original_sh_yml)
+        assert result.exit_code == 0
+        assert not result.output
+        assert not conf.images
+        assert sh_yml == {'project': 12345}
+
+    def test_add_image_for_existing_default_target(self):
+        original_sh_yml = 'projects:\n  default: 12345\n  prod: 33333\n'
+        result, conf, sh_yml = self._test_wizard(
+            image=True, sh_yml=original_sh_yml, input='\n')
+        assert result.exit_code == 0
+        assert conf.images == {'default': True}
+        assert sh_yml == {
+            'projects': {'default': 12345, 'prod': 33333},
+            'image': True
+        }
+
+    def test_add_image_for_existing_nondefault_target(self):
+        original_sh_yml = 'projects:\n  default: 12345\n  prod: 33333\n'
+        result, conf, sh_yml = self._test_wizard(
+            target='prod', image=True, sh_yml=original_sh_yml, input='\n')
+        assert result.exit_code == 0
+        assert not conf.images
+        assert sh_yml == {
+            'projects': {
+                'default': 12345,
+                'prod': {
+                    'id': 33333,
+                    'image': True,
+                },
+            },
+        }
+
+    def test_skip_for_already_defined_default_image(self):
+        original_sh_yml = 'project: 12345\nimage: true\n'
+        result, conf, sh_yml = self._test_wizard(
+            image=True, sh_yml=original_sh_yml)
+        assert result.exit_code == 0
+        assert not result.output
+
+    def test_skip_for_already_defined_nondefault_image(self):
+        original_sh_yml = textwrap.dedent("""\
+            projects:
+              default: 12345
+              prod:
+                id: 33333
+                image: true\
+            """)
+        result, conf, sh_yml = self._test_wizard(
+            target='prod', image=True, sh_yml=original_sh_yml)
+        assert result.exit_code == 0
+        assert not result.output
+
+    def test_scrapy_project_with_numeric_target(self):
+        result, conf, sh_yml = self._test_wizard(target='12345')
+        assert result.exit_code == 0
+        assert conf.projects == {'default': 12345}
+        assert sh_yml == {'project': 12345}
+
+    def test_custom_project_with_numeric_target(self):
+        result, conf, sh_yml = self._test_wizard(
+            target='12345', scrapy_cfg=False, dockerfile=True, input='repo\n')
+        assert result.exit_code == 0
+        assert conf.projects == {'default': 12345}
+        assert conf.images == {'default': 'repo'}
+        assert sh_yml == {'project': 12345, 'image': 'repo'}
+
+    def test_dont_leak_global_config(self):
+        conf = ShubConfig()
+        conf.projects = {'prod': 33333}
+        conf.apikeys = {'default': 'abc'}
+        result, conf, sh_yml = self._test_wizard(conf=conf, input='12345\n')
+        assert result.exit_code == 0
+        assert conf.projects == {'default': 12345, 'prod': 33333}
+        assert conf.apikeys == {'default': 'abc'}
+        assert sh_yml == {'project': 12345}
+
+    def test_dont_leak_global_config_on_image(self):
+        conf = ShubConfig()
+        conf.projects = {'prod': 33333}
+        conf.apikeys = {'default': 'abc'}
+        result, conf, sh_yml = self._test_wizard(
+            conf=conf, scrapy_cfg=False, dockerfile=True,
+            input='12345\nrepo\n')
+        assert result.exit_code == 0
+        assert conf.projects == {'default': 12345, 'prod': 33333}
+        assert conf.apikeys == {'default': 'abc'}
+        assert conf.images == {'default': 'repo'}
+        assert sh_yml == {'project': 12345, 'image': 'repo'}
 
 
 if __name__ == '__main__':
