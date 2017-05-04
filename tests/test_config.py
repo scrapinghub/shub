@@ -534,7 +534,7 @@ class ShubConfigTest(unittest.TestCase):
         self.assertEqual(self.conf.get_image('success'),
                          SH_IMAGES_REPOSITORY.format(project=456))
 
-    def test_get_image_ambigious(self):
+    def test_get_image_ambigious_deprecated_images_section(self):
         with self.assertRaises(BadConfigException):
             self.conf.load("""
                 projects:
@@ -546,6 +546,53 @@ class ShubConfigTest(unittest.TestCase):
                 images:
                     default: custom/image
             """)
+        self.conf.load("""
+            projects:
+                default:
+                    id: 123
+                stacks:
+                    id: 322
+                    image: false
+                    stack: scrapy:1.2
+            image: custom/image
+        """)
+
+    def test_get_image_ambiguous_global_image_and_global_stack(self):
+        self.conf.load("""
+            project: 123
+            image: true
+            stack: scrapy:1.3
+        """)
+        with self.assertRaisesRegexp(BadConfigException, '(?i)ambiguous'):
+            self.conf.get_image('default')
+
+    def test_get_image_ambiguous_global_image_and_project_stack(self):
+        self.conf.load("""
+            projects:
+              bad:
+                id: 123
+                stack: scrapy:1.3
+              good:
+                id: 456
+                image: false
+                stack: scrapy:1.3
+            image: true
+            """)
+        with self.assertRaisesRegexp(BadConfigException, '(?i)ambiguous'):
+            self.conf.get_image('bad')
+        with self.assertRaisesRegexp(BadConfigException, '(?i)disabled'):
+            self.conf.get_image('good')
+
+    def test_get_image_ambiguous_project_image_and_project_stack(self):
+        self.conf.load("""
+            projects:
+              default:
+                id: 123
+                image: true
+                stack: scrapy:1.3
+            """)
+        with self.assertRaisesRegexp(BadConfigException, '(?i)ambiguous'):
+            self.conf.get_image('default')
 
     def test_get_target_conf(self):
         self.assertEqual(

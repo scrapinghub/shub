@@ -353,6 +353,12 @@ class ShubConfig(object):
             raise BadConfigException(
                 "Using custom images is disabled for the project '{}'. "
                 "Please enable it in your scrapinghub.yml.".format(target))
+        elif target_conf.stack:
+            raise BadConfigException(
+                "Ambiguous configuration: There is both a custom image and a "
+                "stack configured for project '{}'. Please see {} for "
+                "information on how to configure both custom image-based and "
+                "stack-based projects.".format(target, CONFIG_DOCS_LINK))
         default_image = SH_IMAGES_REPOSITORY.format(project=project)
         if image.startswith(SH_IMAGES_REGISTRY) and image != default_image:
             raise BadConfigException(
