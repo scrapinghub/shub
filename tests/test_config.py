@@ -496,7 +496,7 @@ class ShubConfigTest(unittest.TestCase):
         """)
         self.assertEqual(self.conf.get_image('default'),
                          SH_IMAGES_REPOSITORY.format(project=123))
-        with self.assertRaises(BadParameterException):
+        with self.assertRaises(BadConfigException):
             self.conf.get_image('stacks-explicit')
         # check that aliases work as expected
         self.assertEqual(self.conf.get_image('devel'),
@@ -527,15 +527,15 @@ class ShubConfigTest(unittest.TestCase):
                 develop: images.scrapinghub.com/project/123
                 success: images.scrapinghub.com/project/456
         """)
-        with self.assertRaises(BadParameterException):
+        with self.assertRaises(BadConfigException):
             self.conf.get_image('prod')
-        with self.assertRaises(BadParameterException):
+        with self.assertRaises(BadConfigException):
             self.conf.get_image('develop')
         self.assertEqual(self.conf.get_image('success'),
                          SH_IMAGES_REPOSITORY.format(project=456))
 
     def test_get_image_ambigious(self):
-        with self.assertRaises(BadParameterException):
+        with self.assertRaises(BadConfigException):
             self.conf.load("""
                 projects:
                     default:
