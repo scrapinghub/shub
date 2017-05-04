@@ -6,3 +6,6 @@ dist
 .eggs/
 .tox
 .cache
+
+# Docs build
+docs/_build
