@@ -115,7 +115,7 @@ class ShubConfig(object):
         # fail if `projects` section has keys not found in `images`
         if (check_default_image_scope and
                 not set(self.projects).issubset(set(self.images))):
-            raise BadParameterException(
+            raise BadConfigException(
                     "Found ambigious configuration: default image has global "
                     "scope now, but some projects were not using custom "
                     "images and can be broken now. Please fix your config by "
@@ -350,12 +350,18 @@ class ShubConfig(object):
                 "Could not find image for project '{}'. Please define it "
                 "in your scrapinghub.yml.".format(target))
         elif image is False:
-            raise BadParameterException(
+            raise BadConfigException(
                 "Using custom images is disabled for the project '{}'. "
                 "Please enable it in your scrapinghub.yml.".format(target))
+        elif target_conf.stack:
+            raise BadConfigException(
+                "Ambiguous configuration: There is both a custom image and a "
+                "stack configured for project '{}'. Please see {} for "
+                "information on how to configure both custom image-based and "
+                "stack-based projects.".format(target, CONFIG_DOCS_LINK))
         default_image = SH_IMAGES_REPOSITORY.format(project=project)
         if image.startswith(SH_IMAGES_REGISTRY) and image != default_image:
-            raise BadParameterException(
+            raise BadConfigException(
                 "Found wrong SH repository for project '{}': expected {}.\n  "
                 "Please use aliases `True` or `scrapinghub` to fix it in your "
                 "config.".format(target, default_image))
