@@ -61,6 +61,18 @@ Contract statements
 Environment variables
 ---------------------
 
+SHUB_SPIDER
+^^^^^^^^^^^
+
+Spider name.
+
+**Example**:
+
+.. code-block:: javascript
+
+    test-spider
+
+
 SHUB_JOBKEY
 ^^^^^^^^^^^
 
