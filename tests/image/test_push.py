@@ -10,7 +10,7 @@ from shub import exceptions as shub_exceptions
 from shub.image.push import cli
 from shub.image.utils import ProgressBar
 
-from ..utils import format_expected_progress
+from ..utils import clean_progress_output, format_expected_progress
 
 
 @pytest.fixture
@@ -77,24 +77,24 @@ def test_cli_with_progress(docker_client_mock):
     result = runner.invoke(cli, ["dev", "--version", "test"])
     assert result.exit_code == 0
     expected = format_expected_progress(
-        'Login to registry succeeded.\n'
-        'Pushing registry/user/project:test to the registry.\n\r'
-        'Layers:   0%|          | 0/1\r          \r'
-        'Layers:   0%|          | 0/1\r          \r'
-        'Layers:   0%|          | 0/2\r          \r'
-        'Layers:   0%|          | 0/3\r          \r'
-        'Layers:   0%|          | 0/3\r          \r'
-        'Layers:   0%|          | 0/3\n\r'
-        'abc:   2%|▏         | 512/24.8K [1.00MB/s]\x1b[A\r          \r'
-        'Layers:   0%|          | 0/3\n\n\r'
-        'egh: 100%|██████████| 57.3K/57.3K [1.00MB/s]\x1b[A\x1b[A\r          \r'
-        'Layers:  33%|███▎      | 1/3\r          \r'
-        'Layers:  67%|██████▋   | 2/3\r'
-        'Layers: 100%|██████████| 3/3\n\r'
-        'abc: 100%|██████████| 24.8K/24.8K [1.00MB/s]\n\n'
-        'The image registry/user/project:test pushed successfully.\n'
+        'Login to registry succeeded.'
+        'Pushing registry/user/project:test to the registry.'
+        'Layers:   0%|          | 0/1          '
+        'Layers:   0%|          | 0/1          '
+        'Layers:   0%|          | 0/2          '
+        'Layers:   0%|          | 0/3          '
+        'Layers:   0%|          | 0/3          '
+        'Layers:   0%|          | 0/3'
+        'abc:   2%|▏         | 512/24.8K [1.00MB/s]          '
+        'Layers:   0%|          | 0/3'
+        'egh: 100%|██████████| 57.3K/57.3K [1.00MB/s]          '
+        'Layers:  33%|███▎      | 1/3          '
+        'Layers:  67%|██████▋   | 2/3'
+        'Layers: 100%|██████████| 3/3'
+        'abc: 100%|██████████| 24.8K/24.8K [1.00MB/s]'
+        'The image registry/user/project:test pushed successfully.'
     )
-    assert expected in result.output
+    assert expected in clean_progress_output(result.output)
 
 
 @pytest.mark.usefixtures('project_dir', 'test_mock')
@@ -123,25 +123,25 @@ def test_progress_no_total(docker_client_mock):
     result = runner.invoke(cli, ["dev", "--version", "test"])
     assert result.exit_code == 0
     expected = format_expected_progress(
-        'Layers:   0%|          | 0/1\r          \r'
-        'Layers:   0%|          | 0/1\r          \r'
-        'Layers:   0%|          | 0/2\r          \r'
-        'Layers:   0%|          | 0/3\r          \r'
-        'Layers:   0%|          | 0/4\r          \r'
-        'Layers:   0%|          | 0/4\r          \r'
-        'Layers:   0%|          | 0/4\r          \r'
-        'Layers:   0%|          | 0/4\n\r'
-        'abc: 100%|██████████| 512/512 [1.00MB/s]\x1b[A\r          \r'
-        'Layers:   0%|          | 0/4\n\n\r'
-        'egh: 100%|██████████| 57.3K/57.3K [1.00MB/s]\x1b[A\x1b[A\r          \r'
-        'Layers:  25%|██▌       | 1/4\r          \r'
-        'Layers:  50%|█████     | 2/4\r          \r'
-        'Layers:  75%|███████▌  | 3/4\r'
-        'Layers: 100%|██████████| 4/4\n\r'
-        'abc: 100%|██████████| 24.8K/24.8K [1.00MB/s]\n\n'
-        'The image registry/user/project:test pushed successfully.\n'
+        'Layers:   0%|          | 0/1          '
+        'Layers:   0%|          | 0/1          '
+        'Layers:   0%|          | 0/2          '
+        'Layers:   0%|          | 0/3          '
+        'Layers:   0%|          | 0/4          '
+        'Layers:   0%|          | 0/4          '
+        'Layers:   0%|          | 0/4          '
+        'Layers:   0%|          | 0/4'
+        'abc: 100%|██████████| 512/512 [1.00MB/s]          '
+        'Layers:   0%|          | 0/4'
+        'egh: 100%|██████████| 57.3K/57.3K [1.00MB/s]          '
+        'Layers:  25%|██▌       | 1/4          '
+        'Layers:  50%|█████     | 2/4          '
+        'Layers:  75%|███████▌  | 3/4'
+        'Layers: 100%|██████████| 4/4'
+        'abc: 100%|██████████| 24.8K/24.8K [1.00MB/s]'
+        'The image registry/user/project:test pushed successfully.'
     )
-    assert expected in result.output
+    assert expected in clean_progress_output(result.output)
 
 
 @pytest.mark.usefixtures('project_dir')
