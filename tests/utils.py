@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 import sys
-import mock
+import re
 
+import mock
 from click.testing import CliRunner
 from tqdm._utils import _supports_unicode
 
@@ -69,3 +70,17 @@ def format_expected_progress(progress):
         for sym in to_replace:
             progress = progress.replace(sym, to_replace[sym])
     return progress
+
+
+def clean_progress_output(output):
+    """Return output cleaned from \\r, \\n, and ANSI escape sequences"""
+    return re.sub(
+        r"""(?x)      # Matches:
+        \n|\r|        # 1. newlines or carriage returns, or
+        (\x1b\[|\x9b) # 2. ANSI control sequence introducer ("ESC[" or single
+                      #    byte \x9b) +
+        [^@-_]*[@-_]| #    private mode characters + command character, or
+        \x1b[@-_]     # 3. ANSI control codes without sequence introducer
+                      #    ("ESC"  + single command character)
+        """,
+        '', output)

@@ -7,7 +7,7 @@ from click.testing import CliRunner
 
 from shub import exceptions as shub_exceptions
 from shub.image.build import cli
-from ..utils import format_expected_progress
+from ..utils import clean_progress_output, format_expected_progress
 
 
 @pytest.fixture
@@ -43,12 +43,12 @@ def test_cli_with_progress(docker_client_mock, project_dir, test_mock):
     result = runner.invoke(cli, ["dev"])
     assert result.exit_code == 0
     expected = format_expected_progress(
-        'Building registry/user/project:1.0.\n\r'
-        'Steps:   0%|          | 0/1\r'
-        'Steps: 100%|██████████| 3/3\n'
-        'The image registry/user/project:1.0 build is completed.\n'
+        'Building registry/user/project:1.0.'
+        'Steps:   0%|          | 0/1'
+        'Steps: 100%|██████████| 3/3'
+        'The image registry/user/project:1.0 build is completed.'
     )
-    assert expected in result.output
+    assert expected in clean_progress_output(result.output)
 
 
 def test_cli_custom_version(docker_client_mock, project_dir, test_mock):
