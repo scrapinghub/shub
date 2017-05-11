@@ -90,14 +90,44 @@ SHUB_JOB_DATA
 
 Job arguments, in JSON format.
 
+
 **Example**:
 
 .. code-block:: javascript
 
     {"key": "1111112/2/2", "project": 1111112, "version": "version1",
-    "spider": "spider-name", "spider_type": "auto", "tags": [],
-    "priority": 2, "scheduled_by": "user", "started_by": "admin",
+    "spider": "spider-name", "spider_type": "auto", "tags": ["tagA", "tagB"],
+    "priority": 2, "scheduled_by": "user", "started_by": "john",
     "pending_time": 1460374516193, "running_time": 1460374557448, ... }
+
+
+Some useful fields
+__________________
+
+============ ======================================================== =================================
+Field        Description                                              Example
+============ ======================================================== =================================
+key          Job key in format ``PROJECT_ID/SPIDER_ID/JOB_ID``        ``"1111112/2/2"``
+project      Integer project ID                                       ``1111112``
+spider       String spider name                                       ``"spider-name"``
+spider_args  Spider args dictionary                                   ``{"arg1":"val1"}``
+version      String project version used to run the job               ``"version1"``
+units        Amount of units used by the job                          ``1``
+priority     Job priority value                                       ``2``
+tags         List of string tags for the job                          ``["tagA", "tagB"]``
+state        Job current state name                                   ``"running"``
+pending_time UNIX timestamp when the job was added, in milliseconds   ``1460374516193``
+running_time UNIX timestamp when the job was started, in milliseconds ``1460374557448``
+auth         Job authentication string to access job data             ``""eyJ0e***.eyJhd***.9H5Oq***"``
+scheduled_by Username who scheduled the job                           ``"john"``
+============ ======================================================== =================================
+
+If you specified some custom metadata with ``meta`` field when scheduling the job, the data will also be in the dictionary.
+
+.. warning::
+
+    There could be some other fields but it's for internal use only and not a part of the contract.
+
 
 SHUB_SETTINGS
 ^^^^^^^^^^^^^
