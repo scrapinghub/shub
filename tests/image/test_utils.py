@@ -1,7 +1,6 @@
 import os
 import sys
 import tempfile
-from six import StringIO
 from unittest import TestCase
 
 import mock
