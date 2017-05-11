@@ -81,6 +81,7 @@ def test_cli_insecure_registry(list_mocked, post_mocked, get_mocked):
 
 @pytest.fixture
 def mocked_post(monkeypatch):
+    """Helper fixture to mock requests.post used for initial deploy request."""
     def fake_post(self, *args, **kwargs):
         fake_response = Response()
         fake_response.status_code = 200
@@ -91,6 +92,7 @@ def mocked_post(monkeypatch):
 
 
 def format_status_responses(events):
+    """Convert a list of events into a list of fake responses."""
     responses = []
     for event in events:
         r = mock.Mock()
@@ -100,6 +102,7 @@ def format_status_responses(events):
 
 
 def _format_progress_event(status, progress, total, step):
+    """Helper to format progress events for mocking it with fake responses."""
     return {'status': status, 'progress': progress, 'total': total, 'last_step': step}
 
 
@@ -126,6 +129,11 @@ DEPLOY_EVENTS_BASE_SAMPLE = format_status_responses([
 
 
 def _load_deploy_event_result(line):
+    """Helper to extract a data dictionary from parsed command output line.
+
+    Shub tool prints the lines as python dicts, so quotes should be properly
+    replaced with double quotes to extract data from json dict.
+    """
     return json.loads(line.replace("'", '"'))
 
 
