@@ -110,7 +110,7 @@ def _format_progress_event(status, progress, total, step):
 DEPLOY_EVENTS_SHORT_SAMPLE = format_status_responses([
     _format_progress_event('progress', 0,  100, 'preparing release'),
     _format_progress_event('progress', 25, 100, 'pulling image'),
-    _format_progress_event('progress', 27, 100, 'pulling image'),
+    _format_progress_event('progress', 30, 100, 'pulling image'),
     {'status': 'ok', 'project': 1111112, 'version': 'test', 'spiders': 10},
 ])
 
@@ -118,11 +118,11 @@ DEPLOY_EVENTS_SHORT_SAMPLE = format_status_responses([
 DEPLOY_EVENTS_BASE_SAMPLE = format_status_responses([
     _format_progress_event('progress', 0,  100, 'preparing release'),
     _format_progress_event('progress', 25, 100, 'pulling image'),
-    _format_progress_event('progress', 27, 100, 'pulling image'),
+    _format_progress_event('progress', 30, 100, 'pulling image'),
     _format_progress_event('progress', 35, 100, 'pulling image'),
     _format_progress_event('progress', 50, 100, 'pushung image'),
-    _format_progress_event('progress', 52, 100, 'pushung image'),
-    _format_progress_event('progress', 61, 100, 'pushung image'),
+    _format_progress_event('progress', 55, 100, 'pushung image'),
+    _format_progress_event('progress', 65, 100, 'pushung image'),
     _format_progress_event('progress', 75, 100, 'updating panel'),
     _format_progress_event('progress', 100, 100, 'updating panel'),
     {'status': 'ok', 'project': 1111112, 'version': 'test', 'spiders': 10},
@@ -166,7 +166,8 @@ def test_progress_verbose_logic(list_mocked, mocked_get, mocked_post, monkeypatc
 
 @mock.patch('requests.get')
 @mock.patch('shub.image.list.list_cmd')
-def test_progress_bar_logic(list_mocked, mocked_get, mocked_post, monkeypatch):
+def test_progress_bar_logic(list_mocked, mocked_get, mocked_post, monkeypatch,
+                            monkeypatch_bar_rate):
     monkeypatch.setattr('shub.image.deploy.SYNC_DEPLOY_REFRESH_TIMEOUT', 0.1)
     list_mocked.return_value = ['a1f', 'abc', 'spi-der']
     mocked_get.side_effect = DEPLOY_EVENTS_BASE_SAMPLE
@@ -179,13 +180,14 @@ def test_progress_bar_logic(list_mocked, mocked_get, mocked_post, monkeypatch):
         expected = format_expected_progress(
             'Progress:   0%|          | 0/100'
             'Progress:  25%|██▌       | 25/100'
-            'Progress:  27%|██▋       | 27/100'
+            'Progress:  30%|███       | 30/100'
             'Progress:  35%|███▌      | 35/100'
             'Progress:  50%|█████     | 50/100'
-            'Progress:  52%|█████▏    | 52/100'
-            'Progress:  61%|██████    | 61/100'
+            'Progress:  55%|█████▌    | 55/100'
+            'Progress:  65%|██████▌   | 65/100'
             'Progress:  75%|███████▌  | 75/100'
             'Progress: 100%|██████████| 100/100'
+            'Deploy results:'
         )
         assert expected in clean_progress_output(result.output)
         # test that the command succeeded
@@ -197,7 +199,8 @@ def test_progress_bar_logic(list_mocked, mocked_get, mocked_post, monkeypatch):
 
 @mock.patch('requests.get')
 @mock.patch('shub.image.list.list_cmd')
-def test_progress_bar_logic_incomplete(list_mocked, mocked_get, mocked_post, monkeypatch):
+def test_progress_bar_logic_incomplete(list_mocked, mocked_get, mocked_post, monkeypatch,
+                                       monkeypatch_bar_rate):
     monkeypatch.setattr('shub.image.deploy.SYNC_DEPLOY_REFRESH_TIMEOUT', 0.1)
     list_mocked.return_value = ['a1f', 'abc', 'spi-der']
     mocked_get.side_effect = DEPLOY_EVENTS_SHORT_SAMPLE
@@ -208,10 +211,13 @@ def test_progress_bar_logic_incomplete(list_mocked, mocked_get, mocked_post, mon
             cli, ["dev", "--version", "test"])
         assert result.exit_code == 0
         expected = format_expected_progress(
+            'Deploying registry/user/project:test'
+            'You can check deploy results later with \'shub image check --id 0\'.'
             'Progress:   0%|          | 0/100'
             'Progress:  25%|██▌       | 25/100'
-            'Progress:  27%|██▋       | 27/100'
+            'Progress:  30%|███       | 30/100'
             'Progress: 100%|██████████| 100/100'
+            'Deploy results:'
         )
         assert expected in clean_progress_output(result.output)
         # test that the command succeeded
