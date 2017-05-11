@@ -42,6 +42,7 @@ commands = [
     "fetch_eggs",
     "image",
     "items",
+    "list_stacks",
     "log",
     "login",
     "logout",
