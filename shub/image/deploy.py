@@ -163,7 +163,7 @@ class _DeployProgress(_BaseDeployProgress):
         # last event with non-waiting status contains successful result or
         # error result from the service with error details
         if self.result_event:
-            click.echo("Deploy results:{}".format(self.result_event))
+            click.echo("Deploy results:\n{}".format(self.result_event))
 
     def handle_event(self, event):
         if 'progress' in event and 'total' in event:

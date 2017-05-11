@@ -1,3 +1,5 @@
+import json
+
 import mock
 import pytest
 from requests import Response
@@ -123,6 +125,10 @@ DEPLOY_EVENTS_BASE_SAMPLE = format_status_responses([
 ])
 
 
+def _load_deploy_event_result(line):
+    return json.loads(line.replace("'", '"'))
+
+
 @mock.patch('requests.get')
 @mock.patch('shub.image.list.list_cmd')
 def test_progress_verbose_logic(list_mocked, mocked_get, mocked_post, monkeypatch):
@@ -135,12 +141,18 @@ def test_progress_verbose_logic(list_mocked, mocked_get, mocked_post, monkeypatc
         result = runner.invoke(
             cli, ["dev", "--version", "test", "--verbose"])
         assert result.exit_code == 0
-        # test for one of the events in the output
-        assert ("{'status': 'progress', 'progress': 100,"
-                " 'total': 100, 'last_step': 'updating panel'}") in result.output
-        # test for result in the end of output
-        assert result.output.endswith("{'status': 'ok', 'project': 1111112,"
-                                      " 'version': 'test', 'spiders': 10}\n")
+        lines = result.output.split('\n')
+        # test that output ends with a newline symbol
+        assert lines[-1] == ''
+        # test that the command succeeded
+        assert _load_deploy_event_result(lines[-2]) == {
+            'status': 'ok', 'project': 1111112, 'version': 'test', 'spiders': 10,
+        }
+        # test that progress events are included in the output
+        assert _load_deploy_event_result(lines[-3]) == {
+            'status': 'progress', 'progress': 100,
+            'total': 100, 'last_step': 'updating panel'
+        }
 
 
 @mock.patch('requests.get')
@@ -167,8 +179,11 @@ def test_progress_bar_logic(list_mocked, mocked_get, mocked_post, monkeypatch):
             'Progress: 100%|██████████| 100/100'
         )
         assert expected in clean_progress_output(result.output)
-        assert result.output.endswith("{'status': 'ok', 'project': 1111112,"
-                                      " 'version': 'test', 'spiders': 10}\n")
+        # test that the command succeeded
+        lines = result.output.split('\n')
+        assert _load_deploy_event_result(lines[-2]) == {
+            'status': 'ok', 'project': 1111112, 'version': 'test', 'spiders': 10,
+        }
 
 
 @mock.patch('requests.get')
@@ -190,8 +205,11 @@ def test_progress_bar_logic_incomplete(list_mocked, mocked_get, mocked_post, mon
             'Progress: 100%|██████████| 100/100'
         )
         assert expected in clean_progress_output(result.output)
-        assert result.output.endswith("{'status': 'ok', 'project': 1111112,"
-                                      " 'version': 'test', 'spiders': 10}\n")
+        # test that the command succeeded
+        lines = result.output.split('\n')
+        assert _load_deploy_event_result(lines[-2]) == {
+            'status': 'ok', 'project': 1111112, 'version': 'test', 'spiders': 10,
+        }
 
 
 # Tests for auxiliary functions
