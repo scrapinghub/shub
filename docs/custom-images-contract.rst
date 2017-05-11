@@ -90,7 +90,6 @@ SHUB_JOB_DATA
 
 Job arguments, in JSON format.
 
-
 **Example**:
 
 .. code-block:: javascript
