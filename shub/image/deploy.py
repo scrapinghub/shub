@@ -100,17 +100,84 @@ def deploy_cmd(target, version, username, password, email,
         "'shub image check --id {}'.".format(status_id))
     if async:
         return
+    if utils.is_verbose():
+        deploy_progress_cls = _LoggedDeployProgress
+    else:
+        deploy_progress_cls = _DeployProgress
+    deploy_progress = deploy_progress_cls(status_url)
     click.echo("Deploy results:")
-    prev_status = None
-    while True:
-        deploy_state = _check_status_url(status_url)
-        status = deploy_state['status']
-        if status != prev_status:
-            click.echo("{}".format(deploy_state))
-            prev_status = status
-        if status not in SYNC_DEPLOY_WAIT_STATUSES:
-            break
-        time.sleep(SYNC_DEPLOY_REFRESH_TIMEOUT)
+    deploy_progress.show()
+
+
+class _BaseDeployProgress(object):
+
+    def __init__(self, status_url):
+        self.status_url = status_url
+
+    def show(self):
+        while True:
+            event = _check_status_url(self.status_url)
+            self.handle_event(event)
+            if event['status'] not in SYNC_DEPLOY_WAIT_STATUSES:
+                break
+            time.sleep(SYNC_DEPLOY_REFRESH_TIMEOUT)
+
+    def handle_event(self, event):
+        raise NotImplemented('Must be implemented in subclasses')
+
+
+class _LoggedDeployProgress(_BaseDeployProgress):
+
+    def __init__(self, status_url):
+        super(_LoggedDeployProgress, self).__init__(status_url)
+        self.prev_status = None
+
+    def handle_event(self, event):
+        if event['status'] != self.prev_status or event['status'] == 'progress':
+            click.echo("{}".format(event))
+            self.prev_status = event['status']
+
+
+class _DeployProgress(_BaseDeployProgress):
+
+    def __init__(self, status_url):
+        super(_DeployProgress, self).__init__(status_url)
+        self.progress_bar = None
+        self.result_event = None
+
+    def show(self):
+        super(_DeployProgress, self).show()
+        if self.progress_bar:
+            # it's possible that release process ends instantly without
+            # providing enough information to fill progress bar with 100%:
+            if self.result_event['status'] == 'ok':
+                delta = max(self.progress_bar.total - self.progress_bar.n, 0)
+                self.progress_bar.update(delta)
+            self.progress_bar.close()
+        # last event with non-waiting status contains successful result or
+        # error result from the service with error details
+        if self.result_event:
+            click.echo("{}".format(self.result_event))
+
+    def handle_event(self, event):
+        if 'progress' in event and 'total' in event:
+            progress, total = event['progress'], event['total']
+            if not self.progress_bar:
+                self.progress_bar = self._create_progress_bar(progress, total)
+            else:
+                self.progress_bar.total = max(self.progress_bar.total, total)
+                self.progress_bar.update(max(progress - self.progress_bar.n, 0))
+        elif event['status'] not in SYNC_DEPLOY_WAIT_STATUSES:
+            self.result_event = event
+
+    def _create_progress_bar(self, progress, total):
+        return utils.create_progress_bar(
+            initial=progress,
+            total=total,
+            desc='Progress',
+            # don't need rate here, let's simplify the bar
+            bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt}'
+        )
 
 
 def _retry_on_requests_error(exception):
