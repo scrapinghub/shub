@@ -31,6 +31,7 @@ CHECK_RETRY_EXCEPTIONS = (
 CHECK_RETRY_ATTEMPTS = 6
 CHECK_RETRY_EXP_MULTIPLIER = 1000
 CHECK_RETRY_EXP_MAX = 30000
+DEFAULT_TOTAL_PROGRESS = 100
 
 HELP = """
 A command to deploy your release image to Scrapy Cloud.
@@ -105,7 +106,6 @@ def deploy_cmd(target, version, username, password, email,
     else:
         deploy_progress_cls = _DeployProgress
     deploy_progress = deploy_progress_cls(status_url)
-    click.echo("Deploy results:")
     deploy_progress.show()
 
 
@@ -127,53 +127,54 @@ class _BaseDeployProgress(object):
 
 
 class _LoggedDeployProgress(_BaseDeployProgress):
+    """Visualize deploy progress in verbose mode.
 
+    Output all the distinct events received from the service.
+    """
     def __init__(self, status_url):
         super(_LoggedDeployProgress, self).__init__(status_url)
-        self.prev_status = None
+        self.previous_event = None
+        click.echo("Deploy results:")
 
     def handle_event(self, event):
-        if event['status'] != self.prev_status or event['status'] == 'progress':
+        if event != self.previous_event:
             click.echo("{}".format(event))
-            self.prev_status = event['status']
+            self.previous_event = event
 
 
 class _DeployProgress(_BaseDeployProgress):
+    """Visualize deploy progress in non-verbose mode.
 
+    Uses a progress bar to track total progress.
+    """
     def __init__(self, status_url):
         super(_DeployProgress, self).__init__(status_url)
-        self.progress_bar = None
+        self.progress_bar = self._create_progress_bar()
         self.result_event = None
 
     def show(self):
         super(_DeployProgress, self).show()
-        if self.progress_bar:
-            # it's possible that release process ends instantly without
-            # providing enough information to fill progress bar with 100%:
-            if self.result_event['status'] == 'ok':
-                delta = max(self.progress_bar.total - self.progress_bar.n, 0)
-                self.progress_bar.update(delta)
-            self.progress_bar.close()
+        # it's possible that release process finishes instantly without
+        # providing enough information to fill progress bar completely
+        if self.result_event and self.result_event['status'] == 'ok':
+            delta = max(self.progress_bar.total - self.progress_bar.n, 0)
+            self.progress_bar.update(delta)
+        self.progress_bar.close()
         # last event with non-waiting status contains successful result or
         # error result from the service with error details
         if self.result_event:
-            click.echo("{}".format(self.result_event))
+            click.echo("Deploy results:{}".format(self.result_event))
 
     def handle_event(self, event):
         if 'progress' in event and 'total' in event:
-            progress, total = event['progress'], event['total']
-            if not self.progress_bar:
-                self.progress_bar = self._create_progress_bar(progress, total)
-            else:
-                self.progress_bar.total = max(self.progress_bar.total, total)
-                self.progress_bar.update(max(progress - self.progress_bar.n, 0))
+            self.progress_bar.total = event['total']
+            self.progress_bar.update(max(event['progress'] - self.progress_bar.n, 0))
         elif event['status'] not in SYNC_DEPLOY_WAIT_STATUSES:
             self.result_event = event
 
-    def _create_progress_bar(self, progress, total):
+    def _create_progress_bar(self):
         return utils.create_progress_bar(
-            initial=progress,
-            total=total,
+            total=DEFAULT_TOTAL_PROGRESS,
             desc='Progress',
             # don't need rate here, let's simplify the bar
             bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt}'
