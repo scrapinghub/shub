@@ -105,50 +105,44 @@ def deploy_cmd(target, version, username, password, email,
         deploy_progress_cls = _LoggedDeployProgress
     else:
         deploy_progress_cls = _DeployProgress
-    deploy_progress = deploy_progress_cls(status_url)
+    events = _iterate_with_requests(status_url)
+    deploy_progress = deploy_progress_cls(events)
     deploy_progress.show()
 
 
-class _BaseDeployProgress(object):
-
-    def __init__(self, status_url):
-        self.status_url = status_url
-
-    def show(self):
-        while True:
-            event = _check_status_url(self.status_url)
-            self.handle_event(event)
+def _iterate_with_requests(status_url):
+    previous_event = None
+    while True:
+        event = _check_status_url(status_url)
+        # no need to handle already seen events
+        if previous_event != event:
+            yield event
             if event['status'] not in SYNC_DEPLOY_WAIT_STATUSES:
                 break
-            time.sleep(SYNC_DEPLOY_REFRESH_TIMEOUT)
-
-    def handle_event(self, event):
-        raise NotImplemented('Must be implemented in subclasses')
+            previous_event = event
+        time.sleep(SYNC_DEPLOY_REFRESH_TIMEOUT)
 
 
-class _LoggedDeployProgress(_BaseDeployProgress):
+class _LoggedDeployProgress(utils.BaseProgress):
     """Visualize deploy progress in verbose mode.
 
     Output all the distinct events received from the service.
     """
-    def __init__(self, status_url):
-        super(_LoggedDeployProgress, self).__init__(status_url)
-        self.previous_event = None
+    def show(self):
         click.echo("Deploy results:")
+        super(_LoggedDeployProgress, self).show()
 
     def handle_event(self, event):
-        if event != self.previous_event:
-            click.echo("{}".format(event))
-            self.previous_event = event
+        click.echo("{}".format(event))
 
 
-class _DeployProgress(_BaseDeployProgress):
+class _DeployProgress(utils.BaseProgress):
     """Visualize deploy progress in non-verbose mode.
 
     Uses a progress bar to track total progress.
     """
-    def __init__(self, status_url):
-        super(_DeployProgress, self).__init__(status_url)
+    def __init__(self, events):
+        super(_DeployProgress, self).__init__(events)
         self.progress_bar = self._create_progress_bar()
         self.result_event = None
 
