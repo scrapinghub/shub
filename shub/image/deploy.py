@@ -105,12 +105,17 @@ def deploy_cmd(target, version, username, password, email,
         deploy_progress_cls = _LoggedDeployProgress
     else:
         deploy_progress_cls = _DeployProgress
-    events = _iterate_with_requests(status_url)
+    events = _convert_status_requests_to_events(status_url)
     deploy_progress = deploy_progress_cls(events)
     deploy_progress.show()
 
 
-def _iterate_with_requests(status_url):
+def _convert_status_requests_to_events(status_url):
+    """Convert a sequence of deploy status requests to an iterator.
+
+    Current logic yields only distinct events and stops execution
+    when event status is a final one.
+    """
     previous_event = None
     while True:
         event = _check_status_url(status_url)
@@ -124,10 +129,8 @@ def _iterate_with_requests(status_url):
 
 
 class _LoggedDeployProgress(utils.BaseProgress):
-    """Visualize deploy progress in verbose mode.
+    """Visualize deploy progress in verbose mode."""
 
-    Output all the distinct events received from the service.
-    """
     def show(self):
         click.echo("Deploy results:")
         super(_LoggedDeployProgress, self).show()
