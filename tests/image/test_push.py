@@ -32,8 +32,8 @@ def test_cli_with_apikey_login(docker_client_mock, test_mock):
     test_mock.assert_called_with("dev", "test")
 
 
-@pytest.mark.usefixtures('project_dir', 'test_mock')
-def test_cli_with_progress(docker_client_mock, monkeypatch_bar_rate):
+@pytest.mark.usefixtures('project_dir', 'test_mock', 'monkeypatch_bar_rate')
+def test_cli_with_progress(docker_client_mock):
     docker_client_mock.login.return_value = {"Status": "Login Succeeded"}
     docker_client_mock.push.return_value = [
         {"status": "The push refers to a repository [some/image]"},
@@ -74,8 +74,8 @@ def test_cli_with_progress(docker_client_mock, monkeypatch_bar_rate):
     assert expected in clean_progress_output(result.output)
 
 
-@pytest.mark.usefixtures('project_dir', 'test_mock')
-def test_progress_no_total(docker_client_mock, monkeypatch_bar_rate):
+@pytest.mark.usefixtures('project_dir', 'test_mock', 'monkeypatch_bar_rate')
+def test_progress_no_total(docker_client_mock):
     docker_client_mock.login.return_value = {"Status": "Login Succeeded"}
     docker_client_mock.push.return_value = [
         {"status": "The push refers to a repository [some/image]"},
