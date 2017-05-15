@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
 import json
+import time
 
 import mock
 import pytest
-from requests import Response
+from click import command
 from click.testing import CliRunner
+from requests import Response
 
-from shub.image.deploy import cli
-from shub.image.deploy import _prepare_deploy_params
+from shub.image.deploy import _LoggedDeployProgress, _DeployProgress
 from shub.image.deploy import _extract_scripts_from_project
-
+from shub.image.deploy import _prepare_deploy_params
+from shub.image.deploy import cli
 from ..utils import clean_progress_output, format_expected_progress
 
 
@@ -98,27 +100,13 @@ DEPLOY_EVENTS_BASE_SAMPLE = [
     _format_progress_event('progress', 25, 100, 'pulling image'),
     _format_progress_event('progress', 30, 100, 'pulling image'),
     _format_progress_event('progress', 35, 100, 'pulling image'),
-    _format_progress_event('progress', 50, 100, 'pushung image'),
-    _format_progress_event('progress', 55, 100, 'pushung image'),
-    _format_progress_event('progress', 65, 100, 'pushung image'),
+    _format_progress_event('progress', 50, 100, 'pushing image'),
+    _format_progress_event('progress', 55, 100, 'pushing image'),
+    _format_progress_event('progress', 65, 100, 'pushing image'),
     _format_progress_event('progress', 75, 100, 'updating panel'),
     _format_progress_event('progress', 100, 100, 'updating panel'),
     {'status': 'ok', 'project': 1111112, 'version': 'test', 'spiders': 10},
 ]
-
-
-def _format_status_responses(events):
-    """Convert a list of events into a list of fake responses."""
-    responses = []
-    for event in events:
-        r = mock.Mock()
-        r.json.return_value = event
-        responses.append(r)
-    return responses
-
-
-DEPLOY_RESPONSES_SHORT_SAMPLE = _format_status_responses(DEPLOY_EVENTS_SHORT_SAMPLE)
-DEPLOY_RESPONSES_BASE_SAMPLE = _format_status_responses(DEPLOY_EVENTS_BASE_SAMPLE)
 
 
 def _load_deploy_event_result(line):
@@ -130,17 +118,25 @@ def _load_deploy_event_result(line):
     return json.loads(line.replace("'", '"'))
 
 
-@pytest.mark.usefixtures('project_dir', 'mocked_post')
-@mock.patch('requests.get')
-@mock.patch('shub.image.list.list_cmd')
-def test_progress_verbose_logic(list_mocked, mocked_get, monkeypatch):
-    monkeypatch.setattr('shub.image.deploy.SYNC_DEPLOY_REFRESH_TIMEOUT', 0)
-    list_mocked.return_value = ['a1f', 'abc', 'spi-der']
-    mocked_get.side_effect = DEPLOY_RESPONSES_BASE_SAMPLE
+def _get_logged_progress_cmd(progress_cls, events):
+    @command()
+    def progress_cmd():
+        progress = progress_cls(events)
+        progress.show()
+    return progress_cmd
 
-    result = CliRunner().invoke(cli, ["dev", "--version", "test", "--verbose"])
+
+def _yield_events_with_timeout(events, timeout):
+    for event in events:
+        yield event
+        time.sleep(timeout)
+
+
+def test_progress_verbose_logic():
+    progress_cmd = _get_logged_progress_cmd(_LoggedDeployProgress,
+                                            DEPLOY_EVENTS_BASE_SAMPLE)
+    result = CliRunner().invoke(progress_cmd)
     assert result.exit_code == 0
-
     lines = result.output.split('\n')
     # test that output ends with a newline symbol
     assert lines[-1] == ''
@@ -150,17 +146,12 @@ def test_progress_verbose_logic(list_mocked, mocked_get, monkeypatch):
     assert _load_deploy_event_result(lines[-3]) == DEPLOY_EVENTS_BASE_SAMPLE[-2]
 
 
-@pytest.mark.usefixtures('project_dir', 'mocked_post', 'monkeypatch_bar_rate')
-@mock.patch('requests.get')
-@mock.patch('shub.image.list.list_cmd')
-def test_progress_bar_logic(list_mocked, mocked_get, monkeypatch):
-    monkeypatch.setattr('shub.image.deploy.SYNC_DEPLOY_REFRESH_TIMEOUT', 0.1)
-    list_mocked.return_value = ['a1f', 'abc', 'spi-der']
-    mocked_get.side_effect = DEPLOY_RESPONSES_BASE_SAMPLE
-
-    result = CliRunner().invoke(cli, ["dev", "--version", "test"])
+@pytest.mark.usefixtures('monkeypatch_bar_rate')
+def test_progress_bar_logic():
+    events = _yield_events_with_timeout(DEPLOY_EVENTS_BASE_SAMPLE, timeout=0.1)
+    progress_cmd = _get_logged_progress_cmd(_DeployProgress, events)
+    result = CliRunner().invoke(progress_cmd)
     assert result.exit_code == 0
-
     expected = format_expected_progress(
         'Progress:   0%|          | 0/100'
         'Progress:  25%|██▌       | 25/100'
@@ -181,20 +172,13 @@ def test_progress_bar_logic(list_mocked, mocked_get, monkeypatch):
     assert _load_deploy_event_result(lines[-2]) == DEPLOY_EVENTS_BASE_SAMPLE[-1]
 
 
-@pytest.mark.usefixtures('project_dir', 'mocked_post', 'monkeypatch_bar_rate')
-@mock.patch('requests.get')
-@mock.patch('shub.image.list.list_cmd')
-def test_progress_bar_logic_incomplete(list_mocked, mocked_get, monkeypatch):
-    monkeypatch.setattr('shub.image.deploy.SYNC_DEPLOY_REFRESH_TIMEOUT', 0.1)
-    list_mocked.return_value = ['a1f', 'abc', 'spi-der']
-    mocked_get.side_effect = DEPLOY_RESPONSES_SHORT_SAMPLE
-
-    result = CliRunner().invoke(cli, ["dev", "--version", "test"])
+@pytest.mark.usefixtures('monkeypatch_bar_rate')
+def test_progress_bar_logic_incomplete():
+    events = _yield_events_with_timeout(DEPLOY_EVENTS_SHORT_SAMPLE, timeout=0.1)
+    progress_cmd = _get_logged_progress_cmd(_DeployProgress, events)
+    result = CliRunner().invoke(progress_cmd)
     assert result.exit_code == 0
-
     expected = format_expected_progress(
-        'Deploying registry/user/project:test'
-        'You can check deploy results later with \'shub image check --id 0\'.'
         'Progress:   0%|          | 0/100'
         'Progress:  25%|██▌       | 25/100'
         'Progress:  30%|███       | 30/100'
@@ -204,7 +188,10 @@ def test_progress_bar_logic_incomplete(list_mocked, mocked_get, monkeypatch):
     assert expected in clean_progress_output(result.output)
     # test that the command succeeded
     lines = result.output.split('\n')
-    assert _load_deploy_event_result(lines[-2]) == DEPLOY_EVENTS_BASE_SAMPLE[-1]
+    # test that output ends with a newline symbol
+    assert lines[-1] == ''
+    # test that the command succeeded
+    assert _load_deploy_event_result(lines[-2]) == DEPLOY_EVENTS_SHORT_SAMPLE[-1]
 
 
 # Tests for auxiliary functions
