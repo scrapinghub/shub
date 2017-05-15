@@ -126,7 +126,8 @@ If you specified some custom metadata with ``meta`` field when scheduling the jo
 
 .. warning::
 
-    There could be some other fields but it's for internal use only and not a part of the contract.
+    ``SHUB_JOB_DATA`` may contain other undocumented fields. They are for the platform's internal use
+     and are not part of the contract, i.e. they can appear or be removed anytime.
 
 
 SHUB_SETTINGS
