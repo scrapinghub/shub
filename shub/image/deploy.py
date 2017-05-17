@@ -31,6 +31,7 @@ CHECK_RETRY_EXCEPTIONS = (
 CHECK_RETRY_ATTEMPTS = 6
 CHECK_RETRY_EXP_MULTIPLIER = 1000
 CHECK_RETRY_EXP_MAX = 30000
+DEFAULT_TOTAL_PROGRESS = 100
 
 HELP = """
 A command to deploy your release image to Scrapy Cloud.
@@ -79,7 +80,8 @@ def deploy_cmd(target, version, username, password, email,
         target_conf.project_id, version, image_name, endpoint, apikey,
         username, password, email)
 
-    utils.debug_log('Deploy with params: {}'.format(params))
+    click.echo("Deploying {}".format(image_name))
+    utils.debug_log('Deploy parameters: {}'.format(params))
     req = requests.post(
         urljoin(endpoint, '/api/releases/deploy.json'),
         data=params,
@@ -87,43 +89,93 @@ def deploy_cmd(target, version, username, password, email,
         timeout=300,
         allow_redirects=False
     )
-    try:
-        req.raise_for_status()
-    except requests.exceptions.HTTPError:
-        _handle_deploy_errors(req)
-
-    click.echo("Deploy task results: {}".format(req))
+    if req.status_code == 400:
+        reason = req.json().get('non_field_errors')
+        raise ShubException('\n'.join(reason) if reason else req.text)
+    req.raise_for_status()
     status_url = req.headers['location']
-
     status_id = utils.store_status_url(
         status_url, limit=STORE_N_LAST_STATUS_URLS)
     click.echo(
         "You can check deploy results later with "
         "'shub image check --id {}'.".format(status_id))
-
-    click.echo("Deploy results:")
-    actual_state = _check_status_url(status_url)
-    click.echo(" {}".format(actual_state))
-
-    if not async:
-        status = actual_state['status']
-        while status in SYNC_DEPLOY_WAIT_STATUSES:
-            time.sleep(SYNC_DEPLOY_REFRESH_TIMEOUT)
-            actual_state = _check_status_url(status_url)
-            if actual_state['status'] != status:
-                click.echo(" {}".format(actual_state))
-                status = actual_state['status']
+    if async:
+        return
+    if utils.is_verbose():
+        deploy_progress_cls = _LoggedDeployProgress
+    else:
+        deploy_progress_cls = _DeployProgress
+    events = _convert_status_requests_to_events(status_url)
+    deploy_progress = deploy_progress_cls(events)
+    deploy_progress.show()
 
 
-def _handle_deploy_errors(request):
-    content = request.json()
-    if request.status_code == 400 and content:
-        reason = content.get('non_field_errors')
-        if reason:
-            raise ShubException('\n'.join(reason))
-        else:
-            raise ShubException(request.content)
-    raise
+def _convert_status_requests_to_events(status_url):
+    """Convert a sequence of deploy status requests to an iterator.
+
+    Current logic yields only distinct events and stops execution
+    when event status is a final one.
+    """
+    previous_event = None
+    while True:
+        event = _check_status_url(status_url)
+        # no need to handle already seen events
+        if previous_event != event:
+            yield event
+            if event['status'] not in SYNC_DEPLOY_WAIT_STATUSES:
+                break
+            previous_event = event
+        time.sleep(SYNC_DEPLOY_REFRESH_TIMEOUT)
+
+
+class _LoggedDeployProgress(utils.BaseProgress):
+    """Visualize deploy progress in verbose mode."""
+
+    def show(self):
+        click.echo("Deploy results:")
+        super(_LoggedDeployProgress, self).show()
+
+    def handle_event(self, event):
+        click.echo("{}".format(event))
+
+
+class _DeployProgress(utils.BaseProgress):
+    """Visualize deploy progress in non-verbose mode.
+
+    Uses a progress bar to track total progress.
+    """
+    def __init__(self, events):
+        super(_DeployProgress, self).__init__(events)
+        self.progress_bar = self._create_progress_bar()
+        self.result_event = None
+
+    def show(self):
+        super(_DeployProgress, self).show()
+        # it's possible that release process finishes instantly without
+        # providing enough information to fill progress bar completely
+        if self.result_event and self.result_event['status'] == 'ok':
+            delta = max(self.progress_bar.total - self.progress_bar.n, 0)
+            self.progress_bar.update(delta)
+        self.progress_bar.close()
+        # last event with non-waiting status contains successful result or
+        # error result from the service with error details
+        if self.result_event:
+            click.echo("Deploy results:\n{}".format(self.result_event))
+
+    def handle_event(self, event):
+        if 'progress' in event and 'total' in event:
+            self.progress_bar.total = event['total']
+            self.progress_bar.update(max(event['progress'] - self.progress_bar.n, 0))
+        elif event['status'] not in SYNC_DEPLOY_WAIT_STATUSES:
+            self.result_event = event
+
+    def _create_progress_bar(self):
+        return utils.create_progress_bar(
+            total=DEFAULT_TOTAL_PROGRESS,
+            desc='Progress',
+            # don't need rate here, let's simplify the bar
+            bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt}'
+        )
 
 
 def _retry_on_requests_error(exception):

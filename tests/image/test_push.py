@@ -1,14 +1,10 @@
 # -*- coding: utf-8 -*-
-import inspect
-from functools import wraps
-
 import mock
 import pytest
 from click.testing import CliRunner
 
 from shub import exceptions as shub_exceptions
 from shub.image.push import cli
-from shub.image.utils import ProgressBar
 
 from ..utils import clean_progress_output, format_expected_progress
 
@@ -18,25 +14,6 @@ def test_mock():
     """Mock for shub image test command"""
     with mock.patch('shub.image.push.test_cmd') as m:
         yield m
-
-
-@pytest.fixture(autouse=True)
-def monkeypatch_bar_rate(monkeypatch):
-    args, _, _, _ = inspect.getargspec(ProgressBar.format_meter)
-    rate_arg_idx = args.index('rate')
-
-    def override_rate(func):
-
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            args = list(args)
-            args[rate_arg_idx] = 10 ** 6
-            return func(*args, **kwargs)
-
-        return wrapper
-
-    monkeypatch.setattr('shub.image.utils.ProgressBar.format_meter',
-                        staticmethod(override_rate(ProgressBar.format_meter)))
 
 
 @pytest.mark.usefixtures('project_dir')
@@ -55,7 +32,7 @@ def test_cli_with_apikey_login(docker_client_mock, test_mock):
     test_mock.assert_called_with("dev", "test")
 
 
-@pytest.mark.usefixtures('project_dir', 'test_mock')
+@pytest.mark.usefixtures('project_dir', 'test_mock', 'monkeypatch_bar_rate')
 def test_cli_with_progress(docker_client_mock):
     docker_client_mock.login.return_value = {"Status": "Login Succeeded"}
     docker_client_mock.push.return_value = [
@@ -97,7 +74,7 @@ def test_cli_with_progress(docker_client_mock):
     assert expected in clean_progress_output(result.output)
 
 
-@pytest.mark.usefixtures('project_dir', 'test_mock')
+@pytest.mark.usefixtures('project_dir', 'test_mock', 'monkeypatch_bar_rate')
 def test_progress_no_total(docker_client_mock):
     docker_client_mock.login.return_value = {"Status": "Login Succeeded"}
     docker_client_mock.push.return_value = [
