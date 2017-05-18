@@ -109,13 +109,13 @@ Field        Description                                              Example
 key          Job key in format ``PROJECT_ID/SPIDER_ID/JOB_ID``        ``"1111112/2/2"``
 project      Integer project ID                                       ``1111112``
 spider       String spider name                                       ``"spider-name"``
-job_cmd      JSON list of string arguments for the job                ``["--flagA", "--key1=value1"]``
-spider_args  Spider args dictionary                                   ``{"arg1": "val1"}``
+job_cmd      List of string arguments for the job                     ``["--flagA", "--key1=value1"]``
+spider_args  Dictionary with spider arguments                         ``{"arg1": "val1"}``
 version      String project version used to run the job               ``"version1"``
 deploy_id    Integer project deploy ID used to run the job            ``253``
 units        Amount of units used by the job                          ``1``
 priority     Job priority value                                       ``2``
-tags         JSON list of string tags for the job                     ``["tagA", "tagB"]``
+tags         List of string tags for the job                          ``["tagA", "tagB"]``
 state        Job current state name                                   ``"running"``
 pending_time UNIX timestamp when the job was added, in milliseconds   ``1460374516193``
 running_time UNIX timestamp when the job was started, in milliseconds ``1460374557448``
