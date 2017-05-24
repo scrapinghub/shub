@@ -35,6 +35,7 @@ def cli():
 
 
 commands = [
+    "bootstrap",
     "deploy",
     "login",
     "deploy_egg",
