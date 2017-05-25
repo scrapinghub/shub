@@ -31,7 +31,7 @@ def mocked_post(monkeypatch):
 @mock.patch('requests.post')
 @mock.patch('shub.image.list.list_cmd')
 def test_cli(list_mocked, post_mocked, get_mocked):
-    list_mocked.return_value = ['a1f', 'abc', 'spi-der']
+    list_mocked.return_value = {'spiders': ['a1f', 'abc', 'spi-der']}
     post_req = mock.Mock()
     post_req.headers = {'location': 'https://status-url'}
     post_mocked.return_value = post_req
@@ -59,7 +59,7 @@ def test_cli(list_mocked, post_mocked, get_mocked):
 @mock.patch('requests.post')
 @mock.patch('shub.image.list.list_cmd')
 def test_cli_insecure_registry(list_mocked, post_mocked, get_mocked):
-    list_mocked.return_value = ['a1f', 'abc', 'spi-der']
+    list_mocked.return_value = {'spiders': ['a1f', 'abc', 'spi-der']}
     post_req = mock.Mock()
     post_req.headers = {'location': 'https://status-url'}
     post_mocked.return_value = post_req
@@ -197,18 +197,18 @@ def test_progress_bar_logic_incomplete():
 # Tests for auxiliary functions
 
 def test_extract_scripts_from_project_empty():
-    assert _extract_scripts_from_project() == ''
+    assert _extract_scripts_from_project() == []
 
 
 @pytest.mark.usefixtures('project_dir')
 def test_extract_scripts_from_project_fake():
-    assert _extract_scripts_from_project() == 'scriptA.py,scriptB.py'
+    assert _extract_scripts_from_project() == ['scriptA.py', 'scriptB.py']
 
 
 @pytest.mark.usefixtures('project_dir')
 @mock.patch('shub.image.list.list_cmd')
 def test_prepare_deploy_params(mocked):
-    mocked.return_value = ['a1f', 'abc', 'spi-der']
+    mocked.return_value = {'spiders': ['a1f', 'abc', 'spi-der']}
     expected = {
         'image_url': 'registry/user/project',
         'project': 123,
@@ -225,7 +225,7 @@ def test_prepare_deploy_params(mocked):
 @pytest.mark.usefixtures('project_dir')
 @mock.patch('shub.image.list.list_cmd')
 def test_prepare_deploy_params_more_params(mocked):
-    mocked.return_value = ['a1f', 'abc', 'spi-der']
+    mocked.return_value = {'spiders': ['a1f', 'abc', 'spi-der']}
     expected = {
         'image_url': 'registry/user/project',
         'project': 123,
