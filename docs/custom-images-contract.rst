@@ -46,10 +46,10 @@ Contract statements
     metadata in a structured form allowing to simplify non-Scrapy development and parametrize custom images
     in a more configurable way.
 
-    The command could also handle optional ``--debug`` flag by returning debug information about the image:
-    a name/version of operation system, installed packages etc. For example, for a Python-based custom image
-    it could be a good idea to include ``pip freeze`` into the output. The output format is not structured
-    for simplicity.
+    The command could also handle optional ``--debug`` flag by returning debug information about the image
+    inside of an additional ``debug`` field: a name/version of operation system, installed packages etc.
+    For example, for a Python-based custom image it could be a good idea to include ``pip freeze`` call results.
+    Data format of the ``debug`` field is plain text, not structured to keep it simple.
 
 3. Crawler should be able to get all needed params using :ref:`system environment variables <environment-variables>`.
 
