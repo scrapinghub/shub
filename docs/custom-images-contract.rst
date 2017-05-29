@@ -34,10 +34,7 @@ Contract statements
 
     {
         "project_type": "casperjs",
-        "spiders": {
-            "spiderA": {"args": ["--custom-arg"]},
-            "spiderB": {"args": ["--verbose"]}
-        }
+        "spiders": ["spiderA", "spiderB"]
     }
 
 .. note::
