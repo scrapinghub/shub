@@ -44,7 +44,7 @@ Deploying dependencies
 
 Sometimes your project will depend on third party libraries that are not
 available on Scrapy Cloud. You can easily upload these by specifying a
-requirements file::
+`requirements file`_::
 
     # project_directory/scrapinghub.yml
 
@@ -78,6 +78,7 @@ Alternatively, if you cannot or don't want to supply Python eggs, you can also
 build your own Docker image to be used on Scrapy Cloud. See
 :ref:`deploy-custom-image`.
 
+.. _requirements file: https://pip.pypa.io/en/stable/user_guide/#requirements-files
 
 .. _choose-custom-stack:
 
