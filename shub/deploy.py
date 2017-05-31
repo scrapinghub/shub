@@ -22,8 +22,7 @@ from shub.config import (list_targets_callback, load_shub_config,
 from shub.exceptions import (BadParameterException, NotFoundException,
                              ShubException)
 from shub.utils import (create_default_setup_py, create_scrapinghub_yml_wizard,
-                        get_config, inside_project, make_deploy_request,
-                        run_python)
+                        inside_project, make_deploy_request, run_python)
 from shub.image.upload import upload_cmd
 
 
@@ -158,8 +157,7 @@ def _upload_egg(endpoint, eggpath, project, version, auth, verbose, keep_log,
 def _build_egg():
     if not inside_project():
         raise NotFoundException("No Scrapy project found in this location.")
-    settings = get_config().get('settings', 'default')
-    create_default_setup_py(settings=settings)
+    create_default_setup_py()
     d = tempfile.mkdtemp(prefix="shub-deploy-")
     run_python(['setup.py', 'clean', '-a', 'bdist_egg', '-d', d])
     egg = glob.glob(os.path.join(d, '*.egg'))[0]

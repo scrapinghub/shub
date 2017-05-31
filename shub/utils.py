@@ -70,6 +70,8 @@ def create_default_setup_py(**kwargs):
     with remember_cwd():
         os.chdir(os.path.dirname(closest))
         if not os.path.exists('setup.py'):
+            if 'settings' not in kwargs:
+                kwargs['settings'] = get_config().get('settings', 'default')
             with open('setup.py', 'w') as f:
                 f.write(_SETUP_PY_TEMPLATE % kwargs)
             click.echo("Created setup.py at {}".format(os.getcwd()))
