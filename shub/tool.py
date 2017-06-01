@@ -35,20 +35,21 @@ def cli():
 
 
 commands = [
-    "deploy",
-    "login",
-    "deploy_egg",
-    "fetch_eggs",
-    "deploy_reqs",
-    "logout",
-    "version",
-    "items",
-    "schedule",
-    "log",
-    "requests",
     "copy_eggs",
-    "migrate_eggs",
+    "deploy",
+    "deploy_egg",
+    "deploy_reqs",
+    "fetch_eggs",
     "image",
+    "items",
+    "list_stacks",
+    "log",
+    "login",
+    "logout",
+    "migrate_eggs",
+    "requests",
+    "schedule",
+    "version",
 ]
 
 for command in commands:
