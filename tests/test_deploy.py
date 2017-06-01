@@ -4,16 +4,14 @@
 from __future__ import absolute_import
 
 import unittest
-import os
 
-import pytest
 from click.testing import CliRunner
 from mock import patch
 
 from shub import deploy
-from shub.config import ShubConfig
-from shub.exceptions import InvalidAuthException, NotFoundException, \
-    ShubException, BadParameterException
+from shub.exceptions import (NotFoundException, ShubException,
+                             BadParameterException)
+from shub.utils import create_default_setup_py
 
 from .utils import AssertInvokeRaisesMixin, mock_conf
 
@@ -105,6 +103,19 @@ class DeployTest(AssertInvokeRaisesMixin, unittest.TestCase):
         with self.runner.isolated_filesystem():
             self._make_project()
             self.assertInvokeRaises(BadParameterException, deploy.cli, ('custom3',))
+
+    @patch('shub.deploy.make_deploy_request')
+    def test_deploy_with_custom_setup_py(self, mock_deploy_req):
+        with self.runner.isolated_filesystem():
+            # This scrapy.cfg contains no "settings" section, so creating a
+            # default setup.py would fail (because we can't find the settings
+            # module)
+            open('scrapy.cfg', 'w').close()
+            # However, we already have a setup.py...
+            create_default_setup_py(settings='some_module')
+            # ... so shub should not fail while trying to create one
+            result = self.runner.invoke(deploy.cli)
+            self.assertEqual(result.exit_code, 0)
 
 
 class DeployFilesTest(unittest.TestCase):
