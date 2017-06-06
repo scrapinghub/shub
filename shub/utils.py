@@ -19,16 +19,7 @@ from tempfile import NamedTemporaryFile, TemporaryFile
 from six.moves.urllib.parse import urljoin
 
 import click
-import requests
 import yaml
-
-from scrapinghub import Connection, APIError
-
-try:
-    from scrapinghub import HubstorageClient
-except ImportError:
-    # scrapinghub < 1.9.0
-    from hubstorage import HubstorageClient
 
 import shub
 from shub.compat import to_native_str
@@ -77,6 +68,7 @@ def create_default_setup_py(**kwargs):
 
 
 def make_deploy_request(url, data, files, auth, verbose, keep_log):
+    import requests
     last_logs = deque(maxlen=LAST_N_LOGS)
     try:
         rsp = requests.post(url=url, auth=auth, data=data, files=files,
@@ -400,6 +392,11 @@ def get_job_specs(job):
 
 
 def get_job(job):
+    try:
+        from scrapinghub import HubstorageClient
+    except ImportError:
+        # scrapinghub < 1.9.0
+        from hubstorage import HubstorageClient
     jobid, apikey = get_job_specs(job)
     hsc = HubstorageClient(auth=apikey)
     job = hsc.get_job(jobid)
@@ -554,6 +551,7 @@ def latest_github_release(force_update=False, timeout=1., cache=None):
         # saved
         if release_data.get('_shub_last_update', 0) == today:
             return release_data
+    import requests
     release_data = requests.get(REQ_URL, timeout=timeout).json()
     release_data['_shub_last_update'] = today
     try:
@@ -646,6 +644,7 @@ def has_project_access(project, endpoint, apikey):
     """Check whether an API key has access to a given project. May raise
     InvalidAuthException if the API key is invalid (but not if it is valid but
     lacks access to the project)"""
+    from scrapinghub import Connection, APIError
     conn = Connection(apikey, url=endpoint)
     try:
         return project in conn.project_ids()

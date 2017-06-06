@@ -148,7 +148,7 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
             with self.assertRaises(BadParameterException):
                 utils.get_job_specs(job_id)
 
-    @patch('shub.utils.HubstorageClient', autospec=True)
+    @patch('scrapinghub.HubstorageClient', autospec=True)
     def test_get_job(self, mock_HSC):
         class MockJob(object):
             metadata = {'some': 'val'}
@@ -271,7 +271,7 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
         job.resource.stats.return_value = {'totals': {'input_values': 1000}}
         self.assertEqual(jri_result(True, tail=3), [])
 
-    @patch('shub.utils.requests.get', autospec=True)
+    @patch('requests.get', autospec=True)
     def test_latest_github_release(self, mock_get):
         with self.runner.isolated_filesystem():
             mock_get.return_value.json.return_value = {'key': 'value'}
@@ -463,7 +463,7 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
             result = runner.invoke(call_update_yaml_dict)
         assert 'deprecated' in result.output
 
-    @patch('shub.utils.Connection')
+    @patch('scrapinghub.Connection')
     def test_has_project_access(self, mock_conn):
         mock_conn.return_value.project_ids.side_effect = APIError(
             'Authentication failed')
