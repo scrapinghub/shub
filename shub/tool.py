@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 import importlib
+import sys
 
 import click
 
@@ -50,6 +51,12 @@ commands = [
     "migrate_eggs",
     "image",
 ]
+
+# Some imports, particularly requests and pip, are very slow. To avoid
+# importing these modules when running a command that doesn't need them, we
+# import that command module only.
+if len(sys.argv) > 1 and sys.argv[1] in commands:
+    commands = [sys.argv[1]]
 
 for command in commands:
     module_path = "shub." + command
