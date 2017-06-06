@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
+import importlib
 import sys
 import re
 
 import mock
 from click.testing import CliRunner
+from mock import create_autospec, Mock, patch
 from tqdm._utils import _supports_unicode
 
 from shub import config
@@ -84,3 +86,17 @@ def clean_progress_output(output):
                       #    ("ESC"  + single command character)
         """,
         '', output)
+
+
+def mock_lazy_import(modname, autospec=False):
+    if autospec:
+        mod_mock = create_autospec(importlib.import_module(modname))
+    else:
+        mod_mock = Mock()
+
+    def decorator(function):
+        def wrapper(self, *args, **kwargs):
+            with patch.dict(sys.modules, {modname: mod_mock}):
+                return function(self, mod_mock, *args, **kwargs)
+        return wrapper
+    return decorator

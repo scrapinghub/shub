@@ -19,7 +19,6 @@ from tempfile import NamedTemporaryFile, TemporaryFile
 from six.moves.urllib.parse import urljoin
 
 import click
-import pip
 import requests
 import yaml
 
@@ -284,6 +283,8 @@ def run_python(cmd, *args, **kwargs):
 
 
 def decompress_egg_files(directory=None):
+    # Import takes about half a second, so we do it lazily
+    import pip
     try:
         EXTS = pip.utils.ARCHIVE_EXTENSIONS
     except AttributeError:
@@ -590,6 +591,8 @@ def update_available(silent_fail=True):
 
 
 def download_from_pypi(dest, pkg=None, reqfile=None, extra_args=None):
+    # Import takes about half a second, so we do it lazily
+    import pip
     if (not pkg and not reqfile) or (pkg and reqfile):
         raise ValueError('Call with either pkg or reqfile')
     extra_args = extra_args or []

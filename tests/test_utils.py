@@ -26,7 +26,7 @@ from shub.exceptions import (
     NotFoundException, RemoteErrorException, SubcommandException
 )
 
-from .utils import AssertInvokeRaisesMixin, mock_conf
+from .utils import AssertInvokeRaisesMixin, mock_conf, mock_lazy_import
 
 
 class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
@@ -343,7 +343,7 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
         with self.assertRaises(MockException):
             utils.update_available(silent_fail=False)
 
-    @patch('shub.utils.pip', autospec=True)
+    @mock_lazy_import('pip', autospec=True)
     def test_download_from_pypi(self, mock_pip):
         def _call(*args, **kwargs):
             utils.download_from_pypi(*args, **kwargs)
