@@ -11,8 +11,12 @@ Scrapy crawler Docker images are already supported via
 the :ref:`scrapinghub-entrypoint-scrapy <sh-entrypoint-scrapy>` contract implementation.
 If you want to run crawlers built using other framework/language than Scrapy/Python,
 you have to make sure your image follows the contract statements listed below.
+You can find example projects written in other frameworks and programming languages in
+the `custom-images-examples repository`_. The ``shub bootstrap`` can be used to clone
+these projects.
 
 .. _Docker: https://docs.docker.com/
+.. _custom-images-examples repository: https://github.com/scrapinghub/custom-images-examples
 
 Contract statements
 -------------------
