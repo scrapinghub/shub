@@ -195,15 +195,16 @@ def _check_status_url(status_url):
 def _prepare_deploy_params(project, version, image_name, endpoint, apikey,
                            username, password, email):
     # Reusing shub.image.list logic to get spiders list
-    spiders = list_mod.list_cmd(image_name, project, endpoint, apikey)
-    scripts = _extract_scripts_from_project()
+    metadata = list_mod.list_cmd(image_name, project, endpoint, apikey)
+    if 'scripts' not in metadata:
+        metadata['scripts'] = _extract_scripts_from_project()
     params = {'project': project,
               'version': version,
               'image_url': image_name}
-    if spiders:
-        params['spiders'] = ','.join(spiders)
-    if scripts:
-        params['scripts'] = scripts
+    if metadata.get('spiders'):
+        params['spiders'] = ','.join(metadata['spiders'])
+    if metadata.get('scripts'):
+        params['scripts'] = ','.join(metadata['scripts'])
     if not username:
         params['pull_insecure_registry'] = True
     else:
@@ -217,7 +218,7 @@ def _prepare_deploy_params(project, version, image_name, endpoint, apikey,
 def _extract_scripts_from_project(setup_filename='setup.py'):
     """Parse setup.py and return scripts"""
     if not os.path.isfile(setup_filename):
-        return ''
+        return []
     mock_setup = textwrap.dedent('''\
     def setup(*args, **kwargs):
         __setup_calls__.append((args, kwargs))
@@ -238,4 +239,4 @@ def _extract_scripts_from_project(setup_filename='setup.py'):
     global_vars = {'__setup_calls__': []}
     exec(codeobj, global_vars, local_vars)
     _, kwargs = global_vars['__setup_calls__'][0]
-    return ','.join([os.path.basename(f) for f in kwargs.get('scripts', [])])
+    return [os.path.basename(f) for f in kwargs.get('scripts', [])]

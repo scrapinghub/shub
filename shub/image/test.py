@@ -12,7 +12,7 @@ It consists of the following steps:
 
 1) check that image exists on local machine
 2) check that image has start-crawl entrypoint
-3) check that image has list-spiders entrypoint
+3) check that image has shub-image-info entrypoint
 
 If any of the checks fails - the test command fails as a whole. By default,
 the test command is also executed automatically as a part of build command
@@ -25,6 +25,12 @@ CONTRACT_CMD_NOT_FOUND_WARNING = (
     '(https://shub.readthedocs.io/en/stable/custom-images-contract.html) or '
     'added scrapinghub-entrypoint-scrapy>=0.8.0 to your requirements file '
     'if you use Scrapy.'
+)
+LIST_SPIDERS_DEPRECATED_WARNING = (
+    'list-spiders command is deprecated in favour of shub-image-info command: '
+    'its format is described well in Scrapy Cloud contract '
+    '(https://shub.readthedocs.io/en/stable/custom-images-contract.html), '
+    'please review and update your code.'
 )
 
 
@@ -50,7 +56,7 @@ def test_cmd(target, version):
     docker_client = utils.get_docker_client()
     for check in [_check_image_exists,
                   _check_start_crawl_entry,
-                  _check_list_spiders_entry]:
+                  _check_shub_image_info_entry]:
         check(image_name, docker_client)
 
 
@@ -67,13 +73,22 @@ def _check_image_exists(image_name, docker_client):
             "The image doesn't exist yet, please use build command at first.")
 
 
-def _check_list_spiders_entry(image_name, docker_client):
-    """Check that the image has list-spiders entrypoint"""
+def _check_shub_image_info_entry(image_name, docker_client):
+    """Check that the image has shub-image-info entrypoint"""
+    status, logs = _run_docker_command(
+        docker_client, image_name, ['which', 'shub-image-info'])
+    if status != 0 or not logs:
+        _check_fallback_to_list_spiders(image_name, docker_client)
+
+
+def _check_fallback_to_list_spiders(image_name, docker_client):
     status, logs = _run_docker_command(
         docker_client, image_name, ['which', 'list-spiders'])
     if status != 0 or not logs:
         raise shub_exceptions.NotFoundException(
-            CONTRACT_CMD_NOT_FOUND_WARNING % 'list-spiders')
+            CONTRACT_CMD_NOT_FOUND_WARNING % 'shub-image-info (& list-spiders)')
+    else:
+        click.echo(LIST_SPIDERS_DEPRECATED_WARNING)
 
 
 def _check_start_crawl_entry(image_name, docker_client):
