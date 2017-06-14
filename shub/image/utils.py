@@ -203,14 +203,14 @@ def _update_status_file(data, path):
         yaml.dump(data, status_file, default_flow_style=False)
 
 
-def valid_spiders(buf):
+def valid_spiders(entries):
     """Filter out garbage and only let valid spider names in
-    >>> _valid_spiders('Update rootfs\\nsony.com\\n\\nsoa-uk\\n182-blink.com')
+    >>> _valid_spiders(['Update rootfs','sony.com', '', 'soa-uk', '182-blink.com'])
     ['182-blink.com', 'soa-uk', 'sony.com']
-    >>> _valid_spiders('-spiders\\nA77aque')
+    >>> _valid_spiders(['-spiders', 'A77aque'])
     ['A77aque']
     """
-    return sorted(filter(_VALIDSPIDERNAME.match, buf.splitlines()))
+    return sorted(filter(_VALIDSPIDERNAME.match, entries))
 
 
 class BaseProgress(object):

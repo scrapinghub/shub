@@ -74,14 +74,14 @@ def list_cmd(image_name, project, endpoint, apikey):
     elif exit_code == 127:
         # FIXME we should pass some value for SCRAPY_PROJECT_ID anyway
         # to handle `scrapy list` cmd properly via sh_scrapy entrypoint
-        environment['SCRAPY_PROJECT_ID'] = str(project) if project else ''
+        # environment['SCRAPY_PROJECT_ID'] = str(project) if project else ''
         exit_code, logs = _run_cmd_in_docker_container(
             image_name, 'list-spiders', environment)
         if exit_code != 0:
             click.echo(logs)
             raise ShubException('Container with list cmd exited with code %s' % exit_code)
         logs = logs.decode('utf-8') if isinstance(logs, binary_type) else logs
-        return {'spiders': utils.valid_spiders(logs)}
+        return {'spiders': utils.valid_spiders(logs.splitlines())}
     else:
         click.echo(logs)
         raise ShubException(
@@ -145,4 +145,7 @@ def _extract_metadata_from_image_info_output(output):
         if not (name and isinstance(name, string_types)):
             raise_shub_image_info_error("spider name can't be empty or non-string")
         scripts.append(name[3:]) if name.startswith('py:') else spiders.append(name)
-    return {'spiders': spiders, 'scripts': scripts}
+    return {
+        'spiders': utils.valid_spiders(spiders),
+        'scripts': utils.valid_spiders(scripts),
+    }
