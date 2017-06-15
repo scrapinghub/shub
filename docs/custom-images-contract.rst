@@ -26,7 +26,10 @@ Contract statements
 
 2. Docker image should be able to return its metadata via ``shub-image-info`` command without arguments.
    ``shub-image-info`` should be :ref:`executable and located on the search path <scripts-example>`.
-   For now only ``project_type`` and ``spiders`` fields are supported.
+   For now only a few fields are supported, and all of them are required:
+
+  - ``project_type`` - a string project type, one of [``scrapy``, ``casperjs``, ``other``],
+  - ``spiders`` - a list of non-empty string spider names.
 
 .. code-block:: bash
 
