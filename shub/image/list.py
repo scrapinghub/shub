@@ -81,7 +81,10 @@ def list_cmd(image_name, project, endpoint, apikey):
             click.echo(logs)
             raise ShubException('Container with list cmd exited with code %s' % exit_code)
         logs = logs.decode('utf-8') if isinstance(logs, binary_type) else logs
-        return {'spiders': utils.valid_spiders(logs.splitlines())}
+        return {
+            'project_type': 'scrapy',
+            'spiders': utils.valid_spiders(logs.splitlines()),
+        }
     else:
         click.echo(logs)
         raise ShubException(
@@ -140,12 +143,17 @@ def _extract_metadata_from_image_info_output(output):
     if not isinstance(spiders_list, list):
         raise_shub_image_info_error('spiders section must be a list')
 
+    project_type = metadata.get('project_type')
     spiders, scripts = [], []
     for name in spiders_list:
         if not (name and isinstance(name, string_types)):
             raise_shub_image_info_error("spider name can't be empty or non-string")
-        scripts.append(name[3:]) if name.startswith('py:') else spiders.append(name)
+        if project_type == 'scrapy' and name.startswith('py:'):
+            scripts.append(name[3:])
+        else:
+            spiders.append(name)
     return {
+        'project_type': project_type,
         'spiders': utils.valid_spiders(spiders),
         'scripts': utils.valid_spiders(scripts),
     }
