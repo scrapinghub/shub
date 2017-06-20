@@ -137,13 +137,15 @@ def _extract_metadata_from_image_info_output(output):
 
     try:
         metadata = json.loads(output)
-        spiders_list = metadata.get('spiders', [])
-    except (ValueError, AttributeError):
+        project_type = metadata.get('project_type')
+    except (AttributeError, ValueError):
         raise_shub_image_info_error('output is not a valid JSON dict')
-    if not isinstance(spiders_list, list):
-        raise_shub_image_info_error('spiders section must be a list')
+    if not isinstance(project_type, string_types):
+        raise_shub_image_info_error('"project_type" key is required and must be a string')
 
-    project_type = metadata.get('project_type')
+    spiders_list = metadata.get('spiders')
+    if not isinstance(spiders_list, list):
+        raise_shub_image_info_error('"spiders" key is required and must be a list')
     spiders, scripts = [], []
     for name in spiders_list:
         if not (name and isinstance(name, string_types)):
