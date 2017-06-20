@@ -198,9 +198,12 @@ def _prepare_deploy_params(project, version, image_name, endpoint, apikey,
     metadata = list_mod.list_cmd(image_name, project, endpoint, apikey)
     if 'scripts' not in metadata:
         metadata['scripts'] = _extract_scripts_from_project()
-    params = {'project': project,
-              'version': version,
-              'image_url': image_name}
+    params = {
+        'project': project,
+        'version': version,
+        'image_url': image_name,
+        'project_type': metadata['project_type'],
+    }
     if metadata.get('spiders'):
         params['spiders'] = ','.join(metadata['spiders'])
     if metadata.get('scripts'):

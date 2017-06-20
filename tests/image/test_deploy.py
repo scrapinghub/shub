@@ -31,7 +31,10 @@ def mocked_post(monkeypatch):
 @mock.patch('requests.post')
 @mock.patch('shub.image.list.list_cmd')
 def test_cli(list_mocked, post_mocked, get_mocked):
-    list_mocked.return_value = {'spiders': ['a1f', 'abc', 'spi-der']}
+    list_mocked.return_value = {
+        'project_type': 'scrapy',
+        'spiders': ['a1f', 'abc', 'spi-der'],
+    }
     post_req = mock.Mock()
     post_req.headers = {'location': 'https://status-url'}
     post_mocked.return_value = post_req
@@ -44,12 +47,15 @@ def test_cli(list_mocked, post_mocked, get_mocked):
         'https://app.scrapinghub.com/api/releases/deploy.json',
         allow_redirects=False,
         auth=('abcdef', ''),
-        data={'project': 12345,
-              'version': u'test',
-              'pull_auth_config': auth_cfg,
-              'image_url': 'registry/user/project:test',
-              'spiders': 'a1f,abc,spi-der',
-              'scripts': 'scriptA.py,scriptB.py'},
+        data={
+            'project_type': 'scrapy',
+            'project': 12345,
+            'version': u'test',
+            'pull_auth_config': auth_cfg,
+            'image_url': 'registry/user/project:test',
+            'spiders': 'a1f,abc,spi-der',
+            'scripts': 'scriptA.py,scriptB.py',
+        },
         timeout=300)
     get_mocked.assert_called_with('https://status-url', timeout=300)
 
@@ -59,7 +65,10 @@ def test_cli(list_mocked, post_mocked, get_mocked):
 @mock.patch('requests.post')
 @mock.patch('shub.image.list.list_cmd')
 def test_cli_insecure_registry(list_mocked, post_mocked, get_mocked):
-    list_mocked.return_value = {'spiders': ['a1f', 'abc', 'spi-der']}
+    list_mocked.return_value = {
+        'project_type': 'scrapy',
+        'spiders': ['a1f', 'abc', 'spi-der'],
+    }
     post_req = mock.Mock()
     post_req.headers = {'location': 'https://status-url'}
     post_mocked.return_value = post_req
@@ -71,12 +80,15 @@ def test_cli_insecure_registry(list_mocked, post_mocked, get_mocked):
         'https://app.scrapinghub.com/api/releases/deploy.json',
         allow_redirects=False,
         auth=('abcdef', ''),
-        data={'project': 12345,
-              'version': u'test',
-              'pull_insecure_registry': True,
-              'image_url': 'registry/user/project:test',
-              'spiders': 'a1f,abc,spi-der',
-              'scripts': 'scriptA.py,scriptB.py'},
+        data={
+            'project_type': 'scrapy',
+            'project': 12345,
+            'version': u'test',
+            'pull_insecure_registry': True,
+            'image_url': 'registry/user/project:test',
+            'spiders': 'a1f,abc,spi-der',
+            'scripts': 'scriptA.py,scriptB.py',
+        },
         timeout=300)
     get_mocked.assert_called_with('https://status-url', timeout=300)
 
@@ -208,8 +220,11 @@ def test_extract_scripts_from_project_fake():
 @pytest.mark.usefixtures('project_dir')
 @mock.patch('shub.image.list.list_cmd')
 def test_prepare_deploy_params(mocked):
-    mocked.return_value = {'spiders': ['a1f', 'abc', 'spi-der']}
+    mocked.return_value = {
+        'project_type': 'scrapy',
+        'spiders': ['a1f', 'abc', 'spi-der']}
     expected = {
+        'project_type': 'scrapy',
         'image_url': 'registry/user/project',
         'project': 123,
         'pull_insecure_registry': True,
@@ -225,8 +240,12 @@ def test_prepare_deploy_params(mocked):
 @pytest.mark.usefixtures('project_dir')
 @mock.patch('shub.image.list.list_cmd')
 def test_prepare_deploy_params_more_params(mocked):
-    mocked.return_value = {'spiders': ['a1f', 'abc', 'spi-der']}
+    mocked.return_value = {
+        'project_type': 'scrapy',
+        'spiders': ['a1f', 'abc', 'spi-der'],
+    }
     expected = {
+        'project_type': 'scrapy',
         'image_url': 'registry/user/project',
         'project': 123,
         'scripts': 'scriptA.py,scriptB.py',

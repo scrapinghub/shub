@@ -4,7 +4,7 @@ import mock
 import pytest
 from click.testing import CliRunner
 
-from shub.exceptions import  BadParameterException, ShubException
+from shub.exceptions import BadParameterException, ShubException
 from shub.image.list import cli
 from shub.image.list import _run_cmd_in_docker_container
 from shub.image.list import _extract_metadata_from_image_info_output
@@ -36,7 +36,7 @@ def test_cli_no_scrapinghub_config():
 def test_cli(requests_get_mock, get_docker_client_mock):
     """Case when shub-image-info succeeded."""
     requests_get_mock.return_value = _get_settings_mock()
-    mocked_logs = json.dumps({'spiders': ['abc', 'def']})
+    mocked_logs = json.dumps({'project_type': 'scrapy', 'spiders': ['abc', 'def']})
     docker_client = _mock_docker_client(logs=mocked_logs)
     get_docker_client_mock.return_value = docker_client
     result = CliRunner().invoke(cli, ["dev", "-v", "-s", "--version", "test"])
@@ -106,14 +106,17 @@ def test_run_cmd_in_docker_container(get_docker_client_mock):
         stream=False, timestamps=False)
 
 
-@pytest.mark.parametrize('output,error_msg',[
-    ('bad-json', 'output is not a valid JSON'),
-    (json.dumps([]), 'output is not a valid JSON dict'),
-    (json.dumps({'spiders': 'spider'}), 'spiders section must be a list'),
-    (json.dumps({'spiders': ['']}), "spider name can't be empty or non-string"),
-    (json.dumps({'spiders': [123]}), "spider name can't be empty or non-string"),
+@pytest.mark.parametrize('output,error_msg', [
+    ('bad-json', 'output is not a valid JSON dict'),
+    (['data'], 'output is not a valid JSON dict'),
+    ({'spiders': []}, '"project_type" key is required and must be a string'),
+    ({'project_type': 1}, '"project_type" key is required and must be a string'),
+    ({'project_type': 'scrapy'}, '"spiders" key is required and must be a list'),
+    ({'project_type': 'scrapy', 'spiders': 'bad-data'}, '"spiders" key is required and must be a list'),
+    ({'project_type': 'scrapy', 'spiders': ['']}, "spider name can't be empty or non-string"),
+    ({'project_type': 'scrapy', 'spiders': [123]}, "spider name can't be empty or non-string"),
 ])
 def test_extract_metadata_from_image_info_output_failures(output, error_msg):
     with pytest.raises(ShubException) as exc:
-        _extract_metadata_from_image_info_output(output)
+        _extract_metadata_from_image_info_output(json.dumps(output))
     assert error_msg in exc.value.message
