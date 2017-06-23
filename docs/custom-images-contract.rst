@@ -28,14 +28,35 @@ Contract statements
 
     docker run myscrapyimage start-crawl
 
-2. Docker image should be able to return a spiders list via ``list-spiders`` command without arguments.
-   ``list-spiders`` should be :ref:`executable and located on the search path <scripts-example>`.
+2. Docker image should be able to return its metadata via ``shub-image-info`` command without arguments.
+   ``shub-image-info`` should be :ref:`executable and located on the search path <scripts-example>`.
+   For now only a few fields are supported, and all of them are required:
+
+  - ``project_type`` - a string project type, one of [``scrapy``, ``casperjs``, ``other``],
+  - ``spiders`` - a list of non-empty string spider names.
 
 .. code-block:: bash
 
-   docker run myscrapyimage list-spiders
+   docker run myscrapyimage shub-image-info
+
+    {
+        "project_type": "casperjs",
+        "spiders": ["spiderA", "spiderB"]
+    }
+
+.. note::
+
+    ``shub-image-info`` is an extension (and a replacement) for a former ``list-spiders`` command to provide
+    metadata in a structured form allowing to simplify non-Scrapy development and parametrize custom images
+    in a more configurable way.
+
+    The command could also handle optional ``--debug`` flag by returning debug information about the image
+    inside of an additional ``debug`` field: a name/version of operation system, installed packages etc.
+    For example, for a Python-based custom image it could be a good idea to include ``pip freeze`` call results.
+    Data format of the ``debug`` field is plain text, not structured to keep it simple.
 
 3. Crawler should be able to get all needed params using :ref:`system environment variables <environment-variables>`.
+
 
 .. _scripts-example:
 
@@ -53,9 +74,9 @@ Contract statements
        ADD . /spiders
        # Create a symbolic link in /usr/sbin because it's present in the PATH
        RUN ln -s /spiders/start-crawl /usr/sbin/start-crawl
-       RUN ln -s /spiders/list-spiders /usr/sbin/list-spiders
+       RUN ln -s /spiders/shub-image-info /usr/sbin/shub-image-info
        # Make scripts executable
-       RUN chmod +x /spiders/start-crawl /spiders/list-spiders
+       RUN chmod +x /spiders/start-crawl /spiders/shub-image-info
 
 .. _PATH: http://pubs.opengroup.org/onlinepubs/7908799/xbd/envvar.html#tag_002_003
 .. _Dockerfile: https://docs.docker.com/engine/reference/builder/
