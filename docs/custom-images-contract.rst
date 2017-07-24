@@ -37,12 +37,8 @@ Contract statements
 
 .. code-block:: bash
 
-   docker run myscrapyimage shub-image-info
-
-    {
-        "project_type": "casperjs",
-        "spiders": ["spiderA", "spiderB"]
-    }
+    docker run myscrapyimage shub-image-info
+    {"project_type": "casperjs", "spiders": ["spiderA", "spiderB"]}
 
 .. note::
 
