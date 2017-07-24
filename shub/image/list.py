@@ -117,9 +117,15 @@ def _run_cmd_in_docker_container(image_name, command, environment):
         raise ShubException("Create container error:\n %s" % container)
     try:
         client.start(container)
-    except docker.errors.NotFound:
-        # return a proper exit code if executable is not found
-        return 127, None
+    except docker.errors.APIError as e:
+        explanation = e.explanation or ''
+        if 'executable file not found' in explanation:
+            # docker.errors.APIError: 500 Server Error:
+            # Internal Server Error ("Cannot start container xxx:
+            # [8] System error: exec: "shub-image-info":
+            # executable file not found in $PATH")
+            return 127, None
+        raise
     statuscode = client.wait(container=container['Id'])
     return statuscode, client.logs(
             container=container['Id'],

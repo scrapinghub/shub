@@ -1,11 +1,12 @@
 import json
 
+import docker
 import mock
 import pytest
 from click.testing import CliRunner
 
 from shub.exceptions import BadParameterException, ShubException
-from shub.image.list import cli
+from shub.image.list import cli, list_cmd
 from shub.image.list import _run_cmd_in_docker_container
 from shub.image.list import _extract_metadata_from_image_info_output
 
@@ -104,6 +105,29 @@ def test_run_cmd_in_docker_container(get_docker_client_mock):
     docker_client.logs.assert_called_with(
         container='1234', stderr=False, stdout=True,
         stream=False, timestamps=False)
+
+
+@mock.patch('shub.image.list._get_project_settings', return_value={})
+@mock.patch('shub.image.utils.get_docker_client')
+def test_shub_image_info_fallback(get_docker_client_mock, _):
+    exception = docker.errors.APIError(
+        mock.Mock(),
+        mock.Mock(),
+        explanation=(
+            'Cannot start container xxx: [8] System error: exec: "shub-image-info": '
+            'executable file not found in $PATH'
+        )
+    )
+    get_docker_client_mock().create_container.return_value = {'Id': 'id'}
+    get_docker_client_mock().start.side_effect = [
+        exception,
+        None,
+    ]
+    get_docker_client_mock().wait.return_value = 0
+    get_docker_client_mock().logs.return_value = 'abc\ndef\n'
+    result = list_cmd('image_name', 111, 'endpoint', 'apikey')
+    assert get_docker_client_mock().start.call_count == 2
+    assert result == {'spiders': [u'abc', u'def'], 'project_type': 'scrapy'}
 
 
 @pytest.mark.parametrize('output,error_msg', [
