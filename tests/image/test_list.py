@@ -32,12 +32,15 @@ def test_cli_no_scrapinghub_config():
 
 
 @pytest.mark.usefixtures('project_dir')
+@pytest.mark.parametrize('is_binary_logs', [True, False])
 @mock.patch('shub.image.utils.get_docker_client')
 @mock.patch('requests.get')
-def test_cli(requests_get_mock, get_docker_client_mock):
+def test_cli(requests_get_mock, get_docker_client_mock, is_binary_logs):
     """Case when shub-image-info succeeded."""
     requests_get_mock.return_value = _get_settings_mock()
     mocked_logs = json.dumps({'project_type': 'scrapy', 'spiders': ['abc', 'def']})
+    if is_binary_logs:
+        mocked_logs = mocked_logs.encode('utf-8')
     docker_client = _mock_docker_client(logs=mocked_logs)
     get_docker_client_mock.return_value = docker_client
     result = CliRunner().invoke(cli, ["dev", "-v", "-s", "--version", "test"])
@@ -107,17 +110,17 @@ def test_run_cmd_in_docker_container(get_docker_client_mock):
         stream=False, timestamps=False)
 
 
+@pytest.mark.parametrize('is_binary_explanation', [True, False])
 @mock.patch('shub.image.list._get_project_settings', return_value={})
 @mock.patch('shub.image.utils.get_docker_client')
-def test_shub_image_info_fallback(get_docker_client_mock, _):
-    exception = docker.errors.APIError(
-        mock.Mock(),
-        mock.Mock(),
-        explanation=(
-            'Cannot start container xxx: [8] System error: exec: "shub-image-info": '
-            'executable file not found in $PATH'
-        )
-    )
+def test_shub_image_info_fallback(get_docker_client_mock, _,
+                                  is_binary_explanation):
+    error_msg = ('Cannot start container xxx: [8] System error: exec:'
+                 ' "shub-image-info": executable file not found in $PATH')
+    if is_binary_explanation:
+        error_msg = error_msg.encode('utf-8')
+    exception = docker.errors.APIError(mock.Mock(), mock.Mock(),
+                                       explanation=error_msg)
     get_docker_client_mock().create_container.return_value = {'Id': 'id'}
     get_docker_client_mock().start.side_effect = [
         exception,
