@@ -146,7 +146,10 @@ def _extract_metadata_from_image_info_output(output):
         if six.PY2:
             metadata = json.loads(output)
         else:
-            metadata = json.loads(output.decode('utf-8'))
+            if isinstance(output, str):
+                metadata = json.loads(output)
+            else:
+                metadata = json.loads(output.decode('utf-8'))
         project_type = metadata.get('project_type')
     except (AttributeError, ValueError):
         raise_shub_image_info_error('output is not a valid JSON dict')
