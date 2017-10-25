@@ -196,7 +196,7 @@ def _prepare_deploy_params(project, version, image_name, endpoint, apikey,
                            username, password, email):
     # Reusing shub.image.list logic to get spiders list
     metadata = list_mod.list_cmd(image_name, project, endpoint, apikey)
-    if 'scripts' not in metadata:
+    if not metadata.get('scripts'):
         metadata['scripts'] = _extract_scripts_from_project()
     params = {
         'project': project,
