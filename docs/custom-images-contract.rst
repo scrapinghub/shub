@@ -11,6 +11,7 @@ Scrapy crawler Docker images are already supported via
 the :ref:`scrapinghub-entrypoint-scrapy <sh-entrypoint-scrapy>` contract implementation.
 If you want to run crawlers built using other framework/language than Scrapy/Python,
 you have to make sure your image follows the contract statements listed below.
+This means you have to implement your own scripts following the specification below.
 You can find example projects written in other frameworks and programming languages in
 the `custom-images-examples repository`_. The ``shub bootstrap`` can be used to clone
 these projects.
@@ -27,6 +28,10 @@ Contract statements
 .. code-block:: bash
 
     docker run myscrapyimage start-crawl
+
+   Crawler will be started by unpriviledged user ``nobody`` in a writable directory ``/scrapinghub``.
+   ``HOME`` environment variable will be set to ``/scrapinghub`` as well. Beware that this directory is added
+   dynamically when job starts, if Docker image contains this directory - it'll be erased.
 
 2. Docker image should be able to return its metadata via ``shub-image-info`` command without arguments.
    ``shub-image-info`` should be :ref:`executable and located on the search path <scripts-example>`.
