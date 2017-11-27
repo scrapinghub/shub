@@ -73,7 +73,13 @@ def get_docker_client(validate=True):
     try:
         import docker
     except ImportError:
-        raise ImportError('You need docker-py installed for the cmd')
+        raise ImportError('You need docker python package installed for the cmd')
+
+    # added for compatiblity with old docker-py
+    if hasattr(docker, 'Client'):
+        docker_client_cls = docker.Client
+    else:
+        docker_client_cls = docker.DockerClient
 
     docker_host = os.environ.get('DOCKER_HOST')
     tls_config = None
@@ -89,9 +95,10 @@ def get_docker_client(validate=True):
             assert_hostname=False)
         docker_host = docker_host.replace('tcp://', 'https://')
     version = os.environ.get('DOCKER_VERSION', DEFAULT_DOCKER_VERSION)
-    client = docker.Client(base_url=docker_host,
-                           version=version,
-                           tls=tls_config)
+
+    client = docker_client_cls(base_url=docker_host,
+                               version=version,
+                               tls=tls_config)
     if validate:
         validate_connection_with_docker_daemon(client)
     return client
