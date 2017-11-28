@@ -1,5 +1,5 @@
 click
-docker
+docker-py
 PyYAML
 requests
 retrying
