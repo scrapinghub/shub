@@ -79,7 +79,7 @@ def get_docker_client(validate=True):
     if hasattr(docker, 'Client'):
         docker_client_cls = docker.Client
     else:
-        docker_client_cls = docker.DockerClient
+        docker_client_cls = docker.APIClient
 
     docker_host = os.environ.get('DOCKER_HOST')
     tls_config = None
