@@ -21,7 +21,7 @@ setup(
     zip_safe=False,
     install_requires=[
         'click',
-        'docker-py',
+        'docker',
         'pip',
         'PyYAML',
         'retrying',
