@@ -75,9 +75,10 @@ def get_docker_client(validate=True):
     except ImportError:
         raise ImportError('You need docker python package installed for the cmd')
 
-    # added for compatiblity with old docker-py
+    # docker-py (legacy)
     if hasattr(docker, 'Client'):
         docker_client_cls = docker.Client
+    # docker >= 2.0
     else:
         docker_client_cls = docker.APIClient
 
@@ -95,7 +96,6 @@ def get_docker_client(validate=True):
             assert_hostname=False)
         docker_host = docker_host.replace('tcp://', 'https://')
     version = os.environ.get('DOCKER_VERSION', DEFAULT_DOCKER_VERSION)
-
     client = docker_client_cls(base_url=docker_host,
                                version=version,
                                tls=tls_config)
