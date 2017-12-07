@@ -1,5 +1,6 @@
 import json
 
+import six
 import docker
 import mock
 import pytest
@@ -25,6 +26,20 @@ def _get_settings_mock(settings=None):
     return settings_mock
 
 
+def _convert_str(data, to_binary=False):
+    """Helper to convert str to corresponding string or binary type.
+
+    `data` has `str` type (in both Python 2/3), the function converts it
+    to corresponding string or binary representation depending on Python
+    version and boolean `to_binary` parameter.
+    """
+    if to_binary and six.PY3:
+        return data.encode('utf-8')
+    elif not to_binary and six.PY2:
+        return data.decode('utf-8')
+    return data
+
+
 def test_cli_no_scrapinghub_config():
     result = CliRunner().invoke(cli, ["dev", "-v", "--version", "test"])
     assert result.exit_code == BadParameterException.exit_code
@@ -32,12 +47,15 @@ def test_cli_no_scrapinghub_config():
 
 
 @pytest.mark.usefixtures('project_dir')
+@pytest.mark.parametrize('is_binary_logs', [True, False])
 @mock.patch('shub.image.utils.get_docker_client')
 @mock.patch('requests.get')
-def test_cli(requests_get_mock, get_docker_client_mock):
+def test_cli(requests_get_mock, get_docker_client_mock, is_binary_logs):
     """Case when shub-image-info succeeded."""
     requests_get_mock.return_value = _get_settings_mock()
-    mocked_logs = json.dumps({'project_type': 'scrapy', 'spiders': ['abc', 'def']})
+    mocked_logs = json.dumps({'project_type': 'scrapy',
+                              'spiders': ['abc', 'def']})
+    mocked_logs = _convert_str(mocked_logs, to_binary=is_binary_logs)
     docker_client = _mock_docker_client(logs=mocked_logs)
     get_docker_client_mock.return_value = docker_client
     result = CliRunner().invoke(cli, ["dev", "-v", "-s", "--version", "test"])
@@ -107,17 +125,16 @@ def test_run_cmd_in_docker_container(get_docker_client_mock):
         stream=False, timestamps=False)
 
 
+@pytest.mark.parametrize('is_binary_explanation', [True, False])
 @mock.patch('shub.image.list._get_project_settings', return_value={})
 @mock.patch('shub.image.utils.get_docker_client')
-def test_shub_image_info_fallback(get_docker_client_mock, _):
-    exception = docker.errors.APIError(
-        mock.Mock(),
-        mock.Mock(),
-        explanation=(
-            'Cannot start container xxx: [8] System error: exec: "shub-image-info": '
-            'executable file not found in $PATH'
-        )
-    )
+def test_shub_image_info_fallback(get_docker_client_mock, _,
+                                  is_binary_explanation):
+    error_msg = ('Cannot start container xxx: [8] System error: exec:'
+                 ' "shub-image-info": executable file not found in $PATH')
+    error_msg = _convert_str(error_msg, to_binary=is_binary_explanation)
+    exception = docker.errors.APIError(mock.Mock(), mock.Mock(),
+                                       explanation=error_msg)
     get_docker_client_mock().create_container.return_value = {'Id': 'id'}
     get_docker_client_mock().start.side_effect = [
         exception,

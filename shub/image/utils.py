@@ -5,6 +5,7 @@ import sys
 import click
 import yaml
 from tqdm import tqdm
+from six import binary_type
 
 from shub import config as shub_config
 from shub import utils as shub_utils
@@ -218,6 +219,10 @@ def valid_spiders(entries):
     ['A77aque']
     """
     return sorted(filter(_VALIDSPIDERNAME.match, entries))
+
+
+def ensure_unicode(s, encoding='utf-8'):
+    return s.decode(encoding) if isinstance(s, binary_type) else s
 
 
 class BaseProgress(object):
