@@ -3,6 +3,7 @@ import json
 import click
 import docker
 import requests
+import six
 from six import binary_type
 from six import string_types
 from six.moves.urllib.parse import urljoin
@@ -142,7 +143,13 @@ def _extract_metadata_from_image_info_output(output):
         raise ShubException(msg)
 
     try:
-        metadata = json.loads(output)
+        if six.PY2:
+            metadata = json.loads(output)
+        else:
+            if isinstance(output, str):
+                metadata = json.loads(output)
+            else:
+                metadata = json.loads(output.decode('utf-8'))
         project_type = metadata.get('project_type')
     except (AttributeError, ValueError):
         raise_shub_image_info_error('output is not a valid JSON dict')
