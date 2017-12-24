@@ -1,5 +1,7 @@
-import click
 import importlib
+import sys
+
+import click
 
 
 @click.group(help="Manage project based on custom Docker image")
@@ -17,6 +19,9 @@ module_deps = [
     "upload",
     "check",
 ]
+
+if len(sys.argv) > 2 and sys.argv[2] in module_deps:
+    module_deps = [sys.argv[2]]
 
 for command in module_deps:
     module_path = "shub.image." + command
