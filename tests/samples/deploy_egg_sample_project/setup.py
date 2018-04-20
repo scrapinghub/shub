@@ -6,7 +6,6 @@ setup(
     name='test_project',
     version='1.2.0',
     packages=['test_project'],
-    url='https://doc.scrapinghub.com/test_project.html',
     description='Test Project',
     author='Scrapinghub',
     author_email='info@scrapinghub.com',

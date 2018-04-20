@@ -4,7 +4,7 @@ import tempfile
 
 import click
 
-from shub import utils
+from shub import utils, DEPLOY_DOCS_LINK
 from shub.config import get_target_conf
 from shub.exceptions import (BadParameterException, NotFoundException,
                              SubcommandException)
@@ -46,8 +46,7 @@ SHORT_HELP = "[DEPRECATED] Build and deploy egg from source"
 def cli(target, from_url=None, git_branch=None, from_pypi=None):
     click.secho(
         "deploy-egg was deprecated, define the eggs you would like to deploy "
-        "in your scrapinghub.yml instead. See "
-        "http://doc.scrapinghub.com/shub.html#deploying-dependencies",
+        "in your scrapinghub.yml instead. See {}".format(DEPLOY_DOCS_LINK),
         err=True, fg='yellow',
     )
     main(target, from_url, git_branch, from_pypi)
