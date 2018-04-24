@@ -23,6 +23,12 @@ import pip
 import requests
 import yaml
 
+# https://github.com/scrapinghub/shub/pull/309#pullrequestreview-113977920
+try:
+    from pip import main as pip_main
+except:
+    from pip._internal import main as pip_main
+
 from scrapinghub import Connection, APIError
 
 try:
@@ -287,11 +293,18 @@ def decompress_egg_files(directory=None):
     try:
         EXTS = pip.utils.ARCHIVE_EXTENSIONS
     except AttributeError:
-        EXTS = ('.zip', '.whl', '.tar', '.tar.gz', '.tar.bz2')
+        try:
+            EXTS = pip._internal.utils.misc.ARCHIVE_EXTENSIONS
+        except AttributeError:
+            EXTS = ('.zip', '.whl', '.tar', '.tar.gz', '.tar.bz2')
     try:
         unpack_file = pip.utils.unpack_file
     except AttributeError:
-        unpack_file = pip.util.unpack_file
+        # XXX a work-around for pip >= 10.0
+        try:
+            unpack_file = pip.util.unpack_file
+        except AttributeError:
+            unpack_file = pip._internal.utils.misc.unpack_file
     pathname = "*"
     if directory is not None:
         pathname = os.path.join(directory, pathname)
@@ -604,7 +617,7 @@ def download_from_pypi(dest, pkg=None, reqfile=None, extra_args=None):
     if pip_version >= LooseVersion('8'):
         cmd = 'download'
     with patch_sys_executable():
-        pip.main([cmd, '-d', dest, '--no-deps'] + no_wheel + extra_args +
+        pip_main([cmd, '-d', dest, '--no-deps'] + no_wheel + extra_args +
                  target)
 
 
