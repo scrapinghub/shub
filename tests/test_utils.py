@@ -343,17 +343,18 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
         with self.assertRaises(MockException):
             utils.update_available(silent_fail=False)
 
+    @patch('shub.utils.pip_main', autospec=True)
     @patch('shub.utils.pip', autospec=True)
-    def test_download_from_pypi(self, mock_pip):
+    def test_download_from_pypi(self, mock_pip, mock_pip_main):
         def _call(*args, **kwargs):
             utils.download_from_pypi(*args, **kwargs)
-            return mock_pip.main.call_args[0][0]
+            return mock_pip_main.call_args[0][0]
 
         with self.assertRaises(ValueError):
             utils.download_from_pypi('tmpdir')
         with self.assertRaises(ValueError):
             utils.download_from_pypi('tmpdir', pkg='shub', reqfile='req.txt')
-        self.assertFalse(mock_pip.main.called)
+        self.assertFalse(mock_pip_main.called)
 
         # 1.0 (Ubuntu Precise)
         del mock_pip.__version__
@@ -475,23 +476,33 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
             utils.has_project_access(12345, 'mock_endpoint', 'abcdef')
 
     def test_get_project_dir(self):
+        # OSX test work-around: /var/ is symlinked to /private/var/,
+        # and tempfile.mkdtemp() returns a non-absolute path while
+        # os.path.dirname function is resolving the absolute location.
+        # The workaround patches a path returned by utils.get_project_dir
+        def get_project_dir():
+            project_dir = utils.get_project_dir()
+            if project_dir.startswith('/private/'):
+                project_dir = project_dir[8:]
+            return project_dir
+
         with CliRunner().isolated_filesystem() as basepath:
             os.makedirs('a/b/c')
             os.chdir('a/b/c')
             with self.assertRaises(NotFoundException):
-                utils.get_project_dir()
+                get_project_dir()
             open(os.path.join(basepath, 'Dockerfile'), 'w').close()
-            self.assertEqual(utils.get_project_dir(), basepath)
+            self.assertEqual(get_project_dir(), basepath)
             # scrapy.cfg takes precedence over Dockerfile
             open(os.path.join(basepath, 'a', 'scrapy.cfg'), 'w').close()
             self.assertEqual(
-                utils.get_project_dir(),
+                get_project_dir(),
                 os.path.join(basepath, 'a'))
             # scrapinghub.yml takes precedence over both
             open(os.path.join(basepath, 'a', 'b', 'scrapinghub.yml'), 'w'
                  ).close()
             self.assertEqual(
-                utils.get_project_dir(),
+                get_project_dir(),
                 os.path.join(basepath, 'a', 'b'))
 
 

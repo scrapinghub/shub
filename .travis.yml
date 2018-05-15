@@ -17,16 +17,39 @@ matrix:
       # Using "generic" because osx in Travis doesn't support python
       language: generic
       env:
-        - TOX_ENV=freeze
+        - TOX_ENV=py27
+        - PYTHON_VERSION='2.7'
+    - os: osx
+      language: generic
+      env:
+        - TOX_ENV=py35
+        - PYTHON_VERSION='3.5.4'
+    - os: osx
+      language: generic
+      env:
+        - TOX_ENV=py36
+        - PYTHON_VERSION='3.6.3'
 
 branches:
   only:
     - master
     - /^v\d+\.\d+\.\d+[\w\-]*$/
 
+before_install: |
+    if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+      # From https://pythonhosted.org/CodeChat/.travis.yml.html
+      brew install pyenv-virtualenv
+      pyenv install $PYTHON_VERSION
+      export PYENV_VERSION=$PYTHON_VERSION
+      export PATH="/Users/travis/.pyenv/shims:${PATH}"
+      pyenv-virtualenv venv
+      source venv/bin/activate
+      # A manual check that the correct version of Python is running.
+      python --version
+      pip install -U pip
+    fi
+
 install:
-  - "./.travis-workarounds.sh"
-  - '[ "$TRAVIS_OS_NAME" != osx ] || source ~/virtualenv/python3.5/bin/activate'
   - pip install -U tox twine wheel codecov
 
 script: tox -e $TOX_ENV
