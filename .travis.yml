@@ -50,7 +50,9 @@ before_install: |
     fi
 
 install:
-  - pip install -U tox twine wheel codecov
+  # FIXME pin virtualenv to provide tests support for python 3.3,
+  # should be removed after dropping support of python 3.3 in shub
+  - pip install -U tox twine wheel codecov virtualenv==15.2.0
 
 script: tox -e $TOX_ENV
 
