@@ -8,6 +8,7 @@ import click
 import six
 import yaml
 
+from shub import DOCS_LINK, CONFIG_DOCS_LINK
 from shub.exceptions import (BadParameterException, BadConfigException,
                              ConfigParseException, MissingAuthException,
                              NotFoundException, ShubDeprecationWarning,
@@ -21,7 +22,6 @@ SH_IMAGES_REGISTRY = 'images.scrapinghub.com'
 SH_IMAGES_REPOSITORY = SH_IMAGES_REGISTRY + '/project/{project}'
 GLOBAL_SCRAPINGHUB_YML_PATH = os.path.expanduser("~/.scrapinghub.yml")
 NETRC_PATH = os.path.expanduser('~/_netrc' if os.name == 'nt' else '~/.netrc')
-CONFIG_DOCS_LINK = "https://shub.readthedocs.io/en/stable/configuration.html"
 
 
 class ShubConfig(object):
@@ -393,12 +393,12 @@ But no worries, shub has automatically migrated your global settings to
 ~/.scrapinghub.yml, and will also automatically migrate your project settings
 when you run a command within a Scrapy project.
 
-Visit http://doc.scrapinghub.com/shub.html for more information on the new
-configuration format and its benefits.
+Visit {docs_link} for more information on the new configuration format and
+its benefits.
 
 Happy scraping!
 -------------------------------------------------------------------------------
-"""
+""".format(docs_link=DOCS_LINK)
 
 
 def _migrate_to_global_scrapinghub_yml():
@@ -423,19 +423,19 @@ def _migrate_to_global_scrapinghub_yml():
 PROJECT_MIGRATION_OK_BANNER = """
 INFO: Your deploy configuration has been migrated to scrapinghub.yml.
 shub will no longer read from scrapy.cfg (but Scrapy will, so don't delete it).
-Visit http://doc.scrapinghub.com/shub.html for more information.
-"""
+Visit {docs_link} for more information.
+""".format(docs_link=DOCS_LINK)
 
 
 PROJECT_MIGRATION_FAILED_BANNER = """
 WARNING: shub failed to convert your scrapy.cfg to scrapinghub.yml. Please
-visit http://doc.scrapinghub.com/shub.html for help on how to use the new
-configuration format. We would be grateful if you could also file a bug report
-at https://github.com/scrapinghub/shub/issues
+visit {docs_link} for help on how to use the new configuration format. We
+would be grateful if you could also file a bug report at
+https://github.com/scrapinghub/shub/issues
 
 For now, shub fell back to reading from scrapy.cfg, everything should work as
 expected.
-"""
+""".format(docs_link=DOCS_LINK)
 
 
 def _migrate_and_load_scrapy_cfg(conf):
