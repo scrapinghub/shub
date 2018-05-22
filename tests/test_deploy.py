@@ -224,6 +224,49 @@ class DeployFilesTest(unittest.TestCase):
         self.assertEqual(len(files_main['eggs']), 4)
         self.assertIn('main content', files_main['eggs'])
 
+    def pipefile_test(self, req_name):
+        with self.runner.isolated_filesystem():
+            with open('./main.egg', 'w') as f:
+                f.write('main content')
+            with open('./Pipfile.lock', 'w') as f:
+                f.write("""
+                {
+                    "default": {
+                        "package": {
+                            "version": "==0.0.0"
+                        }
+                    }
+                }
+                """)
+            with open('./1.egg', 'w') as f:
+                f.write('1.egg content')
+            with open('./2.egg', 'w') as f:
+                f.write('2.egg content')
+            files = self._deploy(req=req_name)
+
+        self.assertEqual(files['requirements'][0], 'package==0.0.0')
+
+    def test_pipefile_namess(self):
+        self.pipefile_test('Pipfile')
+        self.pipefile_test('Pipfile.lock')
+
+    def test_pipefile_lock_missing(self):
+        with self.runner.isolated_filesystem():
+            with open('./main.egg', 'w') as f:
+                f.write('main content')
+            with open('./1.egg', 'w') as f:
+                f.write('1.egg content')
+            with open('./2.egg', 'w') as f:
+                f.write('2.egg content')
+
+            with self.assertRaises(ShubException) as cm:
+                self._deploy(req='Pipfile')
+
+            self.assertEqual(
+                cm.exception.message,
+                'Please lock your Pipfile before deploying',
+            )
+
 
 if __name__ == '__main__':
     unittest.main()
