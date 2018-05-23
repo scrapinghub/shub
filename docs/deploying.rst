@@ -59,6 +59,22 @@ Note that this requirements file is an *extension* of the `Scrapy Cloud
 stack`_, and therefore should not contain packages that are already part of the
 stack, such as ``scrapy``.
 
+In case you use `pipenv`_ you may also specify a ``Pipfile``:
+
+    # project_directory/scrapinghub.yml
+
+    projects:
+      default: 12345
+      prod: 33333
+
+    requirements:
+      file: Pipfile
+
+In this case the ``Pipfile`` must be locked and ``pipenv`` available in the 
+environment. A requirements.txt file will be created out of the ``Pipfile``
+so like the requirements file above, it should not contain packages that are
+already part of the stack.
+
 When your dependencies cannot be specified in a requirements file, e.g.
 because they are not publicly available, you can supply them as Python eggs::
 
@@ -79,6 +95,8 @@ build your own Docker image to be used on Scrapy Cloud. See
 :ref:`deploy-custom-image`.
 
 .. _requirements file: https://pip.pypa.io/en/stable/user_guide/#requirements-files
+
+.. _pipenv: https://github.com/pypa/pipenv
 
 .. _choose-custom-stack:
 
