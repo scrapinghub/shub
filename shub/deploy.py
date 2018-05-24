@@ -60,15 +60,18 @@ SHORT_HELP = "Deploy Scrapy project to Scrapy Cloud"
 @click.option("-l", "--list-targets", is_flag=True, is_eager=True,
               expose_value=False, callback=list_targets_callback,
               help="List available project names defined in your config")
-@click.option("-V", "--version", help="the version to use for deploying")
-@click.option("-d", "--debug", help="debug mode (do not remove build dir)",
+@click.option("-V", "--version", help="The version to use for deploying")
+@click.option("-d", "--debug", help="Debug mode (do not remove build dir)",
               is_flag=True)
-@click.option("--egg", help="deploy the given egg, instead of building one")
-@click.option("--build-egg", help="only build the given egg, don't deploy it")
-@click.option("-v", "--verbose", help="stream deploy logs to console",
+@click.option("--egg", help="Deploy the given egg, instead of building one")
+@click.option("--build-egg", help="Only build the given egg, don't deploy it")
+@click.option("-v", "--verbose", help="Stream deploy logs to console",
               is_flag=True)
-@click.option("-k", "--keep-log", help="keep the deploy log", is_flag=True)
-def cli(target, version, debug, egg, build_egg, verbose, keep_log):
+@click.option("-k", "--keep-log", help="Keep the deploy log", is_flag=True)
+@click.option("--ignore-size", help="Ignore deploy request's egg(s) size check",
+              is_flag=True)
+def cli(target, version, debug, egg, build_egg, verbose, keep_log,
+        ignore_size):
     conf, image = load_shub_config(), None
     if not build_egg:
         create_scrapinghub_yml_wizard(conf, target=target)

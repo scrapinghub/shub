@@ -3,15 +3,19 @@
 
 from __future__ import absolute_import
 
+import os
 import unittest
 
+import requests
 from click.testing import CliRunner
 from mock import patch
 
 from shub import deploy
-from shub.exceptions import (NotFoundException, ShubException,
-                             BadParameterException)
-from shub.utils import create_default_setup_py
+from shub.exceptions import (
+    NotFoundException, ShubException, BadParameterException,
+    DeployRequestTooLargeException,
+)
+from shub.utils import create_default_setup_py, _SETUP_PY_TEMPLATE
 
 from .utils import AssertInvokeRaisesMixin, mock_conf
 
@@ -116,6 +120,31 @@ class DeployTest(AssertInvokeRaisesMixin, unittest.TestCase):
             # ... so shub should not fail while trying to create one
             result = self.runner.invoke(deploy.cli)
             self.assertEqual(result.exit_code, 0)
+
+    @patch('shub.utils.requests')
+    @patch('shub.utils.write_and_echo_logs')
+    def test_deploy_with_single_large_file(self, mock_logs, mock_requests):
+        with self.runner.isolated_filesystem():
+            self._make_project()
+            # patch setup_py to include package data files
+            setup_py = _SETUP_PY_TEMPLATE % {'settings': 'project.settings'}
+            setup_py = setup_py.rsplit('\n', 2)[0]  # drop an enclosing brace
+            setup_py += '    include_package_data = True)'
+            with open('setup.py', 'w') as setup_file:
+                setup_file.write(setup_py)
+            # create a fake package and add a large random file there
+            os.mkdir('files')
+            open('files/__init__.py', 'wb').close()
+            with open('files/file.large', 'wb') as bigfile:
+                bigfile.write(os.urandom(50 * 1024 * 1024))
+            # add manifest to include the non-code file
+            with open('MANIFEST.in', 'w') as manifest_f:
+                manifest_f.write('include files/file.large')
+            fake_response = requests.Response()
+            fake_response.status_code = 200
+            mock_requests.post.return_value = fake_response
+            self.assertInvokeRaises(DeployRequestTooLargeException,
+                                    deploy.cli)
 
 
 class DeployFilesTest(unittest.TestCase):

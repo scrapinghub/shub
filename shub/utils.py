@@ -39,14 +39,19 @@ except ImportError:
 
 import shub
 from shub.compat import to_native_str
-from shub.exceptions import (BadParameterException, InvalidAuthException,
-                             NotFoundException, RemoteErrorException,
-                             SubcommandException, print_warning)
+from shub.exceptions import (
+    BadParameterException, InvalidAuthException, NotFoundException,
+    RemoteErrorException, SubcommandException, DeployRequestTooLargeException,
+    print_warning,
+)
 
 SCRAPY_CFG_FILE = os.path.expanduser("~/.scrapy.cfg")
 FALLBACK_ENCODING = 'utf-8'
 STDOUT_ENCODING = sys.stdout.encoding or FALLBACK_ENCODING
 LAST_N_LOGS = 30
+
+# 50MB for a whole request, reserve 5KB for meta info (e.g. headers)
+REQUEST_FILES_SIZE_LIMIT = 50 * 1024 * 1024 - 5 * 1024
 
 _SETUP_PY_TEMPLATE = """\
 # Automatically created by: shub deploy
@@ -84,6 +89,7 @@ def create_default_setup_py(**kwargs):
 
 
 def make_deploy_request(url, data, files, auth, verbose, keep_log):
+    _check_deploy_files_size(files)
     last_logs = deque(maxlen=LAST_N_LOGS)
     try:
         rsp = requests.post(url=url, auth=auth, data=data, files=files,
@@ -108,6 +114,16 @@ def make_deploy_request(url, data, files, auth, verbose, keep_log):
         raise RemoteErrorException(msg)
     except requests.RequestException as exc:
         raise RemoteErrorException("Deploy failed: {}".format(exc))
+
+
+def _check_deploy_files_size(files):
+    """Ensure that request's files total size is less than current limit."""
+    ctx = click.get_current_context(silent=True)
+    if not isinstance(files, list) or ctx and ctx.params.get('ignore-size'):
+        return
+    files_size = sum(os.fstat(fp.fileno()).st_size for (fname, fp) in files)
+    if files_size > REQUEST_FILES_SIZE_LIMIT:
+        raise DeployRequestTooLargeException
 
 
 def write_and_echo_logs(keep_log, last_logs, rsp, verbose):
