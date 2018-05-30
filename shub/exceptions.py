@@ -69,6 +69,12 @@ class RemoteErrorException(ShubException):
     default_msg = "Remote error."
 
 
+class DeployRequestTooLargeException(ShubException):
+    exit_code = 65  # EX_DATAERR
+    default_msg = ("Deploy request is too large. Please make sure that your "
+                   "project egg(s) size is less than 50MB in total.")
+
+
 class ShubWarning(Warning):
     """Base class for custom warnings."""
 
