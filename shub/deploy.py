@@ -3,6 +3,7 @@ import os
 import glob
 import shutil
 import tempfile
+import json
 from six.moves.urllib.parse import urljoin
 
 import click
@@ -147,6 +148,8 @@ def _upload_egg(endpoint, eggpath, project, version, auth, verbose, keep_log,
 
     try:
         files = [('eggs', open(path, 'rb')) for path in expanded_eggs]
+        if _is_pipfile(requirements_file):
+            requirements_file = _get_pipfile_requirements()
         if requirements_file:
             files.append(('requirements', open(requirements_file, 'rb')))
     except IOError as e:
@@ -155,6 +158,23 @@ def _upload_egg(endpoint, eggpath, project, version, auth, verbose, keep_log,
     url = _url(endpoint, 'scrapyd/addversion.json')
     click.echo('Deploying to Scrapy Cloud project "%s"' % project)
     return make_deploy_request(url, data, files, auth, verbose, keep_log)
+
+
+def _is_pipfile(name):
+    return name in ['Pipfile', 'Pipfile.lock']
+
+
+def _get_pipfile_requirements():
+    try:
+        from pipenv.utils import convert_deps_to_pip
+    except ImportError:
+        raise ImportError('You need pipenv installed to deploy with Pipfile')
+    try:
+        with open('Pipfile.lock') as f:
+            deps = json.load(f)['default']
+    except IOError:
+        raise ShubException('Please lock your Pipfile before deploying')
+    return convert_deps_to_pip(deps)
 
 
 def _build_egg():
