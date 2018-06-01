@@ -38,22 +38,31 @@ Similarly, job-specific settings can be supplied through the -s option:
 """
 
 SHORT_HELP = "Schedule a spider to run on Scrapy Cloud"
+DEFAULT_PRIORITY = 2
+DEFAULT_UNITS = 1
 
 
 @click.command(help=HELP, short_help=SHORT_HELP)
 @click.argument('spider', type=click.STRING)
 @click.option('-a', '--argument',
-              help='spider argument (-a name=value)', multiple=True)
+              help='Spider argument (-a name=value)', multiple=True)
 @click.option('-s', '--set',
-              help='job-specific setting (-s name=value)', multiple=True)
-def cli(spider, argument, set):
+              help='Job-specific setting (-s name=value)', multiple=True)
+@click.option('-p', '--priority', type=int, default=DEFAULT_PRIORITY,
+              help='Job priority (-p number). From 0 (lowest) to 4 (highest)')
+@click.option('-u', '--units', type=int, default=DEFAULT_UNITS,
+              help='Amount of Scrapy Cloud units (-u number)')
+@click.option('-t', '--tag',
+              help='Job tags (-t tag)', multiple=True)
+def cli(spider, argument, set, priority, units, tag):
     try:
         target, spider = spider.rsplit('/', 1)
     except ValueError:
         target = 'default'
     targetconf = get_target_conf(target)
     job_key = schedule_spider(targetconf.project_id, targetconf.endpoint,
-                              targetconf.apikey, spider, argument, set)
+                              targetconf.apikey, spider, argument, set,
+                              priority, units, tag)
     watch_url = urljoin(
         targetconf.endpoint,
         '../p/{}/{}/{}'.format(*job_key.split('/')),
@@ -68,13 +77,16 @@ def cli(spider, argument, set):
                "".format(watch_url))
 
 
-def schedule_spider(project, endpoint, apikey, spider, arguments=(),
-                    settings=()):
+def schedule_spider(project, endpoint, apikey, spider, arguments=(), settings=(),
+                    priority=DEFAULT_PRIORITY, units=DEFAULT_UNITS, tag=()):
     conn = Connection(apikey, url=endpoint)
     try:
         return conn[project].schedule(
             spider,
             job_settings=json.dumps(dict(x.split('=', 1) for x in settings)),
+            priority=priority,
+            units=units,
+            add_tag=tag,
             **dict(x.split('=', 1) for x in arguments)
         )
     except APIError as e:
