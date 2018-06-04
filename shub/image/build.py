@@ -39,18 +39,20 @@ BUILD_SUCCESS_REGEX = re.compile(r'Successfully built ([0-9a-f]+)')
               help="stream build logs to console")
 @click.option("-V", "--version", help="release version")
 @click.option("-S", "--skip-tests", help="skip testing image", is_flag=True)
-def cli(target, debug, verbose, version, skip_tests):
-    build_cmd(target, version, skip_tests)
+@click.option("-f", "--file", "filename", default='Dockerfile',
+              help="Name of the Dockerfile (Default is 'PATH/Dockerfile')")
+def cli(target, debug, verbose, version, skip_tests, filename):
+    build_cmd(target, version, skip_tests, filename=filename)
 
 
-def build_cmd(target, version, skip_tests):
+def build_cmd(target, version, skip_tests, filename='Dockerfile'):
     config = load_shub_config()
     create_scrapinghub_yml_wizard(config, target=target, image=True)
     client = utils.get_docker_client()
     project_dir = utils.get_project_dir()
     image = config.get_image(target)
     image_name = utils.format_image_name(image, version)
-    if not os.path.exists(os.path.join(project_dir, 'Dockerfile')):
+    if not os.path.exists(os.path.join(project_dir, filename)):
         raise shub_exceptions.NotFoundException(
             "Dockerfile is not found and it is required because project '{}' is configured "
             "to deploy Docker images. Please add a Dockerfile that will be used to build "
@@ -61,7 +63,12 @@ def build_cmd(target, version, skip_tests):
     else:
         build_progress_cls = _BuildProgress
     click.echo("Building {}.".format(image_name))
-    events = client.build(path=project_dir, tag=image_name, decode=True)
+    events = client.build(
+        path=project_dir,
+        tag=image_name,
+        decode=True,
+        dockerfile=filename
+    )
     build_progress = build_progress_cls(events)
     build_progress.show()
     click.echo("The image {} build is completed.".format(image_name))

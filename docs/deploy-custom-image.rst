@@ -204,6 +204,12 @@ Option to skip testing image with ``shub image test`` after build.
 
 Increase the tool's verbosity.
 
+.. function:: -f/--file
+
+Use this option to pass a custom Dockerfile name (default is 'PATH/Dockerfile').
+
+**Default value**: ``Dockerfile``
+
 **Example:**
 
 ::

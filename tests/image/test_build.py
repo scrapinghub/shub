@@ -26,7 +26,11 @@ def test_cli(docker_client_mock, project_dir, test_mock):
     result = runner.invoke(cli, ["dev", "-v"])
     assert result.exit_code == 0
     docker_client_mock.build.assert_called_with(
-        decode=True, path=project_dir, tag='registry/user/project:1.0')
+        decode=True,
+        path=project_dir,
+        tag='registry/user/project:1.0',
+        dockerfile='Dockerfile'
+    )
     test_mock.assert_called_with("dev", None)
 
 
@@ -60,7 +64,11 @@ def test_cli_custom_version(docker_client_mock, project_dir, test_mock):
     result = runner.invoke(cli, ["dev", "--version", "test"])
     assert result.exit_code == 0
     docker_client_mock.build.assert_called_with(
-        decode=True, path=project_dir, tag='registry/user/project:test')
+        decode=True,
+        path=project_dir,
+        tag='registry/user/project:test',
+        dockerfile='Dockerfile'
+    )
     test_mock.assert_called_with("dev", "test")
 
 
@@ -95,5 +103,39 @@ def test_cli_skip_tests(docker_client_mock, test_mock, project_dir, skip_tests_f
     result = runner.invoke(cli, ["dev", skip_tests_flag])
     assert result.exit_code == 0
     docker_client_mock.build.assert_called_with(
-        decode=True, path=project_dir, tag='registry/user/project:1.0')
+        decode=True,
+        path=project_dir,
+        tag='registry/user/project:1.0',
+        dockerfile='Dockerfile'
+    )
     assert test_mock.call_count == 0
+
+
+@pytest.mark.parametrize('file_param', ['-f', '--file'])
+def test_cli_custom_dockerfile(docker_client_mock, project_dir, test_mock, file_param):
+    docker_client_mock.build.return_value = [
+        {"stream": "all is ok"},
+        {"stream": "Successfully built 12345"}
+    ]
+    runner = CliRunner()
+    result = runner.invoke(cli, ["dev", file_param, "Dockerfile"])
+    assert result.exit_code == 0
+    docker_client_mock.build.assert_called_with(
+        decode=True,
+        path=project_dir,
+        tag='registry/user/project:1.0',
+        dockerfile='Dockerfile'
+    )
+    test_mock.assert_called_with("dev", None)
+
+
+@pytest.mark.usefixtures('project_dir')
+@pytest.mark.parametrize('file_param', ['-f', '--file'])
+def test_cli_missing_custom_dockerfile(docker_client_mock, file_param):
+    docker_client_mock.build.return_value = [
+        {"error": "Minor", "errorDetail": "Testing output"},
+        {"stream": "Successfully built 12345"}
+    ]
+    runner = CliRunner()
+    result = runner.invoke(cli, ["dev", file_param, "Dockerfile-missing"])
+    assert result.exit_code == shub_exceptions.NotFoundException.exit_code
