@@ -274,7 +274,8 @@ class DeployFilesTest(unittest.TestCase):
                         },
                         "vcs-package": {
                             "git": "https://github.com/vcs/package.git",
-                            "ref": "master"
+                            "ref": "master",
+                            "editable": true
                         }
                     }
                 }

@@ -181,6 +181,9 @@ def _get_pipfile_requirements():
             del v['hash']
         if 'hashes' in v:
             del v['hashes']
+        # Scrapy Cloud also doesn't support editable packages
+        if 'editable' in v:
+            del v['editable']
     return convert_deps_to_pip(deps)
 
 
