@@ -253,7 +253,7 @@ class DeployFilesTest(unittest.TestCase):
         self.assertEqual(len(files_main['eggs']), 4)
         self.assertIn('main content', files_main['eggs'])
 
-    def pipefile_test(self, req_name):
+    def pipfile_test(self, req_name):
         with self.runner.isolated_filesystem():
             with open('./main.egg', 'w') as f:
                 f.write('main content')
@@ -263,6 +263,19 @@ class DeployFilesTest(unittest.TestCase):
                     "default": {
                         "package": {
                             "version": "==0.0.0"
+                        },
+                        "hash-package": {
+                            "version": "==0.0.1",
+                            "hash": "hash"
+                        },
+                        "hash-package2": {
+                            "version": "==0.0.1",
+                            "hashes": ["hash1", "hash2"]
+                        },
+                        "vcs-package": {
+                            "git": "https://github.com/vcs/package.git",
+                            "ref": "master",
+                            "editable": true
                         }
                     }
                 }
@@ -273,13 +286,19 @@ class DeployFilesTest(unittest.TestCase):
                 f.write('2.egg content')
             files = self._deploy(req=req_name)
 
-        self.assertEqual(files['requirements'][0], 'package==0.0.0')
+        reqs = set(files['requirements'][0].split('\n'))
+        self.assertEqual(reqs, {
+            'package==0.0.0',
+            'hash-package==0.0.1',
+            'hash-package2==0.0.1',
+            'git+https://github.com/vcs/package.git@master#egg=vcs-package',
+        })
 
-    def test_pipefile_namess(self):
-        self.pipefile_test('Pipfile')
-        self.pipefile_test('Pipfile.lock')
+    def test_pipfile_names(self):
+        self.pipfile_test('Pipfile')
+        self.pipfile_test('Pipfile.lock')
 
-    def test_pipefile_lock_missing(self):
+    def test_pipfile_lock_missing(self):
         with self.runner.isolated_filesystem():
             with open('./main.egg', 'w') as f:
                 f.write('main content')

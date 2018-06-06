@@ -174,6 +174,16 @@ def _get_pipfile_requirements():
             deps = json.load(f)['default']
     except IOError:
         raise ShubException('Please lock your Pipfile before deploying')
+    # We must remove any hash from the pipfile before converting to play nice
+    # with vcs packages
+    for k, v in deps.items():
+        if 'hash' in v:
+            del v['hash']
+        if 'hashes' in v:
+            del v['hashes']
+        # Scrapy Cloud also doesn't support editable packages
+        if 'editable' in v:
+            del v['editable']
     return convert_deps_to_pip(deps)
 
 
