@@ -13,7 +13,7 @@ with io.open(os.path.join(here, 'shub', '__init__.py'),
 
 setup(
     name='shub',
-    version='2.7.0',
+    version='2.8.0',
     packages=find_packages(exclude=('tests', 'tests.*')),
     url=about['DOCS_LINK'],
     description='Scrapinghub Command Line Client',
