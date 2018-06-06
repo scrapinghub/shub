@@ -76,7 +76,7 @@ deploy:
       condition: "$TRAVIS_OS_NAME == linux && $TOX_ENV == py35"
   - provider: releases
     api_key:
-      secure: JE86/LwMlkUdLXhNe3bmVQPBo9tSDXDOfIM5q8oEmkKOPymQX/dahqw5T7GCQYZUK5M9a1hVeE4ano9xb6xBX2dxVkzBunPMQMaO/UZWtP5rxsmBMr0YLOERfuWeHBDlgW7gUILZYIa7V/Z0EsnAlpSZk5nJsYW/IlmXXWKNTL0=
+      secure: aGbfure96ZxoeZzqckgXVvr1iafipuiSeJ8+i32ldCDV0F+u+QYwKKiYbIdaKJquzlqqknfixICJKW4CjDxx41anK4H1fvAA02uzirOzadPRFPPvNMUgZ6dhHs7Go4ZyrLxb95za5L3ZVoyi7EB18AI5VcCgGw/jLKYwgXga+Qk=
     file: dist_bin/shub-${TRAVIS_TAG}-${TRAVIS_OS_NAME}-x64.tar.gz
     skip_cleanup: true
     draft: true
