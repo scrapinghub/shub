@@ -60,7 +60,7 @@ after_success:
   - codecov
 
 before_deploy:
-  - if [ $TOX_ENV == freeze ]; then tar -czf dist_bin/shub-${TRAVIS_TAG}-${TRAVIS_OS_NAME}-x64.tar.gz -C dist_bin shub; fi
+  - if [ $TOX_ENV == freeze ] || [ $TRAVIS_OS_NAME == osx -a $TOX_ENV == py35 ] ; then tar -czf dist_bin/shub-${TRAVIS_TAG}-${TRAVIS_OS_NAME}-x64.tar.gz -C dist_bin shub; fi
 
 deploy:
   - provider: pypi
