@@ -83,4 +83,4 @@ deploy:
     on:
       tags: true
       repo: scrapinghub/shub
-      condition: "$TOX_ENV == freeze"
+      condition: "$TOX_ENV == freeze || ($TRAVIS_OS_NAME == osx && $TOX_ENV == py35)"
