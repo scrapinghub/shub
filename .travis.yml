@@ -29,6 +29,11 @@ matrix:
       env:
         - TOX_ENV=py36
         - PYTHON_VERSION='3.6.3'
+    - os: osx
+      language: generic
+      env:
+        - TOX_ENV=freeze
+        - PYTHON_VERSION='3.5.4'
 
 branches:
   only:
@@ -39,6 +44,11 @@ before_install: |
     if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
       # From https://pythonhosted.org/CodeChat/.travis.yml.html
       brew install pyenv-virtualenv
+      # See https://github.com/travis-ci/travis-ci/issues/4834, but
+      # ignore py27 due to https://github.com/pyenv/pyenv/issues/484
+      if [[ "$TOX_ENV" != "py27" ]]; then
+        export PYTHON_CONFIGURE_OPTS="--enable-shared"
+      fi
       pyenv install $PYTHON_VERSION
       export PYENV_VERSION=$PYTHON_VERSION
       export PATH="/Users/travis/.pyenv/shims:${PATH}"
@@ -60,7 +70,7 @@ after_success:
   - codecov
 
 before_deploy:
-  - if [ $TOX_ENV == freeze ] || [[ $TRAVIS_OS_NAME == osx && $TOX_ENV == py35 ]] ; then tar -czf dist_bin/shub-${TRAVIS_TAG}-${TRAVIS_OS_NAME}-x64.tar.gz -C dist_bin shub; fi
+  - if [ $TOX_ENV == freeze ] ; then tar -czf dist_bin/shub-${TRAVIS_TAG}-${TRAVIS_OS_NAME}-x64.tar.gz -C dist_bin shub; fi
 
 deploy:
   - provider: pypi
@@ -83,4 +93,4 @@ deploy:
     on:
       tags: true
       repo: scrapinghub/shub
-      condition: "$TOX_ENV == freeze || ($TRAVIS_OS_NAME == osx && $TOX_ENV == py35)"
+      condition: "$TOX_ENV == freeze"
