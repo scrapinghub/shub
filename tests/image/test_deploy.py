@@ -52,7 +52,7 @@ def test_cli(list_mocked, post_mocked, get_mocked):
             'project': 12345,
             'version': u'test',
             'pull_auth_config': auth_cfg,
-            'image_url': 'registry/user/project:test',
+            'image_url': 'registry.io/user/project:test',
             'spiders': 'a1f,abc,spi-der',
             'scripts': 'scriptA.py,scriptB.py',
         },
@@ -85,7 +85,7 @@ def test_cli_insecure_registry(list_mocked, post_mocked, get_mocked):
             'project': 12345,
             'version': u'test',
             'pull_insecure_registry': True,
-            'image_url': 'registry/user/project:test',
+            'image_url': 'registry.io/user/project:test',
             'spiders': 'a1f,abc,spi-der',
             'scripts': 'scriptA.py,scriptB.py',
         },
@@ -225,7 +225,7 @@ def test_prepare_deploy_params(mocked):
         'spiders': ['a1f', 'abc', 'spi-der']}
     expected = {
         'project_type': 'scrapy',
-        'image_url': 'registry/user/project',
+        'image_url': 'registry.io/user/project',
         'project': 123,
         'pull_insecure_registry': True,
         'scripts': 'scriptA.py,scriptB.py',
@@ -233,7 +233,7 @@ def test_prepare_deploy_params(mocked):
         'version': 'test-vers',
     }
     assert _prepare_deploy_params(
-        123, 'test-vers', 'registry/user/project',
+        123, 'test-vers', 'registry.io/user/project',
         'endpoint', 'apikey', None, None, None) == expected
 
 
@@ -246,7 +246,7 @@ def test_prepare_deploy_params_more_params(mocked):
     }
     expected = {
         'project_type': 'scrapy',
-        'image_url': 'registry/user/project',
+        'image_url': 'registry.io/user/project',
         'project': 123,
         'scripts': 'scriptA.py,scriptB.py',
         'spiders': 'a1f,abc,spi-der',
@@ -255,5 +255,5 @@ def test_prepare_deploy_params_more_params(mocked):
             '{"email": "email@mail", "password": "pass", "username": "user"}',
     }
     assert _prepare_deploy_params(
-        123, 'test-vers', 'registry/user/project',
+        123, 'test-vers', 'registry.io/user/project',
         'endpoint', 'apikey', 'user', 'pass', 'email@mail') == expected

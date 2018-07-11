@@ -139,7 +139,7 @@ def get_image_registry(image_name):
     https://github.com/docker/distribution/blob/master/reference/reference.go
     """
     components = image_name.split('/')
-    if any(sym in components[0] for sym in '.:'):
+    if len(components) > 1 and any(sym in components[0] for sym in '.:'):
         return components[0]
 
 

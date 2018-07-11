@@ -27,7 +27,7 @@ def test_cli_with_apikey_login(docker_client_mock, test_mock):
     result = runner.invoke(cli, ["dev", "--version", "test"])
     assert result.exit_code == 0
     docker_client_mock.push.assert_called_with(
-        'registry/user/project:test', decode=True,
+        'registry.io/user/project:test', decode=True,
         insecure_registry=False, stream=True)
     test_mock.assert_called_with("dev", "test")
 
@@ -54,8 +54,8 @@ def test_cli_with_progress(docker_client_mock):
     result = runner.invoke(cli, ["dev", "--version", "test"])
     assert result.exit_code == 0
     expected = format_expected_progress(
-        'Login to registry succeeded.'
-        'Pushing registry/user/project:test to the registry.'
+        'Login to registry.io succeeded.'
+        'Pushing registry.io/user/project:test to the registry.'
         'Layers:   0%|          | 0/1          '
         'Layers:   0%|          | 0/1          '
         'Layers:   0%|          | 0/2          '
@@ -69,7 +69,7 @@ def test_cli_with_progress(docker_client_mock):
         'Layers:  67%|██████▋   | 2/3'
         'Layers: 100%|██████████| 3/3'
         'abc: 100%|██████████| 24.8K/24.8K [1.00MB/s]'
-        'The image registry/user/project:test pushed successfully.'
+        'The image registry.io/user/project:test pushed successfully.'
     )
     assert expected in clean_progress_output(result.output)
 
@@ -116,7 +116,7 @@ def test_progress_no_total(docker_client_mock):
         'Layers:  75%|███████▌  | 3/4'
         'Layers: 100%|██████████| 4/4'
         'abc: 100%|██████████| 24.8K/24.8K [1.00MB/s]'
-        'The image registry/user/project:test pushed successfully.'
+        'The image registry.io/user/project:test pushed successfully.'
     )
     assert expected in clean_progress_output(result.output)
 
@@ -135,9 +135,9 @@ def test_cli_with_custom_login(docker_client_mock, test_mock):
     assert result.exit_code == 0
     docker_client_mock.login.assert_called_with(
         email=u'mail', password=u'pass',
-        reauth=False, registry='registry', username=u'user')
+        reauth=False, registry='registry.io', username=u'user')
     docker_client_mock.push.assert_called_with(
-        'registry/user/project:test', decode=True,
+        'registry.io/user/project:test', decode=True,
         insecure_registry=False, stream=True)
     test_mock.assert_called_with("dev", "test")
 
@@ -155,7 +155,7 @@ def test_cli_with_insecure_registry(docker_client_mock, test_mock):
     assert result.exit_code == 0
     assert not docker_client_mock.login.called
     docker_client_mock.push.assert_called_with(
-        'registry/user/project:test', decode=True,
+        'registry.io/user/project:test', decode=True,
         insecure_registry=True, stream=True)
     test_mock.assert_called_with("dev", "test")
 
@@ -173,9 +173,9 @@ def test_cli_with_login_username_only(docker_client_mock, test_mock):
     assert result.exit_code == 0
     docker_client_mock.login.assert_called_with(
         email=None, password=' ',
-        reauth=False, registry='registry', username='apikey')
+        reauth=False, registry='registry.io', username='apikey')
     docker_client_mock.push.assert_called_with(
-        'registry/user/project:test', decode=True,
+        'registry.io/user/project:test', decode=True,
         insecure_registry=False, stream=True)
     test_mock.assert_called_with("dev", "test")
 
@@ -215,6 +215,6 @@ def test_cli_skip_tests(docker_client_mock, test_mock, skip_tests_flag):
     result = runner.invoke(cli, ["dev", "--version", "test", skip_tests_flag])
     assert result.exit_code == 0
     docker_client_mock.push.assert_called_with(
-        'registry/user/project:test', decode=True,
+        'registry.io/user/project:test', decode=True,
         insecure_registry=False, stream=True)
     assert test_mock.call_count == 0
