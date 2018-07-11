@@ -6,6 +6,7 @@ from shub import exceptions as shub_exceptions
 from shub.config import load_shub_config, list_targets_callback
 from shub.image import utils
 from shub.image.test import test_cmd
+from shub.image.utils import get_image_registry
 
 SHORT_HELP = 'Push an image to a specified docker registry'
 
@@ -72,8 +73,7 @@ def push_cmd(target, version, username, password, email, apikey, insecure, skip_
 
 def _execute_push_login(client, image, username, password, email):
     """Login if there're provided credentials for the registry"""
-    components = image.split('/')
-    registry = components[0] if len(components) == 3 else None
+    registry = get_image_registry(image)
     resp = client.login(username=username, password=password,
                         email=email, registry=registry, reauth=False)
     if not (isinstance(resp, dict) and 'username' in resp or
