@@ -8,7 +8,7 @@ SH_CONFIG_FILE = """
 projects:
   dev:
     id: 12345
-    image: registry/user/project
+    image: registry.io/user/project
   xyz:
     id: 32167
     image: images.scrapinghub.com/project/32167

@@ -7,16 +7,16 @@ import mock
 import click
 import pytest
 from shub.exceptions import BadConfigException, NotFoundException
-
-from shub.image.utils import get_project_dir
-from shub.image.utils import get_docker_client
-from shub.image.utils import format_image_name
-from shub.image.utils import get_credentials
-
-from shub.image.utils import store_status_url
-from shub.image.utils import load_status_url
-from shub.image.utils import STATUS_FILE_LOCATION
-
+from shub.image.utils import (
+    get_credentials,
+    get_docker_client,
+    get_image_registry,
+    get_project_dir,
+    format_image_name,
+    load_status_url,
+    store_status_url,
+    STATUS_FILE_LOCATION,
+)
 from .utils import FakeProjectDirectory, add_sh_fake_config
 
 
@@ -90,6 +90,14 @@ class ReleaseUtilsTest(TestCase):
         with pytest.raises(click.BadParameter):
             get_credentials(username='user')
         assert get_credentials(target_apikey='tapikey') == ('tapikey', ' ')
+
+    def test_get_image_registry(self):
+        assert get_image_registry('ubuntu:12.04') is None
+        assert get_image_registry('someuser/image:tagA') is None
+        assert get_image_registry('registry.io/imageA') == 'registry.io'
+        assert get_image_registry('registry.io/user/name:tag') == 'registry.io'
+        assert get_image_registry('registry:8012/image') == 'registry:8012'
+        assert get_image_registry('registry:8012/user/repo') == 'registry:8012'
 
 
 class StatusUrlsTest(TestCase):

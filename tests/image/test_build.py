@@ -28,7 +28,7 @@ def test_cli(docker_client_mock, project_dir, test_mock):
     docker_client_mock.build.assert_called_with(
         decode=True,
         path=project_dir,
-        tag='registry/user/project:1.0',
+        tag='registry.io/user/project:1.0',
         dockerfile='Dockerfile'
     )
     test_mock.assert_called_with("dev", None)
@@ -47,10 +47,10 @@ def test_cli_with_progress(docker_client_mock, project_dir, test_mock):
     result = runner.invoke(cli, ["dev"])
     assert result.exit_code == 0
     expected = format_expected_progress(
-        'Building registry/user/project:1.0.'
+        'Building registry.io/user/project:1.0.'
         'Steps:   0%|          | 0/1'
         'Steps: 100%|██████████| 3/3'
-        'The image registry/user/project:1.0 build is completed.'
+        'The image registry.io/user/project:1.0 build is completed.'
     )
     assert expected in clean_progress_output(result.output)
 
@@ -66,7 +66,7 @@ def test_cli_custom_version(docker_client_mock, project_dir, test_mock):
     docker_client_mock.build.assert_called_with(
         decode=True,
         path=project_dir,
-        tag='registry/user/project:test',
+        tag='registry.io/user/project:test',
         dockerfile='Dockerfile'
     )
     test_mock.assert_called_with("dev", "test")
@@ -105,7 +105,7 @@ def test_cli_skip_tests(docker_client_mock, test_mock, project_dir, skip_tests_f
     docker_client_mock.build.assert_called_with(
         decode=True,
         path=project_dir,
-        tag='registry/user/project:1.0',
+        tag='registry.io/user/project:1.0',
         dockerfile='Dockerfile'
     )
     assert test_mock.call_count == 0
@@ -123,7 +123,7 @@ def test_cli_custom_dockerfile(docker_client_mock, project_dir, test_mock, file_
     docker_client_mock.build.assert_called_with(
         decode=True,
         path=project_dir,
-        tag='registry/user/project:1.0',
+        tag='registry.io/user/project:1.0',
         dockerfile='Dockerfile'
     )
     test_mock.assert_called_with("dev", None)

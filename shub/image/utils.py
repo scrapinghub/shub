@@ -126,6 +126,23 @@ def format_image_name(image_name, image_tag):
     return '{}:{}'.format(image_name, image_tag)
 
 
+def get_image_registry(image_name):
+    """Extract registry host from Docker image name.
+
+    Returns None if registry hostname is not found in the name, meaning
+    that default Docker registry should be used.
+
+    Docker image name is defined according to the following rules:
+     - name          := [hostname '/'] component ['/' component]*
+     - hostname      := hostcomponent ['.' hostcomponent]* [':' port-number]
+     - hostcomponent := /([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9])/
+    https://github.com/docker/distribution/blob/master/reference/reference.go
+    """
+    components = image_name.split('/')
+    if len(components) > 1 and any(sym in components[0] for sym in '.:'):
+        return components[0]
+
+
 def get_credentials(username=None, password=None, insecure=False,
                     apikey=None, target_apikey=None):
     """ A helper function to get credentials based on cmdline options.
