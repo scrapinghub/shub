@@ -31,23 +31,23 @@ Obviously it accepts all the options for the commands above.
 @click.option("--email", help="docker registry email")
 @click.option("--apikey", help="SH apikey to use built-in registry")
 @click.option("--insecure", is_flag=True, help="use insecure registry")
-@click.option("--async", "_async", is_flag=True, help="[DEPRECATED] enable asynchronous mode",
+@click.option("--async", "async_", is_flag=True, help="[DEPRECATED] enable asynchronous mode",
               callback=utils.deprecate_async_parameter)
 @click.option("-S", "--skip-tests", help="skip testing image", is_flag=True)
 @click.option("-f", "--file", "filename", default='Dockerfile',
               help="Name of the Dockerfile (Default is 'PATH/Dockerfile')")
 def cli(target, debug, verbose, version, username, password, email,
-        apikey, insecure, _async, skip_tests, filename):
+        apikey, insecure, async_, skip_tests, filename):
     upload_cmd(target, version, username, password, email, apikey, insecure,
-               _async, skip_tests, filename)
+               async_, skip_tests, filename)
 
 
 def upload_cmd(target, version, username=None, password=None, email=None,
-               apikey=None, insecure=False, _async=False, skip_tests=False,
+               apikey=None, insecure=False, async_=False, skip_tests=False,
                filename='Dockerfile'):
     build.build_cmd(target, version, skip_tests, filename=filename)
     # skip tests for push command anyway because they run in build command if not skipped
     push.push_cmd(target, version, username, password, email, apikey,
                   insecure, skip_tests=True)
     deploy.deploy_cmd(target, version, username, password, email,
-                      apikey, insecure, _async)
+                      apikey, insecure, async_)
