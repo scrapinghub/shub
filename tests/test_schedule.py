@@ -25,20 +25,20 @@ class ScheduleTest(unittest.TestCase):
         # Default
         self.runner.invoke(schedule.cli, ['spider'])
         mock_schedule.assert_called_with(
-            proj, endpoint, apikey, 'spider', (), (), 2, 1, ())
+            proj, endpoint, apikey, 'spider', (), (), 2, None, ())
         # Other project
         self.runner.invoke(schedule.cli, ['123/spider'])
         mock_schedule.assert_called_with(
-            123, endpoint, apikey, 'spider', (), (), 2, 1, ())
+            123, endpoint, apikey, 'spider', (), (), 2, None, ())
         # Other endpoint
         proj, endpoint, apikey = self.conf.get_target('vagrant')
         self.runner.invoke(schedule.cli, ['vagrant/spider'])
         mock_schedule.assert_called_with(
-            proj, endpoint, apikey, 'spider', (), (), 2, 1, ())
+            proj, endpoint, apikey, 'spider', (), (), 2, None, ())
         # Other project at other endpoint
         self.runner.invoke(schedule.cli, ['vagrant/456/spider'])
         mock_schedule.assert_called_with(
-            456, endpoint, apikey, 'spider', (), (), 2, 1, ())
+            456, endpoint, apikey, 'spider', (), (), 2, None, ())
 
     @mock.patch('shub.schedule.Connection', autospec=True)
     def test_schedule_invalid_spider(self, mock_conn):
@@ -82,17 +82,31 @@ class ScheduleTest(unittest.TestCase):
         assert call_kwargs['add_tag'] == ('tag1', 'tag2', 'tag3')
 
     @mock.patch('shub.schedule.Connection', autospec=True)
-    def test_forwards_priority_and_units(self, mock_conn):
+    def test_forwards_priority(self, mock_conn):
         mock_proj = mock_conn.return_value.__getitem__.return_value
         # short option name
-        self.runner.invoke(schedule.cli, 'testspider -p 3 -u 4'.split())
+        self.runner.invoke(schedule.cli, 'testspider -p 3'.split())
         call_kwargs = mock_proj.schedule.call_args[1]
         assert call_kwargs['priority'] == 3
-        assert call_kwargs['units'] == 4
         # long option name
-        self.runner.invoke(schedule.cli, 'testspider --priority 1 --units 3'.split())
+        self.runner.invoke(schedule.cli, 'testspider --priority 1'.split())
         call_kwargs = mock_proj.schedule.call_args[1]
         assert call_kwargs['priority'] == 1
+
+    @mock.patch('shub.schedule.Connection', autospec=True)
+    def test_forwards_units(self, mock_conn):
+        mock_proj = mock_conn.return_value.__getitem__.return_value
+        # no units specified
+        self.runner.invoke(schedule.cli, 'testspider'.split())
+        call_kwargs = mock_proj.schedule.call_args[1]
+        assert 'units' not in call_kwargs
+        # short option name
+        self.runner.invoke(schedule.cli, 'testspider -u 4'.split())
+        call_kwargs = mock_proj.schedule.call_args[1]
+        assert call_kwargs['units'] == 4
+        # long option name
+        self.runner.invoke(schedule.cli, 'testspider --units 3'.split())
+        call_kwargs = mock_proj.schedule.call_args[1]
         assert call_kwargs['units'] == 3
 
 

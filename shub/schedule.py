@@ -39,7 +39,6 @@ Similarly, job-specific settings can be supplied through the -s option:
 
 SHORT_HELP = "Schedule a spider to run on Scrapy Cloud"
 DEFAULT_PRIORITY = 2
-DEFAULT_UNITS = 1
 
 
 @click.command(help=HELP, short_help=SHORT_HELP)
@@ -50,7 +49,7 @@ DEFAULT_UNITS = 1
               help='Job-specific setting (-s name=value)', multiple=True)
 @click.option('-p', '--priority', type=int, default=DEFAULT_PRIORITY,
               help='Job priority (-p number). From 0 (lowest) to 4 (highest)')
-@click.option('-u', '--units', type=int, default=DEFAULT_UNITS,
+@click.option('-u', '--units', type=int, default=None,
               help='Amount of Scrapy Cloud units (-u number)')
 @click.option('-t', '--tag',
               help='Job tags (-t tag)', multiple=True)
@@ -78,16 +77,18 @@ def cli(spider, argument, set, priority, units, tag):
 
 
 def schedule_spider(project, endpoint, apikey, spider, arguments=(), settings=(),
-                    priority=DEFAULT_PRIORITY, units=DEFAULT_UNITS, tag=()):
+                    priority=DEFAULT_PRIORITY, units=None, tag=()):
     conn = Connection(apikey, url=endpoint)
     try:
+        kw = dict(x.split('=', 1) for x in arguments)
+        kw['add_tag'] = tag
+        if units is not None:
+            kw['units'] = units
         return conn[project].schedule(
             spider,
             job_settings=json.dumps(dict(x.split('=', 1) for x in settings)),
             priority=priority,
-            units=units,
-            add_tag=tag,
-            **dict(x.split('=', 1) for x in arguments)
+            **kw
         )
     except APIError as e:
         raise RemoteErrorException(str(e))
