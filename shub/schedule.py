@@ -49,7 +49,7 @@ DEFAULT_PRIORITY = 2
               help='Job-specific setting (-s name=value)', multiple=True)
 @click.option('-p', '--priority', type=int, default=DEFAULT_PRIORITY,
               help='Job priority (-p number). From 0 (lowest) to 4 (highest)')
-@click.option('-u', '--units', type=int, default=None,
+@click.option('-u', '--units', type=int,
               help='Amount of Scrapy Cloud units (-u number)')
 @click.option('-t', '--tag',
               help='Job tags (-t tag)', multiple=True)
@@ -81,13 +81,13 @@ def schedule_spider(project, endpoint, apikey, spider, arguments=(), settings=()
     conn = Connection(apikey, url=endpoint)
     try:
         kw = dict(x.split('=', 1) for x in arguments)
-        kw['add_tag'] = tag
         if units is not None:
             kw['units'] = units
         return conn[project].schedule(
             spider,
             job_settings=json.dumps(dict(x.split('=', 1) for x in settings)),
             priority=priority,
+            add_tag=tag,
             **kw
         )
     except APIError as e:
