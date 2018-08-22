@@ -39,7 +39,7 @@ after_test:
 deploy:
   provider: GitHub
   auth_token:
-    secure: dYqilqswNHo/A+08lISafEpFx/wNOzk/7Iz4aTHode5BbVcGrLXWkNFczw6zzIN8
+    secure: bJqkTlWPsi3tWbOtxVrR028aYWIb6bayL0ejAFYglCQ9iJFpNbmNuE3P1IaFbDas
   artifact: dist_bin\shub-$(APPVEYOR_REPO_TAG_NAME)-windows-$(PLATFORM).zip
   draft: true
   on:
