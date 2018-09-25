@@ -47,7 +47,7 @@ class ReleaseUtilsTest(TestCase):
             base_url=None, tls=None, version='1.17')
         # set basic test environment
         os.environ['DOCKER_HOST'] = 'http://127.0.0.1'
-        os.environ['DOCKER_VERSION'] = '1.18'
+        os.environ['DOCKER_API_VERSION'] = '1.18'
         assert get_docker_client()
         client_mock.assert_called_with(
             base_url='http://127.0.0.1', tls=None, version='1.18')

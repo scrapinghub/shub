@@ -96,7 +96,7 @@ def get_docker_client(validate=True):
             verify=apply_path_fun('ca.pem'),
             assert_hostname=False)
         docker_host = docker_host.replace('tcp://', 'https://')
-    version = os.environ.get('DOCKER_VERSION', DEFAULT_DOCKER_VERSION)
+    version = os.environ.get('DOCKER_API_VERSION', DEFAULT_DOCKER_VERSION)
     client = docker_client_cls(base_url=docker_host,
                                version=version,
                                tls=tls_config)
