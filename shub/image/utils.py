@@ -15,7 +15,7 @@ from shub.exceptions import (
 )
 
 
-DEFAULT_DOCKER_VERSION = '1.17'
+DEFAULT_DOCKER_API_VERSION = '1.17'
 STATUS_FILE_LOCATION = '.releases'
 _VALIDSPIDERNAME = re.compile('^[a-z0-9][-._a-z0-9]+$', re.I)
 
@@ -96,7 +96,7 @@ def get_docker_client(validate=True):
             verify=apply_path_fun('ca.pem'),
             assert_hostname=False)
         docker_host = docker_host.replace('tcp://', 'https://')
-    version = os.environ.get('DOCKER_VERSION', DEFAULT_DOCKER_VERSION)
+    version = os.environ.get('DOCKER_API_VERSION', DEFAULT_DOCKER_API_VERSION)
     client = docker_client_cls(base_url=docker_host,
                                version=version,
                                tls=tls_config)
