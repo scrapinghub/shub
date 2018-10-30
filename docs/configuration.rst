@@ -21,6 +21,9 @@ All configuration options listed below can be used in both of these
 configuration files.  In case they overlap, the local configuration file will
 always take precedence over the global one.
 
+Additionally, your Scrapinghub API key can be set as an environment variable::
+
+    SHUB_APIKEY=12345
 
 Defining target projects
 ------------------------

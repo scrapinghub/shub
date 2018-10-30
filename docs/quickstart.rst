@@ -43,6 +43,10 @@ This will save your Scrapinghub API key to a file in your home directory
 (``~/.scrapinghub.yml``) and is necessary for access to projects associated
 with your Scrapinghub account.
 
+Alternatively you can set your Scrapinghub API key as an environment variable::
+
+    SHUB_APIKEY=12345
+
 Next, navigate to a Scrapy project that you wish to upload to Scrapinghub. You
 can deploy it to Scrapy Cloud via::
 
