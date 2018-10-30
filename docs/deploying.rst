@@ -59,7 +59,7 @@ Note that this requirements file is an *extension* of the `Scrapy Cloud
 stack`_, and therefore should not contain packages that are already part of the
 stack, such as ``scrapy``.
 
-In case you use `pipenv`_ you may also specify a ``Pipfile``:
+In case you use `pipenv`_ you may also specify a ``Pipfile``::
 
     # project_directory/scrapinghub.yml
 
