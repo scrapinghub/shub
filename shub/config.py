@@ -20,7 +20,9 @@ from shub.utils import (closest_file, get_scrapycfg_targets, get_sources,
 
 SH_IMAGES_REGISTRY = 'images.scrapinghub.com'
 SH_IMAGES_REPOSITORY = SH_IMAGES_REGISTRY + '/project/{project}'
-GLOBAL_SCRAPINGHUB_YML_PATH = os.path.expanduser("~/.scrapinghub.yml")
+GLOBAL_SCRAPINGHUB_YML_PATH = os.path.expanduser(
+    os.environ.get('SHUB_GLOBAL_CONFIG', '~/.scrapinghub.yml')
+)
 NETRC_PATH = os.path.expanduser('~/_netrc' if os.name == 'nt' else '~/.netrc')
 
 
