@@ -11,7 +11,8 @@ shub is configured via two YAML files:
 
 * ``~/.scrapinghub.yml`` -- this file contains global configuration like
   your API key. It is automatically created in your home directory when you run
-  ``shub login``.
+  ``shub login``. You can also change the default location with an environment
+  variable, check an appropriate section below.
 * ``scrapinghub.yml`` -- this file contains local configuration like the
   project ID or the location of your requirements file. It is automatically
   created in your project directory when you run ``shub deploy`` for the first
@@ -120,6 +121,9 @@ On Linux-based systems::
 On Windows::
 
     SET SHUB_APIKEY=0bbf4f0f691e0d9378ae00ca7bcf7f0c
+
+You can also parametrize global ``scrapinghub.yml`` file location with
+``SHUB_GLOBAL_CONFIG`` environment variable (default ``~/.scrapinghub.yml``).
 
 When working with custom Docker images, please be aware that the tool relies
 on a set of standard ``DOCKER_`` prefixed environment variables:
