@@ -11,7 +11,8 @@ shub is configured via two YAML files:
 
 * ``~/.scrapinghub.yml`` -- this file contains global configuration like
   your API key. It is automatically created in your home directory when you run
-  ``shub login``.
+  ``shub login``. You can also change the default location with an environment
+  variable, check an appropriate section below.
 * ``scrapinghub.yml`` -- this file contains local configuration like the
   project ID or the location of your requirements file. It is automatically
   created in your project directory when you run ``shub deploy`` for the first
@@ -104,6 +105,43 @@ Option            Description                                   Scope
 ================  ============================================  ===============
 
 .. _`Scrapy Cloud stack`: https://helpdesk.scrapinghub.com/support/solutions/articles/22000200402-scrapy-cloud-stacks
+
+.. _configuration-environment:
+
+Configuration via environment variables
+---------------------------------------
+
+Your Scrapinghub API key can be set as an environment variable, it could
+be useful for noninteractive deploys (e.g. for CI workflow).
+
+On Linux-based systems::
+
+    SHUB_APIKEY=0bbf4f0f691e0d9378ae00ca7bcf7f0c
+
+On Windows::
+
+    SET SHUB_APIKEY=0bbf4f0f691e0d9378ae00ca7bcf7f0c
+
+You can also parametrize global ``scrapinghub.yml`` file location with
+``SHUB_GLOBAL_CONFIG`` environment variable (default ``~/.scrapinghub.yml``).
+
+When working with custom Docker images, please be aware that the tool relies
+on a set of standard ``DOCKER_`` prefixed environment variables:
+
+DOCKER_HOST
+    The URL or Unix socket path used to connect to the Docker API.
+
+DOCKER_API_VERSION
+    The version of the Docker API running on the host. Defaults to the
+    latest version of the API supported by docker-py.
+
+DOCKER_CERT_PATH
+    Specify a path to the directory containing the client certificate,
+    client key and CA certificate.
+
+DOCKER_TLS_VERIFY
+    Enables securing the connection to the API by using TLS and verifying
+    the authenticity of the Docker Host.
 
 
 Example configurations
