@@ -53,7 +53,9 @@ DEFAULT_PRIORITY = 2
               help='Amount of Scrapy Cloud units (-u number)')
 @click.option('-t', '--tag',
               help='Job tags (-t tag)', multiple=True)
-def cli(spider, argument, set, priority, units, tag):
+@click.option('-l', '--latest', is_flag=True,
+              help="Use latest deploy available at job's runtime")
+def cli(spider, argument, set, priority, units, tag, latest):
     try:
         target, spider = spider.rsplit('/', 1)
     except ValueError:
@@ -61,7 +63,7 @@ def cli(spider, argument, set, priority, units, tag):
     targetconf = get_target_conf(target)
     job_key = schedule_spider(targetconf.project_id, targetconf.endpoint,
                               targetconf.apikey, spider, argument, set,
-                              priority, units, tag)
+                              priority, units, tag, latest)
     watch_url = urljoin(
         targetconf.endpoint,
         '../p/{}/{}/{}'.format(*job_key.split('/')),
@@ -77,12 +79,16 @@ def cli(spider, argument, set, priority, units, tag):
 
 
 def schedule_spider(project, endpoint, apikey, spider, arguments=(), settings=(),
-                    priority=DEFAULT_PRIORITY, units=None, tag=()):
+                    priority=DEFAULT_PRIORITY, units=None, tag=(), latest=False):
     conn = Connection(apikey, url=endpoint)
     try:
         kw = dict(x.split('=', 1) for x in arguments)
         if units is not None:
             kw['units'] = units
+        if latest:  # deploy_id is a part of metadata
+            meta = json.loads(kw['meta']) if kw.get('meta') else {}
+            meta.update({'deploy_id': 'latest'})
+            kw['meta'] = json.dumps(meta)
         return conn[project].schedule(
             spider,
             job_settings=json.dumps(dict(x.split('=', 1) for x in settings)),
