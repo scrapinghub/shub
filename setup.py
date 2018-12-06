@@ -35,7 +35,7 @@ setup(
         'PyYAML',
         'retrying',
         'requests',
-        'scrapinghub>=1.9.0',
+        'scrapinghub>=2.0.3',
         'six>=1.7.0',
         'tqdm',
     ],

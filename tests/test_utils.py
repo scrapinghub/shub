@@ -17,7 +17,7 @@ import yaml
 from click.testing import CliRunner
 from collections import deque
 from mock import Mock, MagicMock, patch
-from scrapinghub import APIError
+from scrapinghub import ScrapinghubAPIError
 
 from shub import utils
 from shub.config import ShubConfig
@@ -464,13 +464,13 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
             result = runner.invoke(call_update_yaml_dict)
         assert 'deprecated' in result.output
 
-    @patch('shub.utils.Connection')
-    def test_has_project_access(self, mock_conn):
-        mock_conn.return_value.project_ids.side_effect = APIError(
+    @patch('shub.utils.ScrapinghubClient')
+    def test_has_project_access(self, mock_client):
+        mock_client.return_value.projects.list.side_effect = ScrapinghubAPIError(
             'Authentication failed')
         with self.assertRaises(InvalidAuthException):
             utils.has_project_access(12345, 'mock_endpoint', 'abcdef')
-        mock_conn.return_value.project_ids.side_effect = APIError(
+        mock_client.return_value.projects.list.side_effect = ScrapinghubAPIError(
             'Random error')
         with self.assertRaises(RemoteErrorException):
             utils.has_project_access(12345, 'mock_endpoint', 'abcdef')

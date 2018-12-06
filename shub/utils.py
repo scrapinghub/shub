@@ -29,13 +29,7 @@ try:
 except:
     from pip._internal import main as pip_main
 
-from scrapinghub import Connection, APIError
-
-try:
-    from scrapinghub import HubstorageClient
-except ImportError:
-    # scrapinghub < 1.9.0
-    from hubstorage import HubstorageClient
+from scrapinghub import ScrapinghubClient, ScrapinghubAPIError, HubstorageClient
 
 import shub
 from shub.compat import to_native_str
@@ -672,10 +666,10 @@ def has_project_access(project, endpoint, apikey):
     """Check whether an API key has access to a given project. May raise
     InvalidAuthException if the API key is invalid (but not if it is valid but
     lacks access to the project)"""
-    conn = Connection(apikey, url=endpoint)
+    client = ScrapinghubClient(apikey, dash_endpoint=endpoint)
     try:
-        return project in conn.project_ids()
-    except APIError as e:
+        return project in client.projects.list()
+    except ScrapinghubAPIError as e:
         if 'Authentication failed' in str(e):
             raise InvalidAuthException
         else:

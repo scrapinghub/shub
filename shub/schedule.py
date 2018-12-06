@@ -2,8 +2,7 @@ from __future__ import absolute_import
 import json
 
 import click
-
-from scrapinghub import Connection, APIError
+from scrapinghub import ScrapinghubClient, ScrapinghubAPIError
 from six.moves.urllib.parse import urljoin
 
 from shub.exceptions import RemoteErrorException
@@ -78,17 +77,22 @@ def cli(spider, argument, set, priority, units, tag):
 
 def schedule_spider(project, endpoint, apikey, spider, arguments=(), settings=(),
                     priority=DEFAULT_PRIORITY, units=None, tag=()):
-    conn = Connection(apikey, url=endpoint)
+    client = ScrapinghubClient(apikey, dash_endpoint=endpoint)
     try:
-        kw = dict(x.split('=', 1) for x in arguments)
-        if units is not None:
-            kw['units'] = units
-        return conn[project].schedule(
-            spider,
-            job_settings=json.dumps(dict(x.split('=', 1) for x in settings)),
+        project = client.get_project(project)
+        args = dict(x.split('=', 1) for x in arguments)
+        cmd_args = args.pop('cmd_args', None)
+        meta = args.pop('meta', None)
+        job = project.jobs.run(
+            spider=spider,
+            meta=json.loads(meta) if meta else {},
+            cmd_args=cmd_args,
+            job_args=args,
+            job_settings=dict(x.split('=', 1) for x in settings),
             priority=priority,
+            units=units,
             add_tag=tag,
-            **kw
         )
-    except APIError as e:
+        return job.key
+    except ScrapinghubAPIError as e:
         raise RemoteErrorException(str(e))
