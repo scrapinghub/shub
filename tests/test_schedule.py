@@ -5,7 +5,7 @@ import unittest
 import mock
 
 from click.testing import CliRunner
-from scrapinghub import APIError
+from scrapinghub import ScrapinghubAPIError
 
 from shub import schedule
 from shub.exceptions import RemoteErrorException
@@ -40,73 +40,73 @@ class ScheduleTest(unittest.TestCase):
         mock_schedule.assert_called_with(
             456, endpoint, apikey, 'spider', (), (), 2, None, ())
 
-    @mock.patch('shub.schedule.Connection', autospec=True)
-    def test_schedule_invalid_spider(self, mock_conn):
-        mock_proj = mock_conn.return_value.__getitem__.return_value
-        mock_proj.schedule.side_effect = APIError('')
+    @mock.patch('shub.schedule.ScrapinghubClient', autospec=True)
+    def test_schedule_invalid_spider(self, mock_client):
+        mock_proj = mock_client.return_value.get_project.return_value
+        mock_proj.jobs.run.side_effect = ScrapinghubAPIError('')
         with self.assertRaises(RemoteErrorException):
             schedule.schedule_spider(1, 'https://endpoint/api/',
                                      'FAKE_API_KEY', 'fake_spider')
 
-    @mock.patch('shub.schedule.Connection', autospec=True)
-    def test_schedule_spider_calls_project_schedule(self, mock_conn):
-        mock_proj = mock_conn.return_value.__getitem__.return_value
+    @mock.patch('shub.schedule.ScrapinghubClient', autospec=True)
+    def test_schedule_spider_calls_project_jobs_run(self, mock_client):
+        mock_proj = mock_client.return_value.get_project.return_value
         schedule.schedule_spider(1, 'https://endpoint/api/',
                                  'FAKE_API_KEY', 'fake_spider')
-        self.assertTrue(mock_proj.schedule.called)
+        self.assertTrue(mock_proj.jobs.run)
 
-    @mock.patch('shub.schedule.Connection', autospec=True)
-    def test_forwards_args_and_settings(self, mock_conn):
-        mock_proj = mock_conn.return_value.__getitem__.return_value
+    @mock.patch('shub.schedule.ScrapinghubClient', autospec=True)
+    def test_forwards_args_and_settings(self, mock_client):
+        mock_proj = mock_client.return_value.get_project.return_value
         self.runner.invoke(
             schedule.cli,
             "testspider -s SETT=99 -a ARG=val1 --set SETTWITHEQUAL=10=10 "
             "--argument ARGWITHEQUAL=val2=val2".split(' '),
         )
-        call_kwargs = mock_proj.schedule.call_args[1]
+        job_args = mock_proj.jobs.run.call_args[1]['job_args']
         self.assertDictContainsSubset(
             {'ARG': 'val1', 'ARGWITHEQUAL': 'val2=val2'},
-            call_kwargs,
+            job_args,
         )
-        # SH API expects settings as json-encoded string named 'job_settings'
+        job_settings = mock_proj.jobs.run.call_args[1]['job_settings']
         self.assertEqual(
             {'SETT': '99', 'SETTWITHEQUAL': '10=10'},
-            json.loads(call_kwargs['job_settings']),
+            job_settings,
         )
 
-    @mock.patch('shub.schedule.Connection', autospec=True)
-    def test_forwards_tags(self, mock_conn):
-        mock_proj = mock_conn.return_value.__getitem__.return_value
+    @mock.patch('shub.schedule.ScrapinghubClient', autospec=True)
+    def test_forwards_tags(self, mock_client):
+        mock_proj = mock_client.return_value.get_project.return_value
         self.runner.invoke(schedule.cli, 'testspider -t tag1 -t tag2 --tag tag3'.split())
-        call_kwargs = mock_proj.schedule.call_args[1]
+        call_kwargs = mock_proj.jobs.run.call_args[1]
         assert call_kwargs['add_tag'] == ('tag1', 'tag2', 'tag3')
 
-    @mock.patch('shub.schedule.Connection', autospec=True)
-    def test_forwards_priority(self, mock_conn):
-        mock_proj = mock_conn.return_value.__getitem__.return_value
+    @mock.patch('shub.schedule.ScrapinghubClient', autospec=True)
+    def test_forwards_priority(self, mock_client):
+        mock_proj = mock_client.return_value.get_project.return_value
         # short option name
         self.runner.invoke(schedule.cli, 'testspider -p 3'.split())
-        call_kwargs = mock_proj.schedule.call_args[1]
+        call_kwargs = mock_proj.jobs.run.call_args[1]
         assert call_kwargs['priority'] == 3
         # long option name
         self.runner.invoke(schedule.cli, 'testspider --priority 1'.split())
-        call_kwargs = mock_proj.schedule.call_args[1]
+        call_kwargs = mock_proj.jobs.run.call_args[1]
         assert call_kwargs['priority'] == 1
 
-    @mock.patch('shub.schedule.Connection', autospec=True)
-    def test_forwards_units(self, mock_conn):
-        mock_proj = mock_conn.return_value.__getitem__.return_value
+    @mock.patch('shub.schedule.ScrapinghubClient', autospec=True)
+    def test_forwards_units(self, mock_client):
+        mock_proj = mock_client.return_value.get_project.return_value
         # no units specified
         self.runner.invoke(schedule.cli, 'testspider'.split())
-        call_kwargs = mock_proj.schedule.call_args[1]
-        assert 'units' not in call_kwargs
+        call_kwargs = mock_proj.jobs.run.call_args[1]
+        assert call_kwargs['units'] is None
         # short option name
         self.runner.invoke(schedule.cli, 'testspider -u 4'.split())
-        call_kwargs = mock_proj.schedule.call_args[1]
+        call_kwargs = mock_proj.jobs.run.call_args[1]
         assert call_kwargs['units'] == 4
         # long option name
         self.runner.invoke(schedule.cli, 'testspider --units 3'.split())
-        call_kwargs = mock_proj.schedule.call_args[1]
+        call_kwargs = mock_proj.jobs.run.call_args[1]
         assert call_kwargs['units'] == 3
 
 

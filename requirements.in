@@ -6,4 +6,4 @@ retrying
 six
 tqdm
 
-scrapinghub>=1.9.0
+scrapinghub>=2.0.3
