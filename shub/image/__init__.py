@@ -16,6 +16,7 @@ module_deps = [
     "deploy",
     "upload",
     "check",
+    "run",
 ]
 
 for command in module_deps:
