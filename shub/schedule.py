@@ -94,7 +94,7 @@ def schedule_spider(project, endpoint, apikey, spider, arguments=(), settings=()
             priority=priority,
             units=units,
             add_tag=tag,
-            environment=json.dumps(dict(x.split('=', 1) for x in environment)),
+            environment=dict(x.split('=', 1) for x in environment),
         )
         return job.key
     except ScrapinghubAPIError as e:

@@ -1,5 +1,4 @@
 from __future__ import absolute_import
-import json
 import unittest
 
 import mock
@@ -109,18 +108,17 @@ class ScheduleTest(unittest.TestCase):
         call_kwargs = mock_proj.jobs.run.call_args[1]
         assert call_kwargs['units'] == 3
 
-    @mock.patch('shub.schedule.Connection', autospec=True)
-    def test_forwards_environment(self, mock_conn):
-        mock_proj = mock_conn.return_value.__getitem__.return_value
+    @mock.patch('shub.schedule.ScrapinghubClient', autospec=True)
+    def test_forwards_environment(self, mock_client):
+        mock_proj = mock_client.return_value.get_project.return_value
         self.runner.invoke(
             schedule.cli,
             "testspider -e VAR1=VAL1 --environment VAR2=VAL2".split(' '),
         )
-        call_kwargs = mock_proj.schedule.call_args[1]
-        # SH API expects environment as json-encoded string named 'environment'
+        call_kwargs = mock_proj.jobs.run.call_args[1]
         self.assertDictContainsSubset(
             {'VAR1': 'VAL1', 'VAR2': 'VAL2'},
-            json.loads(call_kwargs['environment']),
+            call_kwargs['environment'],
         )
 
 
