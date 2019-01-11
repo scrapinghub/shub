@@ -2,11 +2,10 @@ import mock
 import pytest
 from click.testing import CliRunner
 from shub import exceptions as shub_exceptions
-from shub.image.test import cli
-
-from shub.image.test import _run_docker_command
-from shub.image.test import _check_image_exists
-from shub.image.test import _check_start_crawl_entry
+from shub.image.test import (
+    cli, _run_docker_command, _check_image_size, _check_start_crawl_entry,
+    IMAGE_SIZE_LIMIT,
+)
 
 from .utils import FakeProjectDirectory
 from .utils import add_sh_fake_config
@@ -39,12 +38,21 @@ def test_test_cli(monkeypatch, docker_client):
 
 
 def test_check_image_exists(monkeypatch, docker_client):
-    assert _check_image_exists('img', docker_client) is None
+    assert _check_image_size('img', docker_client) is None
 
     monkeypatch.setattr('docker.errors.NotFound', MockedNotFound)
     docker_client.inspect_image.side_effect = MockedNotFound
     with pytest.raises(shub_exceptions.NotFoundException):
-        _check_image_exists('image', docker_client)
+        _check_image_size('image', docker_client)
+
+
+def test_check_image_size(monkeypatch, docker_client):
+    docker_client.inspect_image.return_value = {'Size': IMAGE_SIZE_LIMIT}
+    assert _check_image_size('img', docker_client) is None
+
+    docker_client.inspect_image.return_value = {'Size': IMAGE_SIZE_LIMIT + 1}
+    with pytest.raises(shub_exceptions.CustomImageTooLargeException):
+        _check_image_size('image', docker_client)
 
 
 def test_start_crawl(docker_client):

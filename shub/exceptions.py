@@ -75,6 +75,12 @@ class DeployRequestTooLargeException(ShubException):
                    "project egg(s) size is less than 50MB in total.")
 
 
+class CustomImageTooLargeException(ShubException):
+    exit_code = 65  # EX_DATAERR
+    default_msg = ("Custom Docker image is too large. Please make sure that "
+                   "your image size is less than 3GB.")
+
+
 class ShubWarning(Warning):
     """Base class for custom warnings."""
 

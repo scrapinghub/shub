@@ -1,8 +1,13 @@
+import sys
+
 import click
 
 from shub import exceptions as shub_exceptions
 from shub.config import load_shub_config, list_targets_callback
 from shub.image import utils
+
+if (sys.version_info >= (3, 0)):
+    long = int
 
 SHORT_HELP = "Test a built image with Scrapy Cloud contract"
 HELP = """
@@ -19,6 +24,7 @@ the test command is also executed automatically as a part of build command
 in its end (if you do not provide -S/--skip-tests parameter explicitly).
 """
 
+IMAGE_SIZE_LIMIT = 3 * 1024 * 1024 * 1024  # 3GB
 CONTRACT_CMD_NOT_FOUND_WARNING = (
     'Command %s is not found in the image. '
     'Please make sure you provided it according to Scrapy Cloud contract '
@@ -31,6 +37,13 @@ LIST_SPIDERS_DEPRECATED_WARNING = (
     'its format is described well in Scrapy Cloud contract '
     '(https://shub.readthedocs.io/en/stable/custom-images-contract.html), '
     'please review and update your code.'
+)
+IMAGE_TOO_LARGE_WARNING = (
+    'Custom image for the project is too large (more than 3GB), it can lead '
+    'to various performance issues when running it in Scrapy Cloud. '
+    'Please reduce the image size or ask support team for help '
+    '(one of the recommended articles to start with is '
+    'https://www.codacy.com/blog/five-ways-to-slim-your-docker-images/).'
 )
 
 
@@ -54,19 +67,22 @@ def test_cmd(target, version):
     version = version or config.get_version()
     image_name = utils.format_image_name(image, version)
     docker_client = utils.get_docker_client()
-    for check in [_check_image_exists,
+    for check in [_check_image_size,
                   _check_start_crawl_entry,
                   _check_shub_image_info_entry]:
         check(image_name, docker_client)
 
 
-def _check_image_exists(image_name, docker_client):
-    """Check that the image exists on local machine."""
+def _check_image_size(image_name, docker_client):
+    """Check that the image exists on local machine and validate its size."""
     # if there's no docker lib, the command will fail earlier
     # with an exception when getting a client in get_docker_client()
     from docker.errors import NotFound
     try:
-        docker_client.inspect_image(image_name)
+        size = docker_client.inspect_image(image_name).get('Size')
+        if size and isinstance(size, (int, long)) and size > IMAGE_SIZE_LIMIT:
+            raise shub_exceptions.CustomImageTooLargeException(
+                IMAGE_TOO_LARGE_WARNING)
     except NotFound as exc:
         utils.debug_log("{}".format(exc))
         raise shub_exceptions.NotFoundException(
