@@ -48,11 +48,13 @@ DEFAULT_PRIORITY = 2
               help='Job-specific setting (-s name=value)', multiple=True)
 @click.option('-p', '--priority', type=int, default=DEFAULT_PRIORITY,
               help='Job priority (-p number). From 0 (lowest) to 4 (highest)')
+@click.option('-e', '--environment', multiple=True,
+              help='Job environment variable (-e VAR=VAL)')
 @click.option('-u', '--units', type=int,
               help='Amount of Scrapy Cloud units (-u number)')
 @click.option('-t', '--tag',
               help='Job tags (-t tag)', multiple=True)
-def cli(spider, argument, set, priority, units, tag):
+def cli(spider, argument, set, environment, priority, units, tag):
     try:
         target, spider = spider.rsplit('/', 1)
     except ValueError:
@@ -60,7 +62,7 @@ def cli(spider, argument, set, priority, units, tag):
     targetconf = get_target_conf(target)
     job_key = schedule_spider(targetconf.project_id, targetconf.endpoint,
                               targetconf.apikey, spider, argument, set,
-                              priority, units, tag)
+                              priority, units, tag, environment)
     watch_url = urljoin(
         targetconf.endpoint,
         '../p/{}/{}/{}'.format(*job_key.split('/')),
@@ -76,7 +78,7 @@ def cli(spider, argument, set, priority, units, tag):
 
 
 def schedule_spider(project, endpoint, apikey, spider, arguments=(), settings=(),
-                    priority=DEFAULT_PRIORITY, units=None, tag=()):
+                    priority=DEFAULT_PRIORITY, units=None, tag=(), environment=()):
     client = ScrapinghubClient(apikey, dash_endpoint=endpoint)
     try:
         project = client.get_project(project)
@@ -92,6 +94,7 @@ def schedule_spider(project, endpoint, apikey, spider, arguments=(), settings=()
             priority=priority,
             units=units,
             add_tag=tag,
+            environment=dict(x.split('=', 1) for x in environment),
         )
         return job.key
     except ScrapinghubAPIError as e:

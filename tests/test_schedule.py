@@ -1,5 +1,4 @@
 from __future__ import absolute_import
-import json
 import unittest
 
 import mock
@@ -25,20 +24,20 @@ class ScheduleTest(unittest.TestCase):
         # Default
         self.runner.invoke(schedule.cli, ['spider'])
         mock_schedule.assert_called_with(
-            proj, endpoint, apikey, 'spider', (), (), 2, None, ())
+            proj, endpoint, apikey, 'spider', (), (), 2, None, (), ())
         # Other project
         self.runner.invoke(schedule.cli, ['123/spider'])
         mock_schedule.assert_called_with(
-            123, endpoint, apikey, 'spider', (), (), 2, None, ())
+            123, endpoint, apikey, 'spider', (), (), 2, None, (), ())
         # Other endpoint
         proj, endpoint, apikey = self.conf.get_target('vagrant')
         self.runner.invoke(schedule.cli, ['vagrant/spider'])
         mock_schedule.assert_called_with(
-            proj, endpoint, apikey, 'spider', (), (), 2, None, ())
+            proj, endpoint, apikey, 'spider', (), (), 2, None, (), ())
         # Other project at other endpoint
         self.runner.invoke(schedule.cli, ['vagrant/456/spider'])
         mock_schedule.assert_called_with(
-            456, endpoint, apikey, 'spider', (), (), 2, None, ())
+            456, endpoint, apikey, 'spider', (), (), 2, None, (), ())
 
     @mock.patch('shub.schedule.ScrapinghubClient', autospec=True)
     def test_schedule_invalid_spider(self, mock_client):
@@ -108,6 +107,19 @@ class ScheduleTest(unittest.TestCase):
         self.runner.invoke(schedule.cli, 'testspider --units 3'.split())
         call_kwargs = mock_proj.jobs.run.call_args[1]
         assert call_kwargs['units'] == 3
+
+    @mock.patch('shub.schedule.ScrapinghubClient', autospec=True)
+    def test_forwards_environment(self, mock_client):
+        mock_proj = mock_client.return_value.get_project.return_value
+        self.runner.invoke(
+            schedule.cli,
+            "testspider -e VAR1=VAL1 --environment VAR2=VAL2".split(' '),
+        )
+        call_kwargs = mock_proj.jobs.run.call_args[1]
+        self.assertDictContainsSubset(
+            {'VAR1': 'VAL1', 'VAR2': 'VAL2'},
+            call_kwargs['environment'],
+        )
 
 
 if __name__ == '__main__':
