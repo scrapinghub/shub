@@ -16,6 +16,7 @@ environment:
 branches:
   only:
     - master
+    - fix-appveyor-build-for-release
     - /^v\d+\.\d+\.\d+[\w\-]*$/
 
 install:
