@@ -71,9 +71,16 @@ In case you use `pipenv`_ you may also specify a ``Pipfile``::
       file: Pipfile
 
 In this case the ``Pipfile`` must be locked and ``pipenv`` available in the 
-environment. A requirements.txt file will be created out of the ``Pipfile``
-so like the requirements file above, it should not contain packages that are
-already part of the stack.
+environment.
+
+.. note::
+
+    To install pipenv tool, use ``pip install pipenv`` or check `its documentation
+    <https://pipenv.readthedocs.io/>`_.
+
+A requirements.txt file will be created out of the ``Pipfile`` so like the
+requirements file above, it should not contain packages that are already part
+of the stack.
 
 When your dependencies cannot be specified in a requirements file, e.g.
 because they are not publicly available, you can supply them as Python eggs::
