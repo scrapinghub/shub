@@ -42,6 +42,8 @@ before_install: |
     if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
       # From https://pythonhosted.org/CodeChat/.travis.yml.html
       brew install pyenv-virtualenv
+      eval "$(pyenv init -)"
+      eval "$(pyenv virtualenv-init -)"
       # See https://github.com/travis-ci/travis-ci/issues/4834, but
       # ignore py27 due to https://github.com/pyenv/pyenv/issues/484
       if [[ "$TOX_ENV" != "py27" ]]; then
@@ -49,16 +51,15 @@ before_install: |
       fi
       pyenv install $PYTHON_VERSION
       export PYENV_VERSION=$PYTHON_VERSION
-      export PATH="/Users/travis/.pyenv/shims:${PATH}"
-      pyenv-virtualenv venv
-      source venv/bin/activate
+      pyenv virtualenv venv
+      pyenv activate venv
       # A manual check that the correct version of Python is running.
       python --version
       pip install -U pip
     fi
 
 install:
-  - pip install -U tox twine wheel codecov
+  - pip install -U tox twine wheel codecov virtualenv==16.1.0
 
 script: tox -e $TOX_ENV
 
