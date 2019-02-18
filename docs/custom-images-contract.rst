@@ -216,3 +216,16 @@ In fact, there are a lot of different features:
 
 - `PyPI <https://pypi.python.org/pypi/scrapinghub-entrypoint-scrapy>`_
 - `Github <https://github.com/scrapinghub/scrapinghub-entrypoint-scrapy/>`_
+
+Scrapy addons
+-------------
+
+If you have Scrapy addons enabled in Dash UI, you may encounter with the similar errors:
+
+::
+
+    [sh_scrapy.settings] Addon import error scrapy_pagestorage.PageStorageMiddleware:  No module named scrapy_pagestorage
+
+As you are in control of managing your Docker image content, you should add all missing packages
+by yourself to ``requirements.txt`` file (including dependencies related with the Scrapy addons),
+or disable corresponding addons in Dash UI.
