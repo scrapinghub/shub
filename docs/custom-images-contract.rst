@@ -199,7 +199,7 @@ Scrapy-based python crawlers and scripts on Scrapy Cloud.
 Main functions of this wrapper are the following:
 
 - providing ``start-crawl`` entrypoint
-- providing ``list-spiders`` entrypoint (starting from ``0.7.0`` version)
+- providing ``shub-image-info`` entrypoint (starting from ``0.11.0`` version)
 - translating system environment variables to Scrapy ``crawl`` / ``list`` commands
 
 In fact, there are a lot of different features:
