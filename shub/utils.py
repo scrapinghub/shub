@@ -17,6 +17,7 @@ from glob import glob
 from importlib import import_module
 from tempfile import NamedTemporaryFile, TemporaryFile
 from six.moves.urllib.parse import urljoin
+from six import string_types
 
 import click
 import pip
@@ -115,7 +116,11 @@ def _check_deploy_files_size(files):
     ctx = click.get_current_context(silent=True)
     if not isinstance(files, list) or ctx and ctx.params.get('ignore-size'):
         return
-    files_size = sum(os.fstat(fp.fileno()).st_size for (fname, fp) in files)
+    files_size = sum(
+        len(fp) if isinstance(fp, string_types)
+        else os.fstat(fp.fileno()).st_size
+        for (fname, fp) in files
+    )
     if files_size > REQUEST_FILES_SIZE_LIMIT:
         raise DeployRequestTooLargeException
 

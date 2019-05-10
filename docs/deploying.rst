@@ -82,6 +82,24 @@ A requirements.txt file will be created out of the ``Pipfile`` so like the
 requirements file above, it should not contain packages that are already part
 of the stack.
 
+If you use `Poetry`_ you can specify your ``pyproject.toml``::
+
+    # project_directory/scrapinghub.yml
+
+    projects:
+      default: 12345
+      prod: 33333
+
+    requirements:
+      file: pyproject.toml
+
+A ``poetry.lock`` file must be available, that will be used for determining the
+full requirements.
+
+.. note::
+
+    `Poetry`_ is a tool for dependency management and packaging in Python.
+
 When your dependencies cannot be specified in a requirements file, e.g.
 because they are not publicly available, you can supply them as Python eggs::
 
@@ -104,6 +122,8 @@ build your own Docker image to be used on Scrapy Cloud. See
 .. _requirements file: https://pip.pypa.io/en/stable/user_guide/#requirements-files
 
 .. _pipenv: https://github.com/pypa/pipenv
+
+.. _Poetry: https://poetry.eustace.io/
 
 .. _choose-custom-stack:
 

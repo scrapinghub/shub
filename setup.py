@@ -38,6 +38,7 @@ setup(
         'scrapinghub>=2.0.3',
         'six>=1.7.0',
         'tqdm',
+        'toml',
     ],
     classifiers=[
         'Development Status :: 5 - Production/Stable',
