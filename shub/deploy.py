@@ -7,6 +7,7 @@ import json
 from six.moves.urllib.parse import urljoin
 
 import click
+import toml
 # Not used in code but needed in runtime, don't remove!
 import setuptools
 _1 = setuptools  # NOQA
@@ -150,8 +151,12 @@ def _upload_egg(endpoint, eggpath, project, version, auth, verbose, keep_log,
         files = [('eggs', open(path, 'rb')) for path in expanded_eggs]
         if _is_pipfile(requirements_file):
             requirements_file = _get_pipfile_requirements()
+        elif _is_poetry(requirements_file):
+            requirements_file = _get_poetry_requirements()
+        elif requirements_file:
+            requirements_file = open(requirements_file, 'rb')
         if requirements_file:
-            files.append(('requirements', open(requirements_file, 'rb')))
+            files.append(('requirements', requirements_file))
     except IOError as e:
         raise ShubException("%s %s" % (e.strerror, e.filename))
     files.append(('egg', open(eggpath, 'rb')))
@@ -184,7 +189,43 @@ def _get_pipfile_requirements():
         # Scrapy Cloud also doesn't support editable packages
         if 'editable' in v:
             del v['editable']
-    return convert_deps_to_pip(deps)
+    return open(convert_deps_to_pip(deps), 'rb')
+
+
+def _is_poetry(name):
+    if name != 'pyproject.toml':
+        return False
+    data = toml.load(name)
+    return 'poetry' in (data.get('tool') or {})
+
+
+def _get_poetry_requirements():
+    try:
+        data = toml.load('poetry.lock')
+    except IOError:
+        raise ShubException('Please make sure the poetry lock file is present')
+    # Adapted from poetry 1.0.0a2 poetry/utils/exporter.py
+    lines = []
+    for package in data['package']:
+        source = package.get('source') or {}
+        source_type = source.get('type')
+        if source_type == 'git':
+            line = 'git+{}@{}#egg={}'.format(
+                source['url'], source['reference'], package['name']
+            )
+        elif source_type in ['directory', 'file']:
+            line = ''
+            line += source['url']
+        else:
+            line = '{}=={}'.format(package['name'], package['version'])
+
+            if source_type == 'legacy' and source['url']:
+                line += ' \\\n'
+                line += '    --index-url {}'.format(source['url'])
+
+        line += '\n'
+        lines.append(line)
+    return ''.join(lines)
 
 
 def _build_egg():

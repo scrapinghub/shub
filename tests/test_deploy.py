@@ -9,6 +9,7 @@ import unittest
 import requests
 from click.testing import CliRunner
 from mock import patch
+from six import string_types
 
 from shub import deploy
 from shub.exceptions import (
@@ -168,7 +169,9 @@ class DeployFilesTest(unittest.TestCase):
         )
         files = {}
         for name, file in self.request.call_args[0][2]:
-            files.setdefault(name, []).append(file.read().decode('utf-8'))
+            files.setdefault(name, []).append(
+                file if isinstance(file, string_types)
+                else file.read().decode('utf-8'))
 
         return files
 
@@ -313,6 +316,90 @@ class DeployFilesTest(unittest.TestCase):
             self.assertEqual(
                 cm.exception.message,
                 'Please lock your Pipfile before deploying',
+            )
+
+    def poetry_test(self, req_name):
+        with self.runner.isolated_filesystem():
+            with open('./main.egg', 'w') as f:
+                f.write('main content')
+            with open('./pyproject.toml', 'w') as f:
+                f.write("""
+                [tool.poetry]
+                """)
+            with open('./poetry.lock', 'w') as f:
+                f.write("""
+                [[package]]
+                name = "package"
+                version = "0.0.0"
+
+                [[package]]
+                name = "vcs-package"
+                version = "0.0.1"
+
+                [package.source]
+                reference = "master"
+                type = "git"
+                url = "https://github.com/vcs/package.git"
+
+                [[package]]
+                name = "file-package"
+                version = "0.0.1"
+
+                [package.source]
+                reference = ""
+                type = "file"
+                url = "/path/to/package.tar.gz"
+
+                [[package]]
+                name = "dir-package"
+                version = "0.0.1"
+
+                [package.source]
+                reference = ""
+                type = "directory"
+                url = "/path/to/package"
+
+                [metadata.hashes]
+                package = ["hash"]
+                vcs-package = ["hash1"]
+                """)
+            with open('./1.egg', 'w') as f:
+                f.write('1.egg content')
+            with open('./2.egg', 'w') as f:
+                f.write('2.egg content')
+            files = self._deploy(req=req_name)
+
+        reqs = set(files['requirements'][0].split('\n'))
+        self.assertEqual(reqs, {
+            'package==0.0.0',
+            'git+https://github.com/vcs/package.git@master#egg=vcs-package',
+            '/path/to/package',
+            '/path/to/package.tar.gz',
+            '',
+        })
+
+    def test_poetry_names(self):
+        self.poetry_test('pyproject.toml')
+
+    def test_poetry_lock_missing(self):
+        with self.runner.isolated_filesystem():
+            with open('./pyproject.toml', 'w') as f:
+                f.write("""
+                [tool.poetry]
+                """)
+            with open('./main.egg', 'w') as f:
+                f.write('main content')
+            with open('./1.egg', 'w') as f:
+                f.write('1.egg content')
+            with open('./2.egg', 'w') as f:
+                f.write('2.egg content')
+
+            with self.assertRaises(ShubException) as cm:
+                self._deploy(req='pyproject.toml')
+
+            self.assertEqual(
+                cm.exception.message,
+                'Please make sure the poetry lock file is present',
             )
 
 
