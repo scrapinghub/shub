@@ -1,6 +1,9 @@
 import os
 import re
 import sys
+import shutil
+import tempfile
+import contextlib
 
 import click
 import yaml
@@ -288,3 +291,13 @@ def create_progress_bar(total, desc, **kwargs):
         miniters=1,
         **kwargs
     )
+
+
+@contextlib.contextmanager
+def make_temp_directory(cleanup=True, **kwargs):
+    temp_dir = tempfile.mkdtemp(**kwargs)
+    try:
+        yield temp_dir
+    finally:
+        if cleanup:
+            shutil.rmtree(temp_dir)
