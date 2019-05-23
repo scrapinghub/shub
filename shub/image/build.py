@@ -39,13 +39,15 @@ BUILD_SUCCESS_REGEX = re.compile(r'Successfully built ([0-9a-f]+)')
               help="stream build logs to console")
 @click.option("-V", "--version", help="release version")
 @click.option("-S", "--skip-tests", help="skip testing image", is_flag=True)
+@click.option("-n", "--no-cache", is_flag=True,
+              help="Do not use cache when building the image")
 @click.option("-f", "--file", "filename", default='Dockerfile',
               help="Name of the Dockerfile (Default is 'PATH/Dockerfile')")
-def cli(target, debug, verbose, version, skip_tests, filename):
-    build_cmd(target, version, skip_tests, filename=filename)
+def cli(target, debug, verbose, version, skip_tests, no_cache, filename):
+    build_cmd(target, version, skip_tests, no_cache, filename=filename)
 
 
-def build_cmd(target, version, skip_tests, filename='Dockerfile'):
+def build_cmd(target, version, skip_tests, no_cache, filename='Dockerfile'):
     config = load_shub_config()
     create_scrapinghub_yml_wizard(config, target=target, image=True)
     client = utils.get_docker_client()
@@ -67,7 +69,8 @@ def build_cmd(target, version, skip_tests, filename='Dockerfile'):
         path=project_dir,
         tag=image_name,
         decode=True,
-        dockerfile=filename
+        dockerfile=filename,
+        nocache=no_cache
     )
     build_progress = build_progress_cls(events)
     build_progress.show()
