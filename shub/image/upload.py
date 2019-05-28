@@ -34,18 +34,20 @@ Obviously it accepts all the options for the commands above.
 @click.option("--async", "async_", is_flag=True, help="[DEPRECATED] enable asynchronous mode",
               callback=utils.deprecate_async_parameter)
 @click.option("-S", "--skip-tests", help="skip testing image", is_flag=True)
+@click.option("-n", "--no-cache", is_flag=True,
+              help="Do not use cache when building the image")
 @click.option("-f", "--file", "filename", default='Dockerfile',
               help="Name of the Dockerfile (Default is 'PATH/Dockerfile')")
 def cli(target, debug, verbose, version, username, password, email,
-        apikey, insecure, async_, skip_tests, filename):
+        apikey, insecure, async_, skip_tests, no_cache, filename):
     upload_cmd(target, version, username, password, email, apikey, insecure,
-               async_, skip_tests, filename)
+               async_, skip_tests, no_cache, filename)
 
 
 def upload_cmd(target, version, username=None, password=None, email=None,
                apikey=None, insecure=False, async_=False, skip_tests=False,
-               filename='Dockerfile'):
-    build.build_cmd(target, version, skip_tests, filename=filename)
+               no_cache=False, filename='Dockerfile'):
+    build.build_cmd(target, version, skip_tests, no_cache, filename=filename)
     # skip tests for push command anyway because they run in build command if not skipped
     push.push_cmd(target, version, username, password, email, apikey,
                   insecure, skip_tests=True)
