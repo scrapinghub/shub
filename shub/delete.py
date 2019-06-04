@@ -2,8 +2,6 @@ from __future__ import absolute_import
 import click
 
 from scrapinghub import ScrapinghubClient
-
-from shub.utils import job_resource_iter, get_job
 from shub.config import load_shub_config
 
 HELP = """
@@ -32,6 +30,7 @@ You can also run it in "force" mode, so it won't ask you permission before flush
 SHORT_HELP = "Delete or cancel jobs from Scrapy Cloud"
 
 EXPECTED_STATES = ('pending', 'finished')
+
 
 @click.command(help=HELP, short_help=SHORT_HELP)
 @click.argument('project_id')
