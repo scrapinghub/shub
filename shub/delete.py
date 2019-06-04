@@ -38,7 +38,6 @@ EXPECTED_STATES = ('pending', 'finished')
 @click.option('--spider-id', required=False)
 @click.option('--state', required=False)
 @click.option('--force', '-f', is_flag=True)
-
 def cli(project_id, spider_id, state, force):
     if state is None:
         state = EXPECTED_STATES
@@ -76,7 +75,6 @@ def cli(project_id, spider_id, state, force):
             print('aborted.')
             exit(1)
 
-
     for job in project.jobs.iter(**filters):
         job = project.jobs.get(job['key'])
         state = job.metadata.get('state')
@@ -92,7 +90,6 @@ def cli(project_id, spider_id, state, force):
             state,
             action
         ))
-
 
 
 def _get_spider(spider_id, project):
