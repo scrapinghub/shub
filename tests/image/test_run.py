@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from datetime import datetime
 import os.path
 import tempfile
 
@@ -10,6 +11,7 @@ except ImportError:
 import mock
 import pytest
 from click.testing import CliRunner
+from dateutil import tz
 
 from shub.image.run import cli, _json_dumps, WRAPPER_IMAGE_PATH
 from shub.image.run.wrapper import _consume_from_fifo
@@ -130,7 +132,12 @@ def test_consume_from_fifo(mock_stdout):
             _consume_from_fifo(filename)
     finally:
         os.remove(filename)
+    from_zone, to_zone = tz.tzutc(), tz.tzlocal()
+    date_format = '%Y-%m-%d %H:%M:%S'
+    utc = datetime.strptime('2017-01-24 14:59:01', date_format)
+    utc = utc.replace(tzinfo=from_zone)
+    local_datetime_string = utc.astimezone(to_zone).strftime(date_format)
     assert mock_stdout.getvalue() == (
-        '2017-01-24 14:59:01 INFO Some message\n'
-        '2017-01-24 14:59:01 WARNING Other message\n'
+        '{date} INFO Some message\n'
+        '{date} WARNING Other message\n'.format(date=local_datetime_string)
     )
