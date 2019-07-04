@@ -277,13 +277,20 @@ class ShubConfig(object):
             return str(self.version)
 
     def get_target_conf(self, target, auth_required=True):
+        class Apikey(object):
+            def __init__(self, apikey=''):
+                self.apikey = apikey
+
+            def __repr__(self):
+                return 'XXXXXXXXXXX'
+
         proj = self.get_project(target)
         if proj['endpoint'] not in self.endpoints:
             raise NotFoundException("Could not find endpoint %s. Please "
                                     "define it in your scrapinghub.yml."
                                     "" % proj['endpoint'])
         try:
-            apikey = str(self.apikeys[proj['apikey']])
+            apikey = Apikey(str(self.apikeys[proj['apikey']]))
         except KeyError:
             if auth_required:
                 msg = None
