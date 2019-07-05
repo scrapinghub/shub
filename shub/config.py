@@ -277,7 +277,6 @@ class ShubConfig(object):
             return str(self.version)
 
     def get_target_conf(self, target, auth_required=True):
-
         proj = self.get_project(target)
         if proj['endpoint'] not in self.endpoints:
             raise NotFoundException("Could not find endpoint %s. Please "
