@@ -392,11 +392,6 @@ class Apikey(str):
             k = N // 5 + 1
             return str(''.join([self.apikey[:k], 'X' * (N - k)]))
 
-    def __str__(self):
-        if self.apikey:
-            print(eval(str(self.apikey)))
-            return eval(str(self.apikey))
-
 
 class Target(_Target):
 
