@@ -277,12 +277,6 @@ class ShubConfig(object):
             return str(self.version)
 
     def get_target_conf(self, target, auth_required=True):
-        class Apikey(object):
-            def __init__(self, apikey=''):
-                self.apikey = apikey
-
-            def __repr__(self):
-                return 'XXXXXXXXXXX'
 
         proj = self.get_project(target)
         if proj['endpoint'] not in self.endpoints:
@@ -290,7 +284,7 @@ class ShubConfig(object):
                                     "define it in your scrapinghub.yml."
                                     "" % proj['endpoint'])
         try:
-            apikey = Apikey(str(self.apikeys[proj['apikey']]))
+            apikey = str(self.apikeys[proj['apikey']])
         except KeyError:
             if auth_required:
                 msg = None
@@ -348,7 +342,8 @@ class ShubConfig(object):
         return self.get_target_conf(target, auth_required=False).endpoint
 
     def get_apikey(self, target, required=True):
-        return self.get_target_conf(target, auth_required=required).apikey
+        apikey = self.get_target_conf(target, auth_required=required).apikey
+        return getattr(apikey, 'apikey', apikey)
 
     def get_image(self, target):
         """Return image for a given target."""
@@ -377,9 +372,39 @@ class ShubConfig(object):
         return image
 
 
-Target = namedtuple('Target', ['project_id', 'endpoint', 'apikey', 'stack',
-                               'image', 'requirements_file', 'version',
-                               'eggs'])
+_Target = namedtuple('Target', ['project_id', 'endpoint', 'apikey', 'stack',
+                                'image', 'requirements_file', 'version',
+                                'eggs'])
+
+
+class Apikey(str):
+
+    def __new__(cls, *args, **kwargs):
+        cls._inst = super(Apikey, cls).__new__(cls, *args, **kwargs)
+        return cls._inst
+
+    def __init__(self, apikey=None):
+        self.apikey = apikey
+
+    def __repr__(self):
+        if self.apikey:
+            N = len(self.apikey)
+            k = N // 5 + 1
+            return str(''.join([self.apikey[:k], 'X' * (N - k)]))
+
+    def __str__(self):
+        if self.apikey:
+            print(eval(str(self.apikey)))
+            return eval(str(self.apikey))
+
+
+class Target(_Target):
+
+    def __new__(cls, *args, **kwargs):
+        _kwargs = dict(kwargs)
+        _kwargs['apikey'] = Apikey(kwargs.get('apikey', ''))
+        cls._inst = super(Target, cls).__new__(cls, *args, **_kwargs)
+        return cls._inst
 
 
 MIGRATION_BANNER = """
