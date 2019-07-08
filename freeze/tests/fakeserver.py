@@ -58,6 +58,7 @@ def threadit(target, *args, **kw):
 
 def run(bind_at):
     p1, p2 = multiprocessing.Pipe()
+
     class MyTCPServer(TCPServer):
         allow_reuse_address = True
         pipe = p2

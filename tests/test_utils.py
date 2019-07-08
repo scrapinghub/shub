@@ -243,7 +243,6 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
                 self.assertEqual(kwargs['startafter'], 'jobkey/996')
                 return iter([])
 
-
         def jri_result(follow, tail=None):
             return list(utils.job_resource_iter(
                 job,
@@ -403,9 +402,9 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
         rsp = Mock()
         rsp.iter_lines = Mock(return_value=iter([b"line1", b"line2"]))
         self.assertRaises(RemoteErrorException,
-            utils.write_and_echo_logs,
-            keep_log=True, last_logs=last_logs,
-            rsp=rsp, verbose=True)
+                          utils.write_and_echo_logs,
+                          keep_log=True, last_logs=last_logs,
+                          rsp=rsp, verbose=True)
         self.assertEqual(last_logs, [b"line1", b"line2"])
         last_logs = []
 

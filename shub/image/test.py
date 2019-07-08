@@ -6,7 +6,7 @@ from shub import exceptions as shub_exceptions
 from shub.config import load_shub_config, list_targets_callback
 from shub.image import utils
 
-if (sys.version_info >= (3, 0)):
+if sys.version_info >= (3, 0):
     long = int
 
 SHORT_HELP = "Test a built image with Scrapy Cloud contract"

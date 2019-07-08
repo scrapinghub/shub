@@ -393,7 +393,7 @@ def _get_egg_info(name):
     egg_filename = name.replace('-', '_')
     egg_path_glob = os.path.join('dist', '%s*' % egg_filename)
     egg_path = glob(egg_path_glob)[0]
-    return (egg_filename, egg_path)
+    return egg_filename, egg_path
 
 
 def get_job_specs(job):
