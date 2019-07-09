@@ -22,6 +22,7 @@ def apipipe():
 def scrapyproject(request):
     cwd = os.getcwd()
     tmpdir = os.path.join(tempfile.mkdtemp(), 'project')
+
     def _fin():
         os.chdir(cwd)
         shutil.rmtree(tmpdir, ignore_errors=True)
