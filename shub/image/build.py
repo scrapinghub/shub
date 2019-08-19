@@ -91,7 +91,7 @@ class _LoggedBuildProgress(utils.BaseProgress):
             self.handle_stream_event(event)
 
     def handle_stream_event(self, event):
-        utils.debug_log("{}".format(event['stream'][:-1]))
+        utils.debug_log("{}".format(event['stream'].rstrip()))
 
 
 class _BuildProgress(_LoggedBuildProgress):
