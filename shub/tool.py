@@ -50,6 +50,7 @@ commands = [
     "copy_eggs",
     "migrate_eggs",
     "image",
+    "cancel",
 ]
 
 for command in commands:

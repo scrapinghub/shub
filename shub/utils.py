@@ -71,6 +71,12 @@ def remember_cwd():
         os.chdir(current_dir)
 
 
+def get_scrapinghub_client_from_config(conf):
+    return ScrapinghubClient(
+        conf.apikey, dash_endpoint=conf.endpoint
+    )
+
+
 def create_default_setup_py(**kwargs):
     closest = closest_file('scrapy.cfg')
     with remember_cwd():
