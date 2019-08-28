@@ -43,9 +43,8 @@ otherwise you have to enter your credentials (at least username/password).
               help="re-authenticate to registry")
 def cli(target, debug, verbose, version, username, password, email, apikey,
         insecure, skip_tests, reauth):
-    push_cmd(
-        target, version, username, password, email, apikey, insecure,
-        skip_tests, reauth)
+    push_cmd(target, version, username, password, email, apikey, insecure,
+             skip_tests, reauth)
 
 
 def push_cmd(target, version, username, password, email, apikey, insecure,
