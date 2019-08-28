@@ -200,7 +200,7 @@ def test_cli_login_fail_auth(docker_client_mock, test_mock):
         cli, ["dev", "--version", "test", "--username", "user",
               "--password", "pass", "--email", "mail"])
     assert result.exit_code == shub_exceptions.RemoteErrorException.exit_code
-    assert 'Docker registry login error' in result.stdout
+    assert 'Docker registry login error' in result.output
     test_mock.assert_called_with("dev", "test")
 
 
