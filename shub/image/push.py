@@ -22,6 +22,8 @@ By default, the tool tries to call the registry in insecure manner,
 otherwise you have to enter your credentials (at least username/password).
 """
 
+LOGIN_ERROR_MSG = 'Please authorize with docker login'
+
 
 @click.command(help=HELP, short_help=SHORT_HELP)
 @click.argument("target", required=False, default="default")
@@ -94,6 +96,13 @@ class _LoggedPushProgress(utils.BaseProgress):
     Output all the events received from the docker daemon.
     """
     def handle_event(self, event):
+        if 'error' in event and LOGIN_ERROR_MSG in event['error']:
+            click.echo(
+               "Something went wrong when trying to authenticate to Docker "
+               "registry when pushing the image. Please ensure your "
+               "credentials are correct and try again with --reauth flag.")
+            raise shub_exceptions.RemoteErrorException(
+                "Docker registry authentication error")
         super(_LoggedPushProgress, self).handle_event(event)
         if 'status' in event:
             self.handle_status_event(event)
