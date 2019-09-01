@@ -70,7 +70,8 @@ def build_cmd(target, version, skip_tests, no_cache, filename='Dockerfile'):
         tag=image_name,
         decode=True,
         dockerfile=filename,
-        nocache=no_cache
+        nocache=no_cache,
+        rm=True,
     )
     build_progress = build_progress_cls(events)
     build_progress.show()
