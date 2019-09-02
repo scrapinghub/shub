@@ -682,6 +682,18 @@ class ShubConfigTest(unittest.TestCase):
             _target(123, apikey='123'),
         )
 
+    def test_hidden_apikey(self):
+        self.conf.apikeys['default'] = 123
+        self.assertEqual(
+            self.conf.get_target_conf('shproj').apikey.__repr__(),
+            "1XX"
+        )
+        self.conf.apikeys['default'] = "apikey_string"
+        self.assertEqual(
+            self.conf.get_target_conf('shproj').apikey.__repr__(),
+            "apiXXXXXXXXXX"
+        )
+
     @mock.patch('shub.config.pwd_version', return_value='ver_AUTO')
     @mock.patch('shub.config.pwd_git_version', return_value='ver_GIT')
     @mock.patch('shub.config.pwd_hg_version', return_value='ver_HG')
