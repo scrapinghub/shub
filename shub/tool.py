@@ -51,6 +51,7 @@ commands = [
     "migrate_eggs",
     "image",
     "cancel",
+    "search"
 ]
 
 for command in commands:
