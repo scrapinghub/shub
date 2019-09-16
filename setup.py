@@ -39,6 +39,7 @@ setup(
         'six>=1.7.0',
         'tqdm',
         'toml',
+        'dateparser'
     ],
     classifiers=[
         'Development Status :: 5 - Production/Stable',
