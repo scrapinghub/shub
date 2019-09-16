@@ -6,7 +6,7 @@ from unittest import TestCase
 import mock
 import click
 import pytest
-from shub.exceptions import BadConfigException, NotFoundException
+from shub.exceptions import BadConfigException, BadParameterException, NotFoundException
 from shub.image.utils import (
     get_credentials,
     get_docker_client,
@@ -84,11 +84,17 @@ class ReleaseUtilsTest(TestCase):
 
     def test_get_credentials(self):
         assert get_credentials(insecure=True) == (None, None)
+        with pytest.raises(BadParameterException):
+            get_credentials(username='user', insecure=True)
+        with pytest.raises(BadParameterException):
+            get_credentials(password='pass', insecure=True)
         assert get_credentials(apikey='apikey') == ('apikey', ' ')
         assert get_credentials(
             username='user', password='pass') == ('user', 'pass')
-        with pytest.raises(click.BadParameter):
+        with pytest.raises(BadParameterException):
             get_credentials(username='user')
+        with pytest.raises(BadParameterException):
+            get_credentials(password='pass')
         assert get_credentials(target_apikey='tapikey') == ('tapikey', ' ')
 
     def test_get_image_registry(self):

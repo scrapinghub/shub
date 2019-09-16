@@ -14,7 +14,7 @@ from shub import config as shub_config
 from shub import utils as shub_utils
 from shub.exceptions import (
     ShubException, NotFoundException, BadConfigException, RemoteErrorException,
-    ShubDeprecationWarning, print_warning
+    ShubDeprecationWarning, print_warning, BadParameterException,
 )
 
 
@@ -157,16 +157,19 @@ def get_credentials(username=None, password=None, insecure=False,
     without 'account' query parameter which breaks login.
     """
     if insecure:
+        if username or password:
+            raise BadParameterException(
+                'Insecure credentials not compatible with username/password')
         return None, None
     elif apikey:
         return apikey, ' '
     elif username:
         if password is None:
-            raise click.BadParameter(
+            raise BadParameterException(
                 'Password is required when passing username.')
         return username, password
     elif password:
-        raise click.BadParameter(
+        raise BadParameterException(
             'Username is required when passing password.')
     return target_apikey, ' '
 
