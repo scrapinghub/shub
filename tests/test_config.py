@@ -686,12 +686,12 @@ class ShubConfigTest(unittest.TestCase):
         self.conf.apikeys['default'] = 123
         self.assertEqual(
             self.conf.get_target_conf('shproj').apikey.__repr__(),
-            "1XX"
+            "123"
         )
         self.conf.apikeys['default'] = "apikey_string"
         self.assertEqual(
             self.conf.get_target_conf('shproj').apikey.__repr__(),
-            "apiXXXXXXXXXX"
+            "apikeyXXXXXXX"
         )
 
     @mock.patch('shub.config.pwd_version', return_value='ver_AUTO')

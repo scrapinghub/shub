@@ -17,7 +17,7 @@ from shub.utils import (closest_file, get_scrapycfg_targets, get_sources,
                         pwd_hg_version, pwd_git_version, pwd_version,
                         update_yaml_dict)
 
-
+APIKEY_SHOW_N_CHARS = 6
 SH_IMAGES_REGISTRY = 'images.scrapinghub.com'
 SH_IMAGES_REPOSITORY = SH_IMAGES_REGISTRY + '/project/{project}'
 GLOBAL_SCRAPINGHUB_YML_PATH = os.path.expanduser(
@@ -376,30 +376,29 @@ _Target = namedtuple('Target', ['project_id', 'endpoint', 'apikey', 'stack',
                                 'eggs'])
 
 
-class Apikey(str):
+class APIkey(str):
 
     def __new__(cls, *args, **kwargs):
-        cls._inst = super(Apikey, cls).__new__(cls, *args, **kwargs)
+        cls._inst = super(APIkey, cls).__new__(cls, *args, **kwargs)
         return cls._inst
 
-    def __init__(self, apikey=None):
-        self.apikey = apikey
+    def __init__(self, value=None):
+        self.apikey = value
 
     def __repr__(self):
-        if self.apikey:
-            N = len(self.apikey)
-            k = N // 5 + 1
-            return str(''.join([self.apikey[:k], 'X' * (N - k)]))
+        if not self.apikey:
+            return ''
+        visible_chars = APIKEY_SHOW_N_CHARS
+        return (self.apikey[:visible_chars] +
+                'X' * max(len(self.apikey) - visible_chars, 0))
 
 
 class Target(_Target):
 
-    def __new__(cls, *args, **kwargs):
-        _kwargs = dict(kwargs)
-        _kwargs['apikey'] = Apikey(kwargs.get('apikey', ''))
-        cls._inst = super(Target, cls).__new__(cls, *args, **_kwargs)
+    def __new__(cls, project_id, endpoint, apikey, *args, **kwargs):
+        cls._inst = super(Target, cls).__new__(cls, project_id, endpoint,
+                                               APIkey(apikey), *args, **kwargs)
         return cls._inst
-
 
 MIGRATION_BANNER = """
 -------------------------------------------------------------------------------
