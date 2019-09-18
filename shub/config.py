@@ -400,6 +400,7 @@ class Target(_Target):
                                                APIkey(apikey), *args, **kwargs)
         return cls._inst
 
+
 MIGRATION_BANNER = """
 -------------------------------------------------------------------------------
 Welcome to shub version 2!
