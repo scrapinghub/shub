@@ -383,14 +383,14 @@ class APIkey(str):
         return cls._inst
 
     def __init__(self, value=None):
-        self.apikey = value
+        self.value = value
 
     def __repr__(self):
-        if not self.apikey:
+        if not self.value:
             return ''
         visible_chars = APIKEY_SHOW_N_CHARS
-        return (self.apikey[:visible_chars] +
-                'X' * max(len(self.apikey) - visible_chars, 0))
+        return (self.value[:visible_chars] +
+                'X' * max(len(self.value) - visible_chars, 0))
 
 
 class Target(_Target):
