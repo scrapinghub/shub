@@ -17,7 +17,7 @@ from shub.utils import (closest_file, get_scrapycfg_targets, get_sources,
                         pwd_hg_version, pwd_git_version, pwd_version,
                         update_yaml_dict)
 
-
+APIKEY_SHOW_N_CHARS = 6
 SH_IMAGES_REGISTRY = 'images.scrapinghub.com'
 SH_IMAGES_REPOSITORY = SH_IMAGES_REGISTRY + '/project/{project}'
 GLOBAL_SCRAPINGHUB_YML_PATH = os.path.expanduser(
@@ -341,7 +341,8 @@ class ShubConfig(object):
         return self.get_target_conf(target, auth_required=False).endpoint
 
     def get_apikey(self, target, required=True):
-        return self.get_target_conf(target, auth_required=required).apikey
+        apikey = self.get_target_conf(target, auth_required=required).apikey
+        return getattr(apikey, 'value', apikey)
 
     def get_image(self, target):
         """Return image for a given target."""
@@ -370,9 +371,34 @@ class ShubConfig(object):
         return image
 
 
-Target = namedtuple('Target', ['project_id', 'endpoint', 'apikey', 'stack',
-                               'image', 'requirements_file', 'version',
-                               'eggs'])
+_Target = namedtuple('Target', ['project_id', 'endpoint', 'apikey', 'stack',
+                                'image', 'requirements_file', 'version',
+                                'eggs'])
+
+
+class APIkey(str):
+
+    def __new__(cls, *args, **kwargs):
+        cls._inst = super(APIkey, cls).__new__(cls, *args, **kwargs)
+        return cls._inst
+
+    def __init__(self, value=None):
+        self.value = value
+
+    def __repr__(self):
+        if not self.value:
+            return ''
+        visible_chars = APIKEY_SHOW_N_CHARS
+        return (self.value[:visible_chars] +
+                'X' * max(len(self.value) - visible_chars, 0))
+
+
+class Target(_Target):
+
+    def __new__(cls, project_id, endpoint, apikey, *args, **kwargs):
+        cls._inst = super(Target, cls).__new__(cls, project_id, endpoint,
+                                               APIkey(apikey), *args, **kwargs)
+        return cls._inst
 
 
 MIGRATION_BANNER = """
