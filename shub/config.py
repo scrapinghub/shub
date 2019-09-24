@@ -342,7 +342,7 @@ class ShubConfig(object):
 
     def get_apikey(self, target, required=True):
         apikey = self.get_target_conf(target, auth_required=required).apikey
-        return getattr(apikey, 'apikey', apikey)
+        return getattr(apikey, 'value', apikey)
 
     def get_image(self, target):
         """Return image for a given target."""
