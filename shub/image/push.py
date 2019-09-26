@@ -22,6 +22,8 @@ By default, the tool tries to call the registry in insecure manner,
 otherwise you have to enter your credentials (at least username/password).
 """
 
+LOGIN_ERROR_MSG = 'Please authorize with docker login'
+
 
 @click.command(help=HELP, short_help=SHORT_HELP)
 @click.argument("target", required=False, default="default")
@@ -39,12 +41,16 @@ otherwise you have to enter your credentials (at least username/password).
 @click.option("--apikey", help="SH apikey to use built-in registry")
 @click.option("--insecure", is_flag=True, help="use insecure registry")
 @click.option("-S", "--skip-tests", help="skip testing image", is_flag=True)
+@click.option("-R", "--reauth", is_flag=True,
+              help="re-authenticate to registry")
 def cli(target, debug, verbose, version, username, password, email, apikey,
-        insecure, skip_tests):
-    push_cmd(target, version, username, password, email, apikey, insecure, skip_tests)
+        insecure, skip_tests, reauth):
+    push_cmd(target, version, username, password, email, apikey, insecure,
+             skip_tests, reauth)
 
 
-def push_cmd(target, version, username, password, email, apikey, insecure, skip_tests):
+def push_cmd(target, version, username, password, email, apikey, insecure,
+             skip_tests, reauth):
     # Test the image content after building it
     if not skip_tests:
         test_cmd(target, version)
@@ -57,7 +63,8 @@ def push_cmd(target, version, username, password, email, apikey, insecure, skip_
         apikey=apikey, target_apikey=config.get_apikey(target))
 
     if username:
-        _execute_push_login(client, image, username, password, email)
+        _execute_push_login(
+            client, image, username, password, email, reauth)
     image_name = utils.format_image_name(image, version)
     click.echo("Pushing {} to the registry.".format(image_name))
     events = client.push(image_name, stream=True, decode=True,
@@ -71,11 +78,11 @@ def push_cmd(target, version, username, password, email, apikey, insecure, skip_
     click.echo("The image {} pushed successfully.".format(image_name))
 
 
-def _execute_push_login(client, image, username, password, email):
+def _execute_push_login(client, image, username, password, email, reauth):
     """Login if there're provided credentials for the registry"""
     registry = get_image_registry(image)
     resp = client.login(username=username, password=password,
-                        email=email, registry=registry, reauth=False)
+                        email=email, registry=registry, reauth=reauth)
     if not (isinstance(resp, dict) and 'username' in resp or
             ('Status' in resp and resp['Status'] == 'Login Succeeded')):
         raise shub_exceptions.RemoteErrorException(
@@ -89,6 +96,13 @@ class _LoggedPushProgress(utils.BaseProgress):
     Output all the events received from the docker daemon.
     """
     def handle_event(self, event):
+        if 'error' in event and LOGIN_ERROR_MSG in event['error']:
+            click.echo(
+               "Something went wrong when trying to authenticate to Docker "
+               "registry when pushing the image. Please ensure your "
+               "credentials are correct and try again with --reauth flag.")
+            raise shub_exceptions.RemoteErrorException(
+                "Docker registry authentication error")
         super(_LoggedPushProgress, self).handle_event(event)
         if 'status' in event:
             self.handle_status_event(event)

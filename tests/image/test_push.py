@@ -192,6 +192,19 @@ def test_cli_login_fail(docker_client_mock, test_mock):
 
 
 @pytest.mark.usefixtures('project_dir')
+def test_cli_login_fail_auth(docker_client_mock, test_mock):
+    docker_client_mock.login.return_value = {
+        'error': 'unsupported: Please authorize with docker login.'}
+    runner = CliRunner()
+    result = runner.invoke(
+        cli, ["dev", "--version", "test", "--username", "user",
+              "--password", "pass", "--email", "mail"])
+    assert result.exit_code == shub_exceptions.RemoteErrorException.exit_code
+    assert 'Docker registry login error' in result.output
+    test_mock.assert_called_with("dev", "test")
+
+
+@pytest.mark.usefixtures('project_dir')
 def test_cli_push_fail(docker_client_mock, test_mock):
     docker_client_mock.login.return_value = {"Status": "Login Succeeded"}
     docker_client_mock.push.return_value = [{"error": "Failed:(", "errorDetail": ""}]
