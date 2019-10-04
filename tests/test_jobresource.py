@@ -35,13 +35,24 @@ class JobResourceTest(unittest.TestCase):
             self.runner.invoke(cmd_mod.cli, ('1/2/3', '-f'))
             self.assertTrue(mock_jri.call_args[1]['follow'])
 
+    def _test_resource_filter(self, cmd_mod):
+        with mock.patch.object(cmd_mod, 'get_job'), \
+             mock.patch.object(cmd_mod, 'job_resource_iter', autospec=True) \
+             as mock_jri:
+            self.runner.invoke(cmd_mod.cli, ('1/2/3',))
+            self.assertFalse(mock_jri.call_args[1]['filter_'])
+            self.runner.invoke(cmd_mod.cli, ('1/2/3', '--filter', '["foo"]'))
+            self.assertEqual(mock_jri.call_args[1]['filter_'], '["foo"]')
+
     def test_items(self):
         self._test_prints_objects(items, 'items')
         self._test_forwards_follow(items)
+        self._test_resource_filter(items)
 
     def test_requests(self):
         self._test_prints_objects(requests, 'requests')
         self._test_forwards_follow(requests)
+        self._test_resource_filter(requests)
 
     def test_log(self):
         objects = [
@@ -57,6 +68,7 @@ class JobResourceTest(unittest.TestCase):
             self.assertIn('1970-01-01 00:00:00 INFO message 1', result.output)
             self.assertIn('2015-12-23 12:41:11 CRITICAL message 2', result.output)
         self._test_forwards_follow(log)
+        self._test_resource_filter(log)
 
     def test_log_unicode(self):
         objects = [
