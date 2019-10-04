@@ -45,8 +45,12 @@ SHORT_HELP = "Fetch items from Scrapy Cloud"
               is_flag=True)
 @click.option('-n', '--tail', help='output last N items only', type=int)
 @click.option('--filter', 'filter_', help='filter to be applied to the query')
-def cli(job_id, follow, tail, filter_):
+@click.option('--filter_type', default='filter',
+              type=click.Choice(['filter', 'filterall', 'filterany']),
+              help='type of filter to be applied')
+def cli(job_id, follow, tail, filter_, filter_type):
     job = get_job(job_id)
     for item in job_resource_iter(job, job.items, output_json=True,
-                                  follow=follow, tail=tail, filter_=filter_):
+                                  follow=follow, tail=tail, filter_=filter_,
+                                  filter_type=filter_type):
         click.echo(item)

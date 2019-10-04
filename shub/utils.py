@@ -531,7 +531,7 @@ def job_live(job, refresh_meta_after=60):
 
 
 def job_resource_iter(job, resource, output_json=False, follow=True,
-                      tail=None, filter_=None):
+                      tail=None, filter_=None, filter_type=None):
     """
     Given a python-hubstorage job and resource (e.g. job.items), return a
     generator that periodically checks the job resource and yields its items.
@@ -554,7 +554,7 @@ def job_resource_iter(job, resource, output_json=False, follow=True,
         # It's okay to have null-values included here since the underlying
         # package would have it removed
         'startafter': last_item_key,
-        'filter': filter_,
+        filter_type or 'filter': filter_,
     }
     resource_iter = resource.iter_json if output_json else resource.iter_values
     if not follow:
