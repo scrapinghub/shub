@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import mock
 import unittest
 import time
+import json
 
 from click.testing import CliRunner
 
@@ -70,6 +71,13 @@ class JobResourceTest(unittest.TestCase):
             mock_gj.assert_called_once_with(jobid)
             self.assertIn('1970-01-01 00:00:00 INFO message 1', result.output)
             self.assertIn('2015-12-23 12:41:11 CRITICAL message 2', result.output)
+        with mock.patch.object(log, 'get_job', autospec=True) as mock_gj:
+            with mock.patch.object(log, 'job_resource_iter', autospec=True) as mock_res_iter:
+                mock_res_iter.return_value = [json.dumps(x) for x in objects]
+                result = self.runner.invoke(log.cli, (jobid, '--json'))
+                self.assertTrue(mock_res_iter.call_args[1].get('output_json'))
+                for idx, line in enumerate(result.output.splitlines()):
+                    self.assertEqual(json.loads(line), objects[idx])
         self._test_forwards_follow(log)
         self._test_resource_filter(log)
 
