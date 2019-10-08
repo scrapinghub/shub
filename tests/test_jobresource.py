@@ -60,7 +60,7 @@ class JobResourceTest(unittest.TestCase):
         with mock.patch.object(log, 'get_job', autospec=True) as mock_gj:
             with mock.patch.object(log, 'job_resource_iter', autospec=True) as mock_res_iter:
                 mock_res_iter.return_value = [json.dumps(x) for x in objects]
-                result = self.runner.invoke(log.cli, (jobid, '--output_json'))
+                result = self.runner.invoke(log.cli, (jobid, '--json'))
                 self.assertTrue(mock_res_iter.call_args[1].get('output_json'))
                 for idx, line in enumerate(result.output.splitlines()):
                     self.assertEqual(json.loads(line), objects[idx])

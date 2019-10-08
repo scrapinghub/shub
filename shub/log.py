@@ -42,11 +42,11 @@ SHORT_HELP = "Fetch log from Scrapy Cloud"
 @click.option('-f', '--follow', help='output new log entries as they are '
               'produced', is_flag=True)
 @click.option('-n', '--tail', help='output last N log entries only', type=int)
-@click.option('--output_json', help='output the results in JSON', is_flag=True, default=False)
-def cli(job_id, follow, tail, output_json):
+@click.option('--json', 'json_', help='output the results in JSON', is_flag=True, default=False)
+def cli(job_id, follow, tail, json_):
     job = get_job(job_id)
-    for item in job_resource_iter(job, job.logs, follow=follow, tail=tail, output_json=output_json):
-        if output_json:
+    for item in job_resource_iter(job, job.logs, follow=follow, tail=tail, output_json=json_):
+        if json_:
             click.echo(item)
         else:
             click.echo(
