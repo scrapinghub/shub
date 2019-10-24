@@ -40,7 +40,8 @@ branches:
 before_install: |
     if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
       # From https://pythonhosted.org/CodeChat/.travis.yml.html
-      brew install pyenv-virtualenv
+      # Homebrew currently fails after updating. See also: https://discuss.circleci.com/t/brew-install-fails-while-updating/32992/4
+      HOMEBREW_NO_AUTO_UPDATE=1 brew install pyenv-virtualenv
       eval "$(pyenv init -)"
       eval "$(pyenv virtualenv-init -)"
       # See https://github.com/travis-ci/travis-ci/issues/4834, but
