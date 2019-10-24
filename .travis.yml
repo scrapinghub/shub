@@ -15,7 +15,7 @@ matrix:
       language: generic
       env:
         - TOX_ENV=py27
-        - PYTHON_VERSION='2.7'
+        - PYTHON_VERSION='2.7.9'
     - os: osx
       language: generic
       env:
