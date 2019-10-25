@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-from datetime import datetime
 import os.path
 import tempfile
 
@@ -11,10 +10,9 @@ except ImportError:
 import mock
 import pytest
 from click.testing import CliRunner
-from dateutil import tz
 
 from shub.image.run import cli, _json_dumps, WRAPPER_IMAGE_PATH
-from shub.image.run.wrapper import _consume_from_fifo
+from shub.image.run.wrapper import _consume_from_fifo, _millis_to_str
 from shub.image.utils import make_temp_directory
 
 
@@ -113,11 +111,12 @@ def test_cli_with_script(docker_client_mock):
 
 # Separate section for wrapper tests.
 
+FIFO_TEST_TS = 1485269941065
 FIFO_TEST_DATA = """\
-LOG {"time": 1485269941065, "level": 20, "message": "Some message"}
+LOG {"time": %(ts)d, "level": 20, "message": "Some message"}
 ITM {"key": "value", "should-be": "ignored"}
-LOG {"time": 1485269941065, "level": 30, "message": "Other message"}\
-"""
+LOG {"time": %(ts)d, "level": 30, "message": "Other message"}\
+""" % {'ts': FIFO_TEST_TS}
 
 
 @mock.patch('sys.stdout', new_callable=StringIO)
@@ -132,11 +131,7 @@ def test_consume_from_fifo(mock_stdout):
             _consume_from_fifo(filename)
     finally:
         os.remove(filename)
-    from_zone, to_zone = tz.tzutc(), tz.tzlocal()
-    date_format = '%Y-%m-%d %H:%M:%S'
-    utc = datetime.strptime('2017-01-24 14:59:01', date_format)
-    utc = utc.replace(tzinfo=from_zone)
-    local_datetime_string = utc.astimezone(to_zone).strftime(date_format)
+    local_datetime_string = _millis_to_str(FIFO_TEST_TS)
     assert mock_stdout.getvalue() == (
         '{date} INFO Some message\n'
         '{date} WARNING Other message\n'.format(date=local_datetime_string)

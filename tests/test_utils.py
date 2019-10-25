@@ -375,6 +375,10 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
         pipargs = _call('tmpdir', reqfile='req.txt')
         self.assertEqual(pipargs.index('-r') + 1, pipargs.index('req.txt'))
 
+        # pip>=19.3 shall be unsupported for now
+        mock_pip.__version__ = '19.3'
+        self.assertRaises(NotImplementedError, _call, ['tmpdir'], {'pkg': 'shub'})
+
         # Replace deprecated commands in newer versions
         mock_pip.__version__ = '7.1.2.dev0'
         pipargs = _call('tmpdir', pkg='shub')
