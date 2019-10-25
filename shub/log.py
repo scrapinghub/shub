@@ -32,6 +32,10 @@ If the job is still running, you can watch the log as it is being written by
 providing the -f flag:
 
     shub log -f 2/15
+
+Additional filters may be applied to the query:
+
+    shub log 12345/2/15 --filter '["level",">=",["20"]]'  # loglevel>=INFO
 """
 
 SHORT_HELP = "Fetch log from Scrapy Cloud"
@@ -43,9 +47,11 @@ SHORT_HELP = "Fetch log from Scrapy Cloud"
               'produced', is_flag=True)
 @click.option('-n', '--tail', help='output last N log entries only', type=int)
 @click.option('--json', 'json_', help='output log entries in JSON', is_flag=True, default=False)
-def cli(job_id, follow, tail, json_):
+@click.option('--filter', 'filter_', help='filter to be applied to the query')
+def cli(job_id, follow, tail, json_, filter_):
     job = get_job(job_id)
-    for item in job_resource_iter(job, job.logs, follow=follow, tail=tail, output_json=json_):
+    for item in job_resource_iter(job, job.logs, follow=follow, tail=tail, output_json=json_,
+                                  filter_=filter_):
         if json_:
             click.echo(item)
         else:

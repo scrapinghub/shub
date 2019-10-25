@@ -36,13 +36,27 @@ class JobResourceTest(unittest.TestCase):
             self.runner.invoke(cmd_mod.cli, ('1/2/3', '-f'))
             self.assertTrue(mock_jri.call_args[1]['follow'])
 
+    def _test_resource_filter(self, cmd_mod, test_filter_type=False):
+        with mock.patch.object(cmd_mod, 'get_job'), \
+             mock.patch.object(cmd_mod, 'job_resource_iter', autospec=True) \
+             as mock_jri:
+            self.runner.invoke(cmd_mod.cli, ('1/2/3',))
+            self.assertFalse(mock_jri.call_args[1]['filter_'])
+            self.runner.invoke(cmd_mod.cli, ('1/2/3', '--filter', '["foo"]'))
+            self.assertEqual(mock_jri.call_args[1]['filter_'], '["foo"]')
+            if test_filter_type:
+                self.runner.invoke(cmd_mod.cli, ('1/2/3', '--filter', '["foo"]', '--filter_type', 'filterall'))
+                self.assertEqual(mock_jri.call_args[1]['filter_type'], 'filterall')
+
     def test_items(self):
         self._test_prints_objects(items, 'items')
         self._test_forwards_follow(items)
+        self._test_resource_filter(items, test_filter_type=True)
 
     def test_requests(self):
         self._test_prints_objects(requests, 'requests')
         self._test_forwards_follow(requests)
+        self._test_resource_filter(requests)
 
     def test_log(self):
         objects = [
@@ -65,6 +79,7 @@ class JobResourceTest(unittest.TestCase):
                 for idx, line in enumerate(result.output.splitlines()):
                     self.assertEqual(json.loads(line), objects[idx])
         self._test_forwards_follow(log)
+        self._test_resource_filter(log)
 
     def test_log_unicode(self):
         objects = [

@@ -531,7 +531,7 @@ def job_live(job, refresh_meta_after=60):
 
 
 def job_resource_iter(job, resource, output_json=False, follow=True,
-                      tail=None):
+                      tail=None, filter_=None, filter_type=None):
     """
     Given a python-hubstorage job and resource (e.g. job.items), return a
     generator that periodically checks the job resource and yields its items.
@@ -549,17 +549,24 @@ def job_resource_iter(job, resource, output_json=False, follow=True,
             last_item_key = '{}/{}'.format(job.key, last_item)
     if not job_live(job):
         follow = False
+    # XXX: Some simple validations for the filter value?
+    api_params = {
+        # It's okay to have null-values included here since the underlying
+        # package would have it removed
+        'startafter': last_item_key,
+        filter_type or 'filter': filter_,
+    }
     resource_iter = resource.iter_json if output_json else resource.iter_values
     if not follow:
-        for item in resource_iter(startafter=last_item_key):
+        for item in resource_iter(**api_params):
             yield item
         return
     while True:
         # XXX: Always use iter_json until Kumo team fixes iter_values to also
         # return '_key'
-        for json_line in resource.iter_json(startafter=last_item_key):
+        for json_line in resource.iter_json(**api_params):
             item = json.loads(json_line)
-            last_item_key = item['_key']
+            api_params['startafter'] = item['_key']
             yield json_line if output_json else item
         if not job_live(job):
             break
@@ -637,6 +644,8 @@ def download_from_pypi(dest, pkg=None, reqfile=None, extra_args=None):
         no_wheel = ['--no-binary=:all:']
     if pip_version >= LooseVersion('8'):
         cmd = 'download'
+    if pip_version >= LooseVersion('19.3'):
+        raise NotImplementedError('Expecting pip<19.3')
     with patch_sys_executable():
         pip_main([cmd, '-d', dest, '--no-deps'] + no_wheel + extra_args +
                  target)

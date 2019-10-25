@@ -243,23 +243,26 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
                 self.assertEqual(kwargs['startafter'], 'jobkey/996')
                 return iter([])
 
-        def jri_result(follow, tail=None):
+        def jri_result(follow, tail=None, filter_=None, filter_type=None):
             return list(utils.job_resource_iter(
                 job,
                 job.resource,
                 follow=follow,
                 tail=tail,
+                filter_=filter_,
+                filter_type=filter_type,
                 output_json=True,
             ))
 
-        job.resource.iter_json = magic_iter
+        job.resource.iter_json = Mock(wraps=magic_iter)
 
         magic_iter.stage = 0
         self.assertEqual(jri_result(False), make_items([1, 2, 3]))
         self.assertFalse(mock_sleep.called)
 
         magic_iter.stage = 0
-        self.assertEqual(jri_result(True), make_items([1, 2, 3, 4, 5, 6]))
+        self.assertEqual(jri_result(True, filter_='["foo"]'), make_items([1, 2, 3, 4, 5, 6]))
+        self.assertEqual(job.resource.iter_json.call_args[1]['filter'], '["foo"]')
         self.assertTrue(mock_sleep.called)
 
         magic_iter.stage = 0
@@ -268,7 +271,8 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
 
         magic_iter.stage = 2
         job.resource.stats.return_value = {'totals': {'input_values': 1000}}
-        self.assertEqual(jri_result(True, tail=3), [])
+        self.assertEqual(jri_result(True, tail=3, filter_='["foo"]', filter_type='filterall'), [])
+        self.assertEqual(job.resource.iter_json.call_args[1]['filterall'], '["foo"]')
 
     @patch('shub.utils.requests.get', autospec=True)
     def test_latest_github_release(self, mock_get):
@@ -370,6 +374,10 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
         self.assertEqual(pipargs.index('-d') + 1, pipargs.index('tmpdir'))
         pipargs = _call('tmpdir', reqfile='req.txt')
         self.assertEqual(pipargs.index('-r') + 1, pipargs.index('req.txt'))
+
+        # pip>=19.3 shall be unsupported for now
+        mock_pip.__version__ = '19.3'
+        self.assertRaises(NotImplementedError, _call, ['tmpdir'], {'pkg': 'shub'})
 
         # Replace deprecated commands in newer versions
         mock_pip.__version__ = '7.1.2.dev0'

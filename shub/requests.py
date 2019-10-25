@@ -30,6 +30,10 @@ If the job is still running, you can watch the requests as they are being made
 by providing the -f flag:
 
     shub requests -f 2/15
+
+Additional filters may be applied to the query:
+
+    shub requests 12345/2/15 --filter '["url","icontains",["foo"]]'
 """
 
 SHORT_HELP = "Fetch requests from Scrapy Cloud"
@@ -40,8 +44,9 @@ SHORT_HELP = "Fetch requests from Scrapy Cloud"
 @click.option('-f', '--follow', help='output new requests as they are made',
               is_flag=True)
 @click.option('-n', '--tail', help='output last N requests only', type=int)
-def cli(job_id, follow, tail):
+@click.option('--filter', 'filter_', help='filter to be applied to the query')
+def cli(job_id, follow, tail, filter_):
     job = get_job(job_id)
     for item in job_resource_iter(job, job.requests, output_json=True,
-                                  follow=follow, tail=tail):
+                                  follow=follow, tail=tail, filter_=filter_):
         click.echo(item)
