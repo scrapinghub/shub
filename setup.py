@@ -31,7 +31,7 @@ setup(
     install_requires=[
         'click',
         'docker-py',
-        'pip<19.3',
+        'pip',
         'PyYAML',
         'retrying',
         'requests',

@@ -20,6 +20,3 @@ six==1.10.0
 tqdm==4.11.2
 urllib3==1.25.3           # via requests
 websocket-client==0.37.0  # via docker-py
-
-# The following packages are considered to be unsafe in a requirements file:
-# pip==19.2.3
