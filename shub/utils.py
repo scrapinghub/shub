@@ -28,7 +28,11 @@ import yaml
 try:
     from pip import main as pip_main
 except:
-    from pip._internal import main as pip_main
+    try:
+        # pip>=19.3
+        from pip._internal.main import main as pip_main
+    except ImportError:
+        from pip._internal import main as pip_main
 
 from scrapinghub import ScrapinghubClient, ScrapinghubAPIError, HubstorageClient
 
@@ -637,8 +641,6 @@ def download_from_pypi(dest, pkg=None, reqfile=None, extra_args=None):
         no_wheel = ['--no-binary=:all:']
     if pip_version >= LooseVersion('8'):
         cmd = 'download'
-    if pip_version >= LooseVersion('19.3'):
-        raise NotImplementedError('Expecting pip<19.3')
     with patch_sys_executable():
         pip_main([cmd, '-d', dest, '--no-deps'] + no_wheel + extra_args +
                  target)
