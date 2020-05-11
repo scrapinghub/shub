@@ -196,7 +196,7 @@ def _get_pipfile_requirements():
 
 def _add_sources(_reqs_file, _sources):
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix="-requirements.txt")
-    tmp.write(_sources)
+    tmp.write(_sources + b'\n')
     with open(_reqs_file, 'rb') as f:
         tmp.write(f.read())
     tmp.flush()
