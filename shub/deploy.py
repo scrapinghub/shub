@@ -171,12 +171,15 @@ def _is_pipfile(name):
 
 def _get_pipfile_requirements():
     try:
-        from pipenv.utils import convert_deps_to_pip
+        from pipenv.utils import convert_deps_to_pip, prepare_pip_source_args
     except ImportError:
         raise ImportError('You need pipenv installed to deploy with Pipfile')
     try:
         with open('Pipfile.lock') as f:
-            deps = json.load(f)['default']
+            pipefile = json.load(f)
+            deps = pipefile['default']
+            sources_list = prepare_pip_source_args(pipefile['_meta']['sources'])
+            sources = ' '.join(sources_list)
     except IOError:
         raise ShubException('Please lock your Pipfile before deploying')
     # We must remove any hash from the pipfile before converting to play nice
@@ -189,8 +192,16 @@ def _get_pipfile_requirements():
         # Scrapy Cloud also doesn't support editable packages
         if 'editable' in v:
             del v['editable']
-    return open(convert_deps_to_pip(deps), 'rb')
+    return open(_add_sources(convert_deps_to_pip(deps), _sources=sources.encode()), 'rb')
 
+def _add_sources(_reqs_file, _sources):
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix="-requirements.txt")
+    tmp.write(_sources)
+    with open(_reqs_file, 'rb') as f:
+        tmp.write(f.read())
+    tmp.flush()
+    tmp.close()
+    return tmp.name
 
 def _is_poetry(name):
     if name != 'pyproject.toml':
