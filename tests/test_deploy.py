@@ -263,6 +263,20 @@ class DeployFilesTest(unittest.TestCase):
             with open('./Pipfile.lock', 'w') as f:
                 f.write("""
                 {
+                    "_meta": {
+                        "sources": [
+                            {
+                                "name": "pypi",
+                                "url": "https://pypi.python.org/simple",
+                                "verify_ssl": true
+                            },
+                            {
+                                "name": "external-index",
+                                "url": "https://example.external-index.org/simple",
+                                "verify_ssl": true
+                            }
+                        ]
+                    },
                     "default": {
                         "package": {
                             "version": "==0.0.0"
@@ -291,6 +305,7 @@ class DeployFilesTest(unittest.TestCase):
 
         reqs = set(files['requirements'][0].split('\n'))
         self.assertEqual(reqs, {
+            '-i https://pypi.python.org/simple --extra-index-url https://example.external-index.org/simple',
             'package==0.0.0',
             'hash-package==0.0.1',
             'hash-package2==0.0.1',
