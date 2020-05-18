@@ -112,7 +112,7 @@ def deploy_cmd(target, version, debug, egg, build_egg, verbose, keep_log,
 
             _upload_egg(targetconf.endpoint, egg, targetconf.project_id,
                         version, auth, verbose, keep_log, targetconf.stack,
-                        targetconf.requirements_file, targetconf.eggs)
+                        targetconf.requirements_file, targetconf.eggs, tmpdir)
             click.echo("Run your spiders at: "
                        "https://app.scrapinghub.com/p/%s/"
                        "" % targetconf.project_id)
@@ -129,7 +129,7 @@ def _url(endpoint, action):
 
 
 def _upload_egg(endpoint, eggpath, project, version, auth, verbose, keep_log,
-                stack=None, requirements_file=None, eggs=None):
+                stack=None, requirements_file=None, eggs=None, tmpdir=None):
     expanded_eggs = []
     for e in (eggs or []):
         # Expand glob patterns, but make sure we don't swallow non-existing
@@ -150,7 +150,7 @@ def _upload_egg(endpoint, eggpath, project, version, auth, verbose, keep_log,
     try:
         files = [('eggs', open(path, 'rb')) for path in expanded_eggs]
         if _is_pipfile(requirements_file):
-            requirements_file = _get_pipfile_requirements()
+            requirements_file = _get_pipfile_requirements(tmpdir)
         elif _is_poetry(requirements_file):
             requirements_file = _get_poetry_requirements()
         elif requirements_file:
@@ -169,7 +169,7 @@ def _is_pipfile(name):
     return name in ['Pipfile', 'Pipfile.lock']
 
 
-def _get_pipfile_requirements():
+def _get_pipfile_requirements(tmpdir=None):
     try:
         from pipenv.utils import convert_deps_to_pip, prepare_pip_source_args
     except ImportError:
@@ -192,10 +192,10 @@ def _get_pipfile_requirements():
         # Scrapy Cloud also doesn't support editable packages
         if 'editable' in v:
             del v['editable']
-    return open(_add_sources(convert_deps_to_pip(deps), _sources=sources.encode()), 'rb')
+    return open(_add_sources(convert_deps_to_pip(deps), _sources=sources.encode(), tmpdir=tmpdir), 'rb')
 
-def _add_sources(_reqs_file, _sources):
-    tmp = tempfile.NamedTemporaryFile(delete=False, suffix="-requirements.txt")
+def _add_sources(_reqs_file, _sources, tmpdir=None):
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix="-requirements.txt", dir=tmpdir)
     tmp.write(_sources + b'\n')
     with open(_reqs_file, 'rb') as f:
         tmp.write(f.read())
