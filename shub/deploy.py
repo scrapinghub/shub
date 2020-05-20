@@ -194,6 +194,7 @@ def _get_pipfile_requirements(tmpdir=None):
             del v['editable']
     return open(_add_sources(convert_deps_to_pip(deps), _sources=sources.encode(), tmpdir=tmpdir), 'rb')
 
+
 def _add_sources(_reqs_file, _sources, tmpdir=None):
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix="-requirements.txt", dir=tmpdir)
     tmp.write(_sources + b'\n')
@@ -202,6 +203,7 @@ def _add_sources(_reqs_file, _sources, tmpdir=None):
     tmp.flush()
     tmp.close()
     return tmp.name
+
 
 def _is_poetry(name):
     if name != 'pyproject.toml':
