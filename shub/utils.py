@@ -551,7 +551,7 @@ def job_resource_iter(job, resource, output_json=False, follow=True,
         follow = False
     resource_iter = resource.iter_json if output_json else resource.iter_values
     if not follow:
-        for item in resource_iter(startafter=last_item_key):
+        for item in resource_iter(startafter=last_item_key, count=tail):
             yield item
         return
     while True:
@@ -637,6 +637,8 @@ def download_from_pypi(dest, pkg=None, reqfile=None, extra_args=None):
         no_wheel = ['--no-binary=:all:']
     if pip_version >= LooseVersion('8'):
         cmd = 'download'
+    if pip_version >= LooseVersion('19.3'):
+        raise NotImplementedError('Expecting pip<19.3')
     with patch_sys_executable():
         pip_main([cmd, '-d', dest, '--no-deps'] + no_wheel + extra_args +
                  target)

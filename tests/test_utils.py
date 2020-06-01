@@ -220,6 +220,7 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
         job = MagicMock(spec=['key', 'metadata', 'resource'])
         job.key = 'jobkey'
         job.metadata = {'state': 'running'}
+        job.resource.stats.return_value = {'totals': {'input_values': 0}}
 
         def make_items(iterable):
             return [json.dumps({'_key': x}) for x in iterable]
@@ -252,14 +253,16 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
                 output_json=True,
             ))
 
-        job.resource.iter_json = magic_iter
+        job.resource.iter_json = Mock(wraps=magic_iter)
 
         magic_iter.stage = 0
         self.assertEqual(jri_result(False), make_items([1, 2, 3]))
+        self.assertIsNone(job.resource.iter_json.call_args[1].get('count'))
         self.assertFalse(mock_sleep.called)
 
         magic_iter.stage = 0
-        self.assertEqual(jri_result(True), make_items([1, 2, 3, 4, 5, 6]))
+        self.assertEqual(jri_result(True, tail=6), make_items([1, 2, 3, 4, 5, 6]))
+        self.assertIsNone(job.resource.iter_json.call_args[1].get('count'))
         self.assertTrue(mock_sleep.called)
 
         magic_iter.stage = 0
@@ -269,6 +272,7 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
         magic_iter.stage = 2
         job.resource.stats.return_value = {'totals': {'input_values': 1000}}
         self.assertEqual(jri_result(True, tail=3), [])
+        self.assertEqual(job.resource.iter_json.call_args[1].get('count'), 3)
 
     @patch('shub.utils.requests.get', autospec=True)
     def test_latest_github_release(self, mock_get):
@@ -370,6 +374,10 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
         self.assertEqual(pipargs.index('-d') + 1, pipargs.index('tmpdir'))
         pipargs = _call('tmpdir', reqfile='req.txt')
         self.assertEqual(pipargs.index('-r') + 1, pipargs.index('req.txt'))
+
+        # pip>=19.3 shall be unsupported for now
+        mock_pip.__version__ = '19.3'
+        self.assertRaises(NotImplementedError, _call, ['tmpdir'], {'pkg': 'shub'})
 
         # Replace deprecated commands in newer versions
         mock_pip.__version__ = '7.1.2.dev0'
