@@ -28,7 +28,11 @@ import yaml
 try:
     from pip import main as pip_main
 except:
-    from pip._internal import main as pip_main
+    try:
+        # pip>=19.3
+        from pip._internal.main import main as pip_main
+    except ImportError:
+        from pip._internal import main as pip_main
 
 from scrapinghub import ScrapinghubClient, ScrapinghubAPIError, HubstorageClient
 
