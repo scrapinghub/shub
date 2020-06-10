@@ -67,8 +67,7 @@ def push_cmd(target, version, username, password, email, apikey, insecure,
             client, image, username, password, email, reauth)
     image_name = utils.format_image_name(image, version)
     click.echo("Pushing {} to the registry.".format(image_name))
-    events = client.push(image_name, stream=True, decode=True,
-                         insecure_registry=not bool(username))
+    events = client.push(image_name, stream=True, decode=True)
     if utils.is_verbose():
         push_progress_cls = _LoggedPushProgress
     else:

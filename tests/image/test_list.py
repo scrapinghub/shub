@@ -15,7 +15,7 @@ from shub.image.list import _extract_metadata_from_image_info_output
 def _mock_docker_client(wait_code=0, logs=None):
     client_mock = mock.Mock()
     client_mock.create_container.return_value = {'Id': '1234'}
-    client_mock.wait.return_value = wait_code
+    client_mock.wait.return_value = {'Error': None, 'StatusCode': wait_code}
     client_mock.logs.return_value = logs or ''
     return client_mock
 
@@ -87,7 +87,10 @@ def test_cli_image_info_not_found(requests_get_mock, get_docker_client_mock):
     """Case when shub-image-info cmd not found with fallback to list-spiders."""
     requests_get_mock.return_value = _get_settings_mock({'SETTING': 'VALUE'})
     docker_client = _mock_docker_client()
-    docker_client.wait.side_effect = [127, 0]
+    docker_client.wait.side_effect = [
+        {'Error': None, 'StatusCode': 127},
+        {'Error': None, 'StatusCode': 0}
+    ]
     docker_client.logs.side_effect = ["not-found", "spider1\nspider2\n"]
     get_docker_client_mock.return_value = docker_client
     result = CliRunner().invoke(cli, ["dev", "-v", "--version", "test"])
@@ -140,7 +143,7 @@ def test_shub_image_info_fallback(get_docker_client_mock, _,
         exception,
         None,
     ]
-    get_docker_client_mock().wait.return_value = 0
+    get_docker_client_mock().wait.return_value = {'Error': None, 'StatusCode': 0}
     get_docker_client_mock().logs.return_value = 'abc\ndef\n'
     result = list_cmd('image_name', 111, 'endpoint', 'apikey')
     assert get_docker_client_mock().start.call_count == 2

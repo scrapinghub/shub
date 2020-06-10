@@ -4,26 +4,16 @@
 #
 #    pip-compile
 #
-backports.ssl-match-hostname==3.5.0.1  # via docker
-appdirs==1.4.3                         # via docker
-asn1crypto==0.22.0                     # via docker
-cffi==1.10.0                           # via docker
-cryptography==2.3                      # via docker
-ipaddress==1.0.18                      # via docker
-paramiko==2.4.2                        # via docker
-pycparser==2.17                        # via docker
-pyOpenSSL==18.0.0                      # via docker
-pyparsing==2.2.0                       # via docker
-certifi==2019.6.16                     # via requests
-chardet==3.0.4                         # via requests
+certifi==2020.4.5.2       # via docker
+chardet==3.0.4            # via requests
 click==6.6
-docker==4.2.0
-idna==2.8                              # via requests
-pyyaml==5.1.1
+docker==4.2.1
+idna==2.9                 # via requests
+PyYAML==5.3.1
 requests==2.23.0
 retrying==1.3.3
-scrapinghub==2.2.1
-six==1.10.0                            # via docker
+scrapinghub>=2.0.3
+six==1.10.0
 tqdm==4.11.2
-urllib3==1.25.3                        # via requests
-websocket-client==0.56.0               # via docker
+urllib3==1.25.9           # via requests
+websocket-client==0.57.0  # via docker

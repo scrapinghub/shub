@@ -18,7 +18,7 @@ from shub.exceptions import (
 )
 
 
-DEFAULT_DOCKER_API_VERSION = '1.17'
+DEFAULT_DOCKER_API_VERSION = '1.21'
 STATUS_FILE_LOCATION = '.releases'
 _VALIDSPIDERNAME = re.compile('^[a-z0-9][-._a-z0-9]+$', re.I)
 
@@ -31,10 +31,10 @@ that's essential for running shub image command. To check that run command
     docker version
 
 and check its output: it should contain Docker client and server versions and
-should not contain any errors.
+should not contain any errors. The minimum API Version is: {}
 
 You can learn about Docker at https://www.docker.com/.
-"""
+""".format(DEFAULT_DOCKER_API_VERSION)
 
 
 def is_verbose():
@@ -79,13 +79,6 @@ def get_docker_client(validate=True):
     except ImportError:
         raise ImportError('You need docker python package installed for the cmd')
 
-    # docker-py (legacy)
-    if hasattr(docker, 'Client'):
-        docker_client_cls = docker.Client
-    # docker >= 2.0
-    else:
-        docker_client_cls = docker.APIClient
-
     docker_host = os.environ.get('DOCKER_HOST')
     tls_config = None
     if os.environ.get('DOCKER_TLS_VERIFY', False):
@@ -100,9 +93,12 @@ def get_docker_client(validate=True):
             assert_hostname=False)
         docker_host = docker_host.replace('tcp://', 'https://')
     version = os.environ.get('DOCKER_API_VERSION', DEFAULT_DOCKER_API_VERSION)
-    client = docker_client_cls(base_url=docker_host,
-                               version=version,
-                               tls=tls_config)
+
+    # If it returns an error, check if you have the old docker-py installed
+    # together with the new docker lib, and uninstall docker-py.
+    client = docker.APIClient(base_url=docker_host,
+                              version=version,
+                              tls=tls_config)
     if validate:
         validate_connection_with_docker_daemon(client)
     return client
