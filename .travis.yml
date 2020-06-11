@@ -10,6 +10,10 @@ matrix:
   include:
     - python: 3.6
       env: TOX_ENV=py36
+    - python: 3.7
+      env: TOX_ENV=py37
+    - python: 3.8
+      env: TOX_ENV=py38
     - os: osx
       # Using "generic" because osx in Travis doesn't support python
       language: generic
@@ -20,12 +24,22 @@ matrix:
       language: generic
       env:
         - TOX_ENV=py35
-        - PYTHON_VERSION='3.5.4'
+        - PYTHON_VERSION='3.5'
     - os: osx
       language: generic
       env:
         - TOX_ENV=py36
-        - PYTHON_VERSION='3.6.3'
+        - PYTHON_VERSION='3.6'
+    - os: osx
+      language: generic
+      env:
+        - TOX_ENV=py37
+        - PYTHON_VERSION='3.7'
+    - os: osx
+      language: generic
+      env:
+        - TOX_ENV=py38
+        - PYTHON_VERSION='3.8'
     - os: osx
       language: generic
       env:
@@ -79,7 +93,7 @@ deploy:
       tags: true
       all_branches: true
       repo: scrapinghub/shub
-      condition: "$TRAVIS_OS_NAME == linux && $TOX_ENV == py35"
+      condition: "$TRAVIS_OS_NAME == linux && $TOX_ENV == py38"
   - provider: releases
     api_key:
       secure: KXxQpLnv/Blgxp10iSBHe1ygciXmgKpXDuSLkXolOyS2xx7IEYbR1ArqESrhMWz66MOpYaVxMYKEBKskFOUYNKZq19shkYDMebNwSG6m8Nb1yAaYVtx4G/OzbLjtbEQwQy0wOS0ogw7m0jCywu+92VPwae8zXLXhjCU3c2yofgk=

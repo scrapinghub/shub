@@ -10,6 +10,10 @@ environment:
       TOX_ENV: py35
     - PYTHON: "C:\\Python36"
       TOX_ENV: py36
+    - PYTHON: "C:\\Python37"
+      TOX_ENV: py37
+    - PYTHON: "C:\\Python38"
+      TOX_ENV: py38
     - PYTHON: "C:\\Python35"
       TOX_ENV: freeze
 
