@@ -11,6 +11,14 @@ with io.open(os.path.join(here, 'shub', '__init__.py'),
     exec(f.read(), about)
 
 
+def load_requirements(filename):
+    return [
+        req.replace('\n','').split(' ')[0]
+        for req in open(filename, 'r').readlines()
+        if not req.startswith('#')
+    ]
+
+
 setup(
     name='shub',
     version='2.10.0',
@@ -28,18 +36,7 @@ setup(
     },
     include_package_data=True,
     zip_safe=False,
-    install_requires=[
-        'click==6.6',
-        'docker==4.2.1',
-        'pip',
-        'PyYAML==5.3.1',
-        'retrying==1.3.3',
-        'requests==2.23.0',
-        'scrapinghub>=2.0.3',
-        'six==1.10.0',
-        'tqdm==4.11.2',
-        'toml==0.10.1',
-    ],
+    install_requires=load_requirements('requirements.txt'),
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
@@ -47,10 +44,10 @@ setup(
         'License :: OSI Approved :: BSD License',
         'Programming Language :: Python',
         'Programming Language :: Python :: 2.7',
-        'Programming Language :: Python :: 3.3',
-        'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
         'Operating System :: OS Independent',
         'Environment :: Console',
         'Topic :: Internet :: WWW/HTTP',
