@@ -11,14 +11,6 @@ with io.open(os.path.join(here, 'shub', '__init__.py'),
     exec(f.read(), about)
 
 
-def load_requirements(filename):
-    return [
-        req.replace('\n','').split(' ')[0]
-        for req in open(filename, 'r').readlines()
-        if not req.startswith('#')
-    ]
-
-
 setup(
     name='shub',
     version='2.10.0',
@@ -36,7 +28,18 @@ setup(
     },
     include_package_data=True,
     zip_safe=False,
-    install_requires=load_requirements('requirements.txt'),
+    install_requires=[
+        'click',
+        'docker',
+        'pip',
+        'PyYAML',
+        'retrying',
+        'requests',
+        'scrapinghub>=2.3.1',
+        'six>=1.7.0',
+        'tqdm==4.11.2',
+        'toml',
+    ],
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
