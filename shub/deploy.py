@@ -10,14 +10,7 @@ import click
 import toml
 # Not used in code but needed in runtime, don't remove!
 import setuptools
-_1 = setuptools  # NOQA
-try:
-    # Only available in setuptools >= 24.0.0
-    import setuptools.msvc
-except ImportError:
-    pass
-else:
-    _2 = setuptools.msvc  # NOQA
+import setuptools.msvc  # noqa
 
 from shub.config import (list_targets_callback, load_shub_config,
                          SH_IMAGES_REGISTRY)

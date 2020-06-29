@@ -27,7 +27,7 @@ import yaml
 # https://github.com/scrapinghub/shub/pull/309#pullrequestreview-113977920
 try:
     from pip import main as pip_main
-except:
+except:  # noqa
     from pip._internal import main as pip_main
 
 from scrapinghub import ScrapinghubClient, ScrapinghubAPIError, HubstorageClient

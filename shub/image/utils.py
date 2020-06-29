@@ -107,7 +107,7 @@ def get_docker_client(validate=True):
 def validate_connection_with_docker_daemon(client):
     try:
         client.version()
-    except:
+    except:  # noqa
         raise ShubException(DOCKER_UNAVAILABLE_MSG)
 
 
