@@ -19,32 +19,32 @@ matrix:
       language: generic
       env:
         - TOX_ENV=py27
-        - PYTHON_VERSION='2.7'
+        - PYTHON_VERSION='2.7.18'
     - os: osx
       language: generic
       env:
         - TOX_ENV=py35
-        - PYTHON_VERSION='3.5'
+        - PYTHON_VERSION='3.5.9'
     - os: osx
       language: generic
       env:
         - TOX_ENV=py36
-        - PYTHON_VERSION='3.6'
+        - PYTHON_VERSION='3.6.10'
     - os: osx
       language: generic
       env:
         - TOX_ENV=py37
-        - PYTHON_VERSION='3.7'
+        - PYTHON_VERSION='3.7.7'
     - os: osx
       language: generic
       env:
         - TOX_ENV=py38
-        - PYTHON_VERSION='3.8'
+        - PYTHON_VERSION='3.8.3'
     - os: osx
       language: generic
       env:
         - TOX_ENV=freeze
-        - PYTHON_VERSION='3.5.4'
+        - PYTHON_VERSION='3.5.9'
 
 branches:
   only:
