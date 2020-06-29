@@ -16,6 +16,7 @@ from shub.image.utils import (
     load_status_url,
     store_status_url,
     STATUS_FILE_LOCATION,
+    DEFAULT_DOCKER_API_VERSION,
 )
 from .utils import FakeProjectDirectory, add_sh_fake_config
 
@@ -41,16 +42,16 @@ class ReleaseUtilsTest(TestCase):
             def version(self):
                 return {}
 
-        mocked_docker.Client = DockerClientMock
+        mocked_docker.APIClient = DockerClientMock
         assert get_docker_client()
         client_mock.assert_called_with(
-            base_url=None, tls=None, version='1.17')
+            base_url=None, tls=None, version=DEFAULT_DOCKER_API_VERSION)
         # set basic test environment
         os.environ['DOCKER_HOST'] = 'http://127.0.0.1'
-        os.environ['DOCKER_API_VERSION'] = '1.18'
+        os.environ['DOCKER_API_VERSION'] = '1.40'
         assert get_docker_client()
         client_mock.assert_called_with(
-            base_url='http://127.0.0.1', tls=None, version='1.18')
+            base_url='http://127.0.0.1', tls=None, version='1.40')
         # test for tls
         os.environ['DOCKER_TLS_VERIFY'] = '1'
         os.environ['DOCKER_CERT_PATH'] = 'some-path'
@@ -60,7 +61,7 @@ class ReleaseUtilsTest(TestCase):
         client_mock.assert_called_with(
             base_url='http://127.0.0.1',
             tls=mocked_tls,
-            version='1.18')
+            version='1.40')
         mocked_docker.tls.TLSConfig.assert_called_with(
             client_cert=(os.path.join('some-path', 'cert.pem'),
                          os.path.join('some-path', 'key.pem')),

@@ -124,7 +124,7 @@ def _run_cmd_in_docker_container(image_name, command, environment):
             # executable file not found in $PATH")
             return 127, None
         raise
-    statuscode = client.wait(container=container['Id'])
+    statuscode = client.wait(container=container['Id'])['StatusCode']
     logs = client.logs(
         container=container['Id'], stream=False, timestamps=False,
         stdout=True, stderr=True if statuscode else False,

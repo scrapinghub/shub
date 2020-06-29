@@ -4,7 +4,7 @@
 #
 #    pip-compile --output-file=tests/requirements.txt tests/requirements.in
 #
-certifi==2019.6.16        # via pipenv
+certifi==2020.4.5.2        # via pipenv
 coverage==4.3.4           # via pytest-cov
 flake8==3.3.0
 mccabe==0.6.1             # via flake8

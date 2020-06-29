@@ -121,7 +121,7 @@ def _run_docker_command(client, image_name, command):
     container = client.create_container(image=image_name, command=command)
     try:
         client.start(container)
-        statuscode = client.wait(container=container['Id'])
+        statuscode = client.wait(container=container['Id'])['StatusCode']
         logs = client.logs(container=container['Id'], stdout=True,
                            stderr=True if statuscode else False,
                            stream=False, timestamps=False)

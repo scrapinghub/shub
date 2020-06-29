@@ -1,12 +1,13 @@
 click
-docker-py
+docker
 PyYAML
 requests
 retrying
 six
-tqdm
+toml
 
-scrapinghub>=2.0.3
+tqdm==4.11.2
+scrapinghub>=2.3.1
 
 # address known vulnerabilities
 requests>=2.20.0    # CVE-2018-18074

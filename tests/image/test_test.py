@@ -19,7 +19,7 @@ class MockedNotFound(Exception):
 def docker_client():
     client = mock.Mock()
     client.create_container.return_value = {'Id': '12345'}
-    client.wait.return_value = 0
+    client.wait.return_value = {'Error': None, 'StatusCode': 0}
     client.logs.return_value = 'some-logs'
     return client
 
@@ -59,11 +59,11 @@ def test_start_crawl(docker_client):
     assert _check_start_crawl_entry('image', docker_client) is None
     docker_client.create_container.assert_called_with(
         image='image', command=['which', 'start-crawl'])
-    docker_client.wait.return_value = 1
+    docker_client.wait.return_value = {'Error': None, 'StatusCode': 1}
     with pytest.raises(shub_exceptions.NotFoundException):
         _check_start_crawl_entry('image', docker_client)
 
-    docker_client.wait.return_value = 0
+    docker_client.wait.return_value = {'Error': None, 'StatusCode': 0}
     docker_client.logs.return_value = ''
     with pytest.raises(shub_exceptions.NotFoundException):
         _check_start_crawl_entry('image', docker_client)
