@@ -13,8 +13,8 @@ with io.open(os.path.join(here, 'shub', '__init__.py'),
 
 extra_requirements = []
 try:
-    import pip
-except ModuleNotFoundError:
+    import pip  # NOQA
+except ImportError:
     extra_requirements.append('pip')
 
 
