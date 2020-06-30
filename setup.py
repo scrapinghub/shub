@@ -11,6 +11,13 @@ with io.open(os.path.join(here, 'shub', '__init__.py'),
     exec(f.read(), about)
 
 
+extra_requirements = []
+try:
+    import pip
+except ModuleNotFoundError:
+    extra_requirements.append('pip')
+
+
 setup(
     name='shub',
     version='2.10.0',
@@ -31,7 +38,6 @@ setup(
     install_requires=[
         'click',
         'docker',
-        'pip',
         'PyYAML',
         'retrying',
         'requests',
@@ -39,7 +45,7 @@ setup(
         'six>=1.7.0',
         'tqdm==4.11.2',
         'toml',
-    ],
+    ] + extra_requirements,
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Intended Audience :: Developers',
