@@ -342,7 +342,10 @@ def decompress_egg_files(directory=None):
         click.echo("Uncompressing: %s" % egg)
         egg_ext = EXTS[list(egg.endswith(ext) for ext in EXTS).index(True)]
         decompress_location = egg[:-len(egg_ext)]
-        unpack_file(egg, decompress_location, None, None)
+        try:
+            unpack_file(egg, decompress_location, None)
+        except TypeError:
+            unpack_file(egg, decompress_location, None, None)
 
 
 def build_and_deploy_eggs(project, endpoint, apikey):
