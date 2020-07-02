@@ -72,7 +72,7 @@ before_install: |
     fi
 
 install:
-  - pip install -U tox twine wheel codecov virtualenv==16.1.0
+  - pip install -U tox twine wheel codecov virtualenv
 
 script: tox -e $TOX_ENV
 
