@@ -28,8 +28,7 @@ class LogoutTestCase(unittest.TestCase):
             self.assertIn('default', conf.apikeys)
             self.runner.invoke(logout.cli)
             conf = config.load_shub_config()
-            # FIXME temporarily comment out broken test
-            # self.assertNotIn('default', conf.apikeys)
+            self.assertNotIn('default', conf.apikeys)
 
     @mock.patch('shub.logout.update_yaml_dict')
     def test_fail_on_not_logged_in(self, mock_uyd):
