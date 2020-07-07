@@ -7,7 +7,6 @@ https://www.freebsd.org/cgi/man.cgi?query=sysexits&sektion=3
 
 from __future__ import absolute_import
 
-import sys
 import warnings
 
 from click import BadParameter, ClickException
@@ -94,17 +93,19 @@ class ShubDeprecationWarning(ShubWarning):
 def print_warning(msg, category=ShubWarning):
     """Helper to use Python warnings with custom formatter."""
 
-    def custom_showwarning(message, *args, **kwargs):
-        # ignore everything except the message
-        try:
-            sys.stderr.write("WARNING: " + str(message) + '\n')
-        # stderr is invalid - this warning just gets lost
-        except (IOError, UnicodeError):
-            pass
+    warnings.warn(msg, category=category)
 
-    old_showwarning = warnings.showwarning
-    try:
-        warnings.showwarning = custom_showwarning
-        warnings.warn(msg, category=category)
-    finally:
-        warnings.formatwarning = old_showwarning
+    # def custom_showwarning(message, *args, **kwargs):
+    #     # ignore everything except the message
+    #     try:
+    #         sys.stderr.write("WARNING: " + str(message) + '\n')
+    #     # stderr is invalid - this warning just gets lost
+    #     except (IOError, UnicodeError):
+    #         pass
+
+    # old_showwarning = warnings.showwarning
+    # try:
+    #     warnings.showwarning = custom_showwarning
+    #     warnings.warn(msg, category=category)
+    # finally:
+    #     warnings.formatwarning = old_showwarning
