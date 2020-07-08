@@ -28,7 +28,10 @@ import yaml
 try:
     from pip import main as pip_main
 except:  # noqa
-    from pip._internal import main as pip_main
+    try:
+        from pip._internal.main import main as pip_main
+    except ModuleNotFoundError:  # noqa
+        from pip._internal import main as pip_main
 
 from scrapinghub import ScrapinghubClient, ScrapinghubAPIError, HubstorageClient
 
