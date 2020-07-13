@@ -107,4 +107,4 @@ def print_warning(msg, category=ShubWarning):
         warnings.showwarning = custom_showwarning
         warnings.warn(msg, category=category)
     finally:
-        warnings.formatwarning = old_showwarning
+        warnings.showwarning = old_showwarning

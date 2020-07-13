@@ -2,12 +2,13 @@
 # coding=utf-8
 
 from __future__ import print_function
-
 from __future__ import absolute_import
-import unittest
+
+import mock
 import os
-import tempfile
 import shutil
+import tempfile
+import unittest
 from zipfile import ZipFile
 
 from shub import deploy_egg
@@ -23,6 +24,7 @@ class FakeRequester:
         self.auth = args[3]
 
 
+@mock.patch.dict(os.environ, {'SHUB_APIKEY': '1234'})
 class TestDeployEgg(unittest.TestCase):
 
     def setUp(self):
@@ -30,7 +32,6 @@ class TestDeployEgg(unittest.TestCase):
         self.fake_requester = FakeRequester()
         deploy_egg.utils.make_deploy_request = self.fake_requester.fake_request
         self.tmp_dir = tempfile.mktemp(prefix="shub-test-deploy-eggs")
-        os.environ['SHUB_APIKEY'] = '1234'
 
     def tearDown(self):
         os.chdir(self.curdir)

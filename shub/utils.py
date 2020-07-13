@@ -27,8 +27,16 @@ import yaml
 # https://github.com/scrapinghub/shub/pull/309#pullrequestreview-113977920
 try:
     from pip import main as pip_main
-except:
-    from pip._internal import main as pip_main
+except:  # noqa
+    try:
+        # For pip v20: https://tinyurl.com/pip20-error
+        from pip._internal.cli.main import pip_main
+    except ImportError:
+        try:
+            # For pip v9 and v10: https://tinyurl.com/y8mvl8rb
+            from pip._internal.main import main as pip_main
+        except ImportError:
+            from pip._internal import main as pip_main
 
 from scrapinghub import ScrapinghubClient, ScrapinghubAPIError, HubstorageClient
 

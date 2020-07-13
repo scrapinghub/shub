@@ -154,7 +154,7 @@ def _format_requirements(project_dir, requirements):
     else:
         # let's create requirements.txt with base dependencies
         with open(rel_reqs_path, 'w') as reqs_file:
-            reqs_file.writelines("%s\n" % l for l in RECOMMENDED_PYTHON_DEPS)
+            reqs_file.writelines("%s\n" % line for line in RECOMMENDED_PYTHON_DEPS)
         click.echo('Created base requirements.txt in project dir.')
     rows = [
         'COPY ./{} {}/requirements.txt'.format(rel_reqs_path, DOCKER_APP_DIR),
