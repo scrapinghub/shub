@@ -42,6 +42,7 @@ after_test:
 
 deploy:
   provider: GitHub
+  description: v$(appveyor_build_version)
   auth_token:
     secure: dYqilqswNHo/A+08lISafEpFx/wNOzk/7Iz4aTHode5BbVcGrLXWkNFczw6zzIN8
   artifact: dist_bin\shub-$(APPVEYOR_REPO_TAG_NAME)-windows-$(PLATFORM).zip
