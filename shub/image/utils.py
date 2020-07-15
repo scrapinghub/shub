@@ -9,6 +9,7 @@ import click
 import yaml
 from tqdm import tqdm
 from six import binary_type
+import pkg_resources
 
 from shub import config as shub_config
 from shub import utils as shub_utils
@@ -22,6 +23,10 @@ DEFAULT_DOCKER_API_VERSION = '1.21'
 STATUS_FILE_LOCATION = '.releases'
 _VALIDSPIDERNAME = re.compile('^[a-z0-9][-._a-z0-9]+$', re.I)
 
+DOCKER_PY_UNAVAILABLE_MSG = """\
+You need docker>=2.0.0 python package installed to run the command.
+docker-py python package must be uninstalled to avoid dependency conflicts.
+"""
 DOCKER_UNAVAILABLE_MSG = """
 Detected error connecting to Docker daemon's host.
 
@@ -77,7 +82,10 @@ def get_docker_client(validate=True):
     try:
         import docker
     except ImportError:
-        raise ImportError('You need docker python package installed for the cmd')
+        raise ImportError(DOCKER_PY_UNAVAILABLE_MSG)
+    for dep in pkg_resources.working_set:
+        if dep.project_name == 'docker-py':
+            raise ImportError(DOCKER_PY_UNAVAILABLE_MSG)
 
     docker_host = os.environ.get('DOCKER_HOST')
     tls_config = None
