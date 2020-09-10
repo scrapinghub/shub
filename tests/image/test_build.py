@@ -31,7 +31,8 @@ def test_cli(docker_client_mock, project_dir, test_mock):
         tag='registry.io/user/project:1.0',
         dockerfile='Dockerfile',
         nocache=False,
-        rm=True
+        rm=True,
+        buildargs={}
     )
     test_mock.assert_called_with("dev", None)
 
@@ -50,7 +51,29 @@ def test_cli_with_nocache(docker_client_mock, project_dir, test_mock):
         tag='registry.io/user/project:1.0',
         dockerfile='Dockerfile',
         nocache=True,
-        rm=True
+        rm=True,
+        buildargs={}
+    )
+    test_mock.assert_called_with("dev", None)
+
+
+def test_cli_with_buildargs(docker_client_mock, project_dir, test_mock):
+    docker_client_mock.build.return_value = [
+        {"stream": "all is ok"},
+        {"stream": "Successfully built 12345"}
+    ]
+    runner = CliRunner()
+    result = runner.invoke(cli, ["dev", "-v", "-b", "AWS_KEY=asdasdeg", "-b",
+                                 "AWS_SEC=ashthku", "-b", "PARAM=query=4"])
+    assert result.exit_code == 0
+    docker_client_mock.build.assert_called_with(
+        decode=True,
+        path=project_dir,
+        tag='registry.io/user/project:1.0',
+        dockerfile='Dockerfile',
+        nocache=False,
+        rm=True,
+        buildargs={'AWS_KEY': 'asdasdeg', 'AWS_SEC': 'ashthku', 'PARAM': 'query=4'}
     )
     test_mock.assert_called_with("dev", None)
 
@@ -90,7 +113,8 @@ def test_cli_custom_version(docker_client_mock, project_dir, test_mock):
         tag='registry.io/user/project:test',
         dockerfile='Dockerfile',
         nocache=False,
-        rm=True
+        rm=True,
+        buildargs={}
     )
     test_mock.assert_called_with("dev", "test")
 
@@ -131,7 +155,8 @@ def test_cli_skip_tests(docker_client_mock, test_mock, project_dir, skip_tests_f
         tag='registry.io/user/project:1.0',
         dockerfile='Dockerfile',
         nocache=False,
-        rm=True
+        rm=True,
+        buildargs={}
     )
     assert test_mock.call_count == 0
 
@@ -151,7 +176,8 @@ def test_cli_custom_dockerfile(docker_client_mock, project_dir, test_mock, file_
         tag='registry.io/user/project:1.0',
         dockerfile='Dockerfile',
         nocache=False,
-        rm=True
+        rm=True,
+        buildargs={}
     )
     test_mock.assert_called_with("dev", None)
 

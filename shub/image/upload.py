@@ -38,18 +38,20 @@ Obviously it accepts all the options for the commands above.
               help="re-authenticate to registry before pushing")
 @click.option("-n", "--no-cache", is_flag=True,
               help="Do not use cache when building the image")
+@click.option("-b", "--build-arg", multiple=True,
+              help="Allow to pass build arguments to docker client.")
 @click.option("-f", "--file", "filename", default='Dockerfile',
               help="Name of the Dockerfile (Default is 'PATH/Dockerfile')")
 def cli(target, debug, verbose, version, username, password, email,
-        apikey, insecure, async_, skip_tests, reauth, no_cache, filename):
+        apikey, insecure, async_, skip_tests, reauth, no_cache, build_arg, filename):
     upload_cmd(target, version, username, password, email, apikey, insecure,
-               async_, skip_tests, reauth, no_cache, filename)
+               async_, skip_tests, reauth, no_cache, build_arg, filename)
 
 
 def upload_cmd(target, version, username=None, password=None, email=None,
                apikey=None, insecure=False, async_=False, skip_tests=False,
-               reauth=False, no_cache=False, filename='Dockerfile'):
-    build.build_cmd(target, version, skip_tests, no_cache, filename=filename)
+               reauth=False, no_cache=False, build_arg=(), filename='Dockerfile'):
+    build.build_cmd(target, version, skip_tests, no_cache, build_arg, filename=filename)
     # skip tests for push command anyway because they run in build command if not skipped
     push.push_cmd(target, version, username, password, email, apikey,
                   insecure, skip_tests=True, reauth=reauth)
