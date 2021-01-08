@@ -37,7 +37,7 @@ setup(
         'requests',
         'scrapinghub>=2.3.1',
         'six>=1.7.0',
-        'tqdm==4.11.2',
+        'tqdm==4.55.1',
         'toml',
     ],
     classifiers=[
