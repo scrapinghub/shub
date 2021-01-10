@@ -53,6 +53,8 @@ def monkeypatch_bar_rate(monkeypatch):
             args = list(args)
             if 'rate' in args:
                 args[rate_arg_idx] = 10 ** 6
+            elif 'rate' in kwargs:
+                kwargs['rate'] = 10 ** 6
             return func(*args, **kwargs)
 
         return wrapper
