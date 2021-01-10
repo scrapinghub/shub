@@ -5,7 +5,7 @@ import re
 
 import mock
 from click.testing import CliRunner
-from tqdm._utils import _supports_unicode
+from tqdm.utils import _supports_unicode
 
 from shub import config
 
