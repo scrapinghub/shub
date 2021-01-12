@@ -119,6 +119,7 @@ def test_progress_no_total(docker_client_mock):
         'Layers: 100%|██████████| 4/4'
         'abc: 100%|██████████| 24.8k/24.8k [1.00MB/s]'
         'egh: 100%|██████████| 57.3k/57.3k [1.00MB/s]'
+        'The image registry.io/user/project:test pushed successfully.'
     )
     assert expected in clean_progress_output(result.output)
 
