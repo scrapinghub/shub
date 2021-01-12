@@ -61,14 +61,14 @@ def test_cli_with_progress(docker_client_mock):
         'Layers:   0%|          | 0/3'
         'Layers:   0%|          | 0/3'
         'Layers:   0%|          | 0/3'
-        'abc:   2%|▏         | 512/24.8K [1.00MB/s]'
+        'abc:   2%|▏         | 512/24.8k [1.00MB/s]'
         'Layers:   0%|          | 0/3'
-        'egh: 100%|██████████| 57.3K/57.3K [1.00MB/s]'
+        'egh: 100%|██████████| 57.3k/57.3k [1.00MB/s]'
         'Layers:  33%|███▎      | 1/3'
         'Layers:  67%|██████▋   | 2/3'
         'Layers: 100%|██████████| 3/3'
-        'abc: 100%|██████████| 24.8K/24.8K [1.00MB/s]'
-        'egh: 100%|██████████| 57.3K/57.3K [1.00MB/s]'
+        'abc: 100%|██████████| 24.8k/24.8k [1.00MB/s]'
+        'egh: 100%|██████████| 57.3k/57.3k [1.00MB/s]'
         'The image registry.io/user/project:test pushed successfully.'
     )
     assert expected in clean_progress_output(result.output)
@@ -112,13 +112,13 @@ def test_progress_no_total(docker_client_mock):
         'Layers:   0%|          | 0/4'
         'abc: 100%|██████████| 512/512 [1.00MB/s]'
         'Layers:   0%|          | 0/4'
-        'egh: 100%|██████████| 57.3K/57.3K [1.00MB/s]'
+        'egh: 100%|██████████| 57.3k/57.3k [1.00MB/s]'
         'Layers:  25%|██▌       | 1/4'
         'Layers:  50%|█████     | 2/4'
         'Layers:  75%|███████▌  | 3/4'
         'Layers: 100%|██████████| 4/4'
-        'abc: 100%|██████████| 24.8K/24.8K [1.00MB/s]'
-        'egh: 100%|██████████| 57.3K/57.3K [1.00MB/s]'
+        'abc: 100%|██████████| 24.8k/24.8k [1.00MB/s]'
+        'egh: 100%|██████████| 57.3k/57.3k [1.00MB/s]'
     )
     assert expected in clean_progress_output(result.output)
 
