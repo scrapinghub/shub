@@ -174,6 +174,7 @@ def test_progress_bar_logic():
         'Progress:  65%|██████▌   | 65/100'
         'Progress:  75%|███████▌  | 75/100'
         'Progress: 100%|██████████| 100/100'
+        'Progress: 100%|██████████| 100/100'
         'Deploy results:'
     )
     assert expected in clean_progress_output(result.output)
@@ -194,6 +195,7 @@ def test_progress_bar_logic_incomplete():
         'Progress:   0%|          | 0/100'
         'Progress:  25%|██▌       | 25/100'
         'Progress:  30%|███       | 30/100'
+        'Progress: 100%|██████████| 100/100'
         'Progress: 100%|██████████| 100/100'
         'Deploy results:'
     )

@@ -14,6 +14,8 @@ matrix:
       env: TOX_ENV=py37
     - python: 3.8
       env: TOX_ENV=py38
+    - python: 3.9
+      env: TOX_ENV=py39
     - os: osx
       # Using "generic" because osx in Travis doesn't support python
       language: generic
@@ -40,6 +42,11 @@ matrix:
       env:
         - TOX_ENV=py38
         - PYTHON_VERSION='3.8.3'
+    - os: osx
+      language: generic
+      env:
+        - TOX_ENV=py39
+        - PYTHON_VERSION='3.9.1'
     - os: osx
       language: generic
       env:

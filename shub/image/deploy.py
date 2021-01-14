@@ -153,7 +153,11 @@ class _DeployProgress(utils.BaseProgress):
         super(_DeployProgress, self).show()
         # it's possible that release process finishes instantly without
         # providing enough information to fill progress bar completely
-        if self.result_event and self.result_event['status'] == 'ok':
+        if (
+            self.result_event
+            and self.result_event['status'] == 'ok'
+            and self.progress_bar.n != self.progress_bar.total
+        ):
             delta = max(self.progress_bar.total - self.progress_bar.n, 0)
             self.progress_bar.update(delta)
         self.progress_bar.close()

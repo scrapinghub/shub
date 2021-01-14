@@ -7,6 +7,12 @@ import pytest
 
 from shub.image.utils import ProgressBar
 
+try:
+    # https://stackoverflow.com/a/55000090
+    from inspect import getfullargspec as get_args
+except ImportError:
+    from inspect import getargspec as get_args
+
 from .utils import (
     FakeProjectDirectory, add_scrapy_fake_config, add_sh_fake_config,
     add_fake_dockerfile, add_fake_setup_py,
@@ -35,7 +41,9 @@ def project_dir():
 
 @pytest.fixture
 def monkeypatch_bar_rate(monkeypatch):
-    args, _, _, _ = inspect.getargspec(ProgressBar.format_meter)
+    # Converting to List instead to unpacking the Tuple
+    # because get_args returns different tuple sizes between py versions.
+    args = list(get_args(ProgressBar.format_meter))[0]
     rate_arg_idx = args.index('rate')
 
     def override_rate(func):
@@ -43,7 +51,10 @@ def monkeypatch_bar_rate(monkeypatch):
         @wraps(func)
         def wrapper(*args, **kwargs):
             args = list(args)
-            args[rate_arg_idx] = 10 ** 6
+            if 'rate' in args:
+                args[rate_arg_idx] = 10 ** 6
+            elif 'rate' in kwargs:
+                kwargs['rate'] = 10 ** 6
             return func(*args, **kwargs)
 
         return wrapper

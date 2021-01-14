@@ -37,7 +37,7 @@ setup(
         'requests',
         'scrapinghub>=2.3.1',
         'six>=1.7.0',
-        'tqdm==4.11.2',
+        'tqdm==4.55.1',
         'toml',
     ],
     classifiers=[
@@ -51,6 +51,7 @@ setup(
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
         'Operating System :: OS Independent',
         'Environment :: Console',
         'Topic :: Internet :: WWW/HTTP',
