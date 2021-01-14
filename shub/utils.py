@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+import setuptools  # noqa: F401
 import contextlib
 import datetime
 import errno
