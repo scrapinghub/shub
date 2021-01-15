@@ -26,12 +26,12 @@ matrix:
       language: generic
       env:
         - TOX_ENV=py35
-        - PYTHON_VERSION='3.5.9'
+        - PYTHON_VERSION='3.5.8'
     - os: osx
       language: generic
       env:
         - TOX_ENV=py36
-        - PYTHON_VERSION='3.6.10'
+        - PYTHON_VERSION='3.6.9'
     - os: osx
       language: generic
       env:
@@ -41,17 +41,17 @@ matrix:
       language: generic
       env:
         - TOX_ENV=py38
-        - PYTHON_VERSION='3.8.3'
+        - PYTHON_VERSION='3.8.0'
     - os: osx
       language: generic
       env:
         - TOX_ENV=py39
-        - PYTHON_VERSION='3.9.1'
+        - PYTHON_VERSION='miniconda3-3.9.1'
     - os: osx
       language: generic
       env:
         - TOX_ENV=freeze
-        - PYTHON_VERSION='3.5.9'
+        - PYTHON_VERSION='3.5.8'
 
 branches:
   only:
