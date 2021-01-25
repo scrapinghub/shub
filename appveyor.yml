@@ -52,5 +52,4 @@ deploy:
   artifact: dist_bin\shub-$(APPVEYOR_REPO_TAG_NAME)-windows-$(PLATFORM).zip
   draft: true
   on:
-    branch: master
     APPVEYOR_REPO_TAG: true
