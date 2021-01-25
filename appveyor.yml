@@ -44,8 +44,9 @@ after_test:
   - if "%TOX_ENV%" == "freeze" (7z a %APPVEYOR_BUILD_FOLDER%\dist_bin\shub-%APPVEYOR_REPO_TAG_NAME%-windows-%PLATFORM%.zip %APPVEYOR_BUILD_FOLDER%\dist_bin\shub.exe) else (echo "Not in freeze environment, skipping zip creation")
 
 deploy:
-  release: v$(appveyor_build_version)
-  description: 'shub v$(appveyor_build_version)'
+  tag: $(APPVEYOR_REPO_TAG_NAME)
+  release: $(APPVEYOR_REPO_TAG_NAME)
+  description: 'shub $(APPVEYOR_REPO_TAG_NAME)'
   provider: GitHub
   auth_token:
     secure: dYqilqswNHo/A+08lISafEpFx/wNOzk/7Iz4aTHode5BbVcGrLXWkNFczw6zzIN8
