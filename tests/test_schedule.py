@@ -24,20 +24,20 @@ class ScheduleTest(unittest.TestCase):
         # Default
         self.runner.invoke(schedule.cli, ['spider'])
         mock_schedule.assert_called_with(
-            proj, endpoint, apikey, 'spider', (), (), 2, None, (), ())
+            proj, endpoint, apikey, 'spider', (), (), 2, None, (), (), None)
         # Other project
         self.runner.invoke(schedule.cli, ['123/spider'])
         mock_schedule.assert_called_with(
-            123, endpoint, apikey, 'spider', (), (), 2, None, (), ())
+            123, endpoint, apikey, 'spider', (), (), 2, None, (), (), None)
         # Other endpoint
         proj, endpoint, apikey = self.conf.get_target('vagrant')
         self.runner.invoke(schedule.cli, ['vagrant/spider'])
         mock_schedule.assert_called_with(
-            proj, endpoint, apikey, 'spider', (), (), 2, None, (), ())
+            proj, endpoint, apikey, 'spider', (), (), 2, None, (), (), None)
         # Other project at other endpoint
         self.runner.invoke(schedule.cli, ['vagrant/456/spider'])
         mock_schedule.assert_called_with(
-            456, endpoint, apikey, 'spider', (), (), 2, None, (), ())
+            456, endpoint, apikey, 'spider', (), (), 2, None, (), (), None)
 
     @mock.patch('shub.schedule.ScrapinghubClient', autospec=True)
     def test_schedule_invalid_spider(self, mock_client):
@@ -72,6 +72,41 @@ class ScheduleTest(unittest.TestCase):
             {'SETT': '99', 'SETTWITHEQUAL': '10=10'},
             job_settings,
         )
+
+    @mock.patch('shub.schedule.ScrapinghubClient', autospec=True)
+    def test_forwards_args_from(self, mock_client):
+        mock_proj = mock_client.return_value.get_project.return_value
+        with mock.patch('shub.schedule.get_args_from_parent_job') as mock_get_afpj:
+            mock_get_afpj.return_value = {"job_arg": "test"}
+
+            self.runner.invoke(
+                schedule.cli,
+                "testspider -a ARG=val1 --args_from 123/321/44".split(' '),
+            )
+            job_args = mock_proj.jobs.run.call_args[1]['job_args']
+            self.assertDictContainsSubset(
+                {'ARG': 'val1', "job_arg": "test"},
+                job_args,
+            )
+
+    @mock.patch('shub.schedule.ScrapinghubClient', autospec=True)
+    def test_forwards_overriding_args_and_args_from(self, mock_client):
+        # override args from another job by args set in cmd
+        mock_proj = mock_client.return_value.get_project.return_value
+        with mock.patch('shub.schedule.get_args_from_parent_job') as mock_get_afpj:
+            mock_get_afpj.return_value = {"job_arg": "test", 'ARG': 'val_test_job'}
+
+        self.runner.invoke(
+            schedule.cli,
+            "testspider -a ARG=val1 --args_from 123/321/44 "
+            "--argument ARGWITHEQUAL=val2=val2".split(' '),
+        )
+        job_args = mock_proj.jobs.run.call_args[1]['job_args']
+        self.assertDictContainsSubset(
+            {'ARG': 'val_test_job', 'ARGWITHEQUAL': 'val2=val2', "job_arg": "test"},
+            job_args,
+        )
+
 
     @mock.patch('shub.schedule.ScrapinghubClient', autospec=True)
     def test_forwards_tags(self, mock_client):

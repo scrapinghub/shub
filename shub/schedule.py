@@ -54,7 +54,9 @@ DEFAULT_PRIORITY = 2
               help='Amount of Scrapy Cloud units (-u number)')
 @click.option('-t', '--tag',
               help='Job tags (-t tag)', multiple=True)
-def cli(spider, argument, set, environment, priority, units, tag):
+@click.option('-f', '--args_from',
+              help='project/spider/job for copying arguments (-f 123/321/456)')
+def cli(spider, argument, set, environment, priority, units, tag, args_from):
     try:
         target, spider = spider.rsplit('/', 1)
     except ValueError:
@@ -62,7 +64,7 @@ def cli(spider, argument, set, environment, priority, units, tag):
     targetconf = get_target_conf(target)
     job_key = schedule_spider(targetconf.project_id, targetconf.endpoint,
                               targetconf.apikey, spider, argument, set,
-                              priority, units, tag, environment)
+                              priority, units, tag, environment, args_from)
     watch_url = urljoin(
         targetconf.endpoint,
         '../p/{}/{}/{}'.format(*job_key.split('/')),
@@ -78,11 +80,13 @@ def cli(spider, argument, set, environment, priority, units, tag):
 
 
 def schedule_spider(project, endpoint, apikey, spider, arguments=(), settings=(),
-                    priority=DEFAULT_PRIORITY, units=None, tag=(), environment=()):
+                    priority=DEFAULT_PRIORITY, units=None, tag=(), environment=(),
+                    args_from=None):
     client = ScrapinghubClient(apikey, dash_endpoint=endpoint)
     try:
         project = client.get_project(project)
         args = dict(x.split('=', 1) for x in arguments)
+        args = add_args_from_job(client, args, args_from)
         cmd_args = args.pop('cmd_args', None)
         meta = args.pop('meta', None)
         job = project.jobs.run(
@@ -99,3 +103,13 @@ def schedule_spider(project, endpoint, apikey, spider, arguments=(), settings=()
         return job.key
     except ScrapinghubAPIError as e:
         raise RemoteErrorException(str(e))
+
+def add_args_from_job(client, base_args, args_from):
+    if not args_from:
+        return base_args
+    parent_job_args = get_args_from_parent_job(client, args_from)
+    return {**parent_job_args, **base_args}
+
+def get_args_from_parent_job(client, args_from):
+    job = client.get_job(args_from)
+    return job.metadata.get("spider_args") or {}
