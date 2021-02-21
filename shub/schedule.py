@@ -107,8 +107,9 @@ def schedule_spider(project, endpoint, apikey, spider, arguments=(), settings=()
 def add_args_from_job(client, base_args, args_from):
     if not args_from:
         return base_args
-    parent_job_args = get_args_from_parent_job(client, args_from)
-    return {**parent_job_args, **base_args}
+    job_args = get_args_from_parent_job(client, args_from).copy()
+    job_args.update(base_args)
+    return job_args
 
 def get_args_from_parent_job(client, args_from):
     job = client.get_job(args_from)
