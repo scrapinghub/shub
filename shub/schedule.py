@@ -34,6 +34,13 @@ Spider arguments can be supplied through the -a option:
 Similarly, job-specific settings can be supplied through the -s option:
 
     shub schedule myspider -s SETTING=VALUE -s LOG_LEVEL=DEBUG
+    
+Also, the spider can be run with all arguments are taken from another job with -f option:
+
+    shub schedule myspider -f 123/21/134
+    
+But arguments with -a will replace these arguments     
+    
 """
 
 SHORT_HELP = "Schedule a spider to run on Scrapy Cloud"
