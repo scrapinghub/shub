@@ -1,5 +1,5 @@
 language: python
-python: 3.5
+python: 3.6
 sudo: false
 env:
   - TOX_ENV=py27
@@ -25,11 +25,6 @@ matrix:
     - os: osx
       language: generic
       env:
-        - TOX_ENV=py35
-        - PYTHON_VERSION='3.5.8'
-    - os: osx
-      language: generic
-      env:
         - TOX_ENV=py36
         - PYTHON_VERSION='3.6.9'
     - os: osx
@@ -51,7 +46,7 @@ matrix:
       language: generic
       env:
         - TOX_ENV=freeze
-        - PYTHON_VERSION='3.5.8'
+        - PYTHON_VERSION='3.6.9'
 
 branches:
   only:

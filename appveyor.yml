@@ -6,8 +6,6 @@ environment:
   matrix:
     - PYTHON: "C:\\Python27"
       TOX_ENV: py27
-    - PYTHON: "C:\\Python35"
-      TOX_ENV: py35
     - PYTHON: "C:\\Python36"
       TOX_ENV: py36
     - PYTHON: "C:\\Python37"
@@ -17,7 +15,7 @@ environment:
     - PYTHON: "C:\\Python39"
       TOX_ENV: py39
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
-    - PYTHON: "C:\\Python35"
+    - PYTHON: "C:\\Python36"
       TOX_ENV: freeze
 
 branches:
