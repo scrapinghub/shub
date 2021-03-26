@@ -3,7 +3,7 @@ python: 3.6
 sudo: false
 env:
   - TOX_ENV=py27
-  - TOX_ENV=py35
+  - TOX_ENV=py36
   - TOX_ENV=freeze
 
 matrix:
