@@ -16,7 +16,7 @@ more-itertools==5.0.0     # via pytest
 packaging==20.4           # via pytest
 pipenv==2020.6.2          # via -r requirements.in
 pluggy==0.13.1            # via pytest
-py==1.8.1                 # via pytest
+py==1.10.0                # via pytest
 pycodestyle==2.6.0        # via flake8
 pyflakes==2.2.0           # via flake8
 pyparsing==2.4.7          # via packaging
