@@ -8,7 +8,7 @@ certifi==2021.5.30
     # via requests
 charset-normalizer==2.0.4
     # via requests
-click==7.1.2
+click==8.0.1
     # via shub (setup.py)
 docker==5.0.2
     # via shub (setup.py)
