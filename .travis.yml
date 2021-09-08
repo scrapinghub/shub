@@ -48,11 +48,10 @@ matrix:
         - TOX_ENV=freeze
         - PYTHON_VERSION='3.6.9'
 
-#branches:
-#  only:
-#    - master
-#    - /^v\d+\.\d+\.\d+[\w\-]*$/
-#    - update_dependencies
+branches:
+  only:
+    - master
+    - /^v\d+\.\d+\.\d+[\w\-]*$/
 
 before_install: |
     if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
