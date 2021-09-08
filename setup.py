@@ -29,14 +29,14 @@ setup(
     include_package_data=True,
     zip_safe=False,
     install_requires=[
-        'click==7.0',
+        'click>=7.1.2',
         'docker',
         'pyyaml',
         'retrying',
         'requests',
         'scrapinghub>=2.3.1',
         'six>=1.7.0',
-        'tqdm==4.55.1',
+        'tqdm>=4.55.1',
         'toml',
     ],
     classifiers=[
