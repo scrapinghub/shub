@@ -830,6 +830,6 @@ def create_scrapinghub_yml_wizard(conf, target='default', image=None):
     if image or (image is None and _detect_custom_image_project()):
         repository = click.prompt(
             "Image repository (leave empty to use Scrapinghub's repository)",
-            default=repository, show_default=False)
+            default=True, show_default=False)
     _update_conf(conf, target, project, repository)
     _update_conf_file(closest_sh_yml, target, project, repository)
