@@ -239,7 +239,7 @@ class ShubConfigTest(unittest.TestCase):
 
                     [deploy:otherurl]
                     project = 444
-                    url = http://app.scrapinghub.com/api/scrapyd/
+                    url = http://app.zyte.com/api/scrapyd/
 
                     [deploy:external]
                     project = 555
@@ -268,7 +268,7 @@ class ShubConfigTest(unittest.TestCase):
         expected_endpoints = {
             'default': ShubConfig.DEFAULT_ENDPOINT,
             'external': 'external_endpoint',
-            'otherurl': 'http://app.scrapinghub.com/api/'
+            'otherurl': 'http://app.zyte.com/api/'
         }
         expected_apikeys = {
             'otheruser': 'otherkey',
@@ -728,7 +728,7 @@ GLOBAL_SCRAPY_CFG = textwrap.dedent("""
     username = ext2_key
 """)
 
-NETRC = 'machine scrapinghub.com login netrc_key password ""'
+NETRC = 'machine zyte.com login netrc_key password ""'
 
 
 class LoadShubConfigTest(unittest.TestCase):

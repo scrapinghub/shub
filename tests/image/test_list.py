@@ -62,7 +62,7 @@ def test_cli(requests_get_mock, get_docker_client_mock, is_binary_logs):
     assert result.exit_code == 0
     assert result.output.endswith('abc\ndef\n')
     requests_get_mock.assert_called_with(
-        'https://app.scrapinghub.com/api/settings/get.json',
+        'https://app.zyte.com/api/settings/get.json',
         allow_redirects=False, auth=('abcdef', ''),
         params={'project': 12345}, timeout=300)
 

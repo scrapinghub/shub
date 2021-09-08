@@ -107,7 +107,7 @@ def deploy_cmd(target, version, debug, egg, build_egg, verbose, keep_log,
                         version, auth, verbose, keep_log, targetconf.stack,
                         targetconf.requirements_file, targetconf.eggs, tmpdir)
             click.echo("Run your spiders at: "
-                       "https://app.scrapinghub.com/p/%s/"
+                       "https://app.zyte.com/p/%s/"
                        "" % targetconf.project_id)
     finally:
         if tmpdir:

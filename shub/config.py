@@ -18,6 +18,7 @@ from shub.utils import (closest_file, get_scrapycfg_targets, get_sources,
                         update_yaml_dict)
 
 APIKEY_SHOW_N_CHARS = 6
+# WARNING: images.zyte.com is not yet available
 SH_IMAGES_REGISTRY = 'images.scrapinghub.com'
 SH_IMAGES_REPOSITORY = SH_IMAGES_REGISTRY + '/project/{project}'
 GLOBAL_SCRAPINGHUB_YML_PATH = os.path.expanduser(
@@ -28,7 +29,7 @@ NETRC_PATH = os.path.expanduser('~/_netrc' if os.name == 'nt' else '~/.netrc')
 
 class ShubConfig(object):
 
-    DEFAULT_ENDPOINT = 'https://app.scrapinghub.com/api/'
+    DEFAULT_ENDPOINT = 'https://app.zyte.com/api/'
 
     # Dictionary option name: Shortcut to set 'default' key
     SHORTCUTS = {
@@ -55,15 +56,21 @@ class ShubConfig(object):
         """Check the endpoints. Send warnings if necessary."""
         for endpoint, url in self.endpoints.items():
             parsed = six.moves.urllib.parse.urlparse(url)
-            if parsed.netloc == 'staging.scrapinghub.com':
+            current_url = 'app.zyte.com'
+            obsolete_urls = (
+                'staging.zyte.com',
+                'staging.scrapinghub.com',
+                'app.scrapinghub.com',
+            )
+            if parsed.netloc in obsolete_urls:
                 self.endpoints[endpoint] = six.moves.urllib.parse.urlunparse(
-                    parsed._replace(netloc='app.scrapinghub.com')
+                    parsed._replace(netloc=current_url)
                 )
                 click.echo(
                     'WARNING: Endpoint "%s" is still using %s which has been '
-                    'obsoleted. shub has updated it to app.scrapinghub.com '
+                    'obsoleted. shub has updated it to %s '
                     'for this time only. Please update your configuration.' % (
-                        endpoint, parsed.netloc,
+                        endpoint, parsed.netloc, current_url,
                     ),
                     err=True
                 )
@@ -434,7 +441,7 @@ def _migrate_to_global_scrapinghub_yml():
     conf.load_scrapycfg(get_sources(use_closest=False))
     try:
         info = netrc.netrc(NETRC_PATH)
-        netrc_key, _, _ = info.authenticators("scrapinghub.com")
+        netrc_key, _, _ = info.authenticators("zyte.com")
     except (IOError, TypeError):
         netrc_key = None
     if netrc_key:

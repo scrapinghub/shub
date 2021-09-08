@@ -14,7 +14,7 @@ Reading about SH custom image contract should bring you more context
 https://shub.readthedocs.io/en/stable/custom-images-contract.html.
 
 FIFO based communication protocol is described well in
-https://doc.scrapinghub.com/scrapy-cloud-write-entrypoint.html
+https://doc.zyte.com/scrapy-cloud-write-entrypoint.html
 
 TODO As a custom image isn't necessarily based on Python, the wrapper
 should be rewritten in the future with something more basic and

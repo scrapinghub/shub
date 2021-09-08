@@ -16,7 +16,7 @@ Add your Scrapinghub API key to your global configuration file
 with your Scrapinghub account.
 
 You can find your API key in Scrapinghub's dashboard:
-https://app.scrapinghub.com/account/apikey
+https://app.zyte.com/account/apikey
 """
 
 SHORT_HELP = "Save your Scrapinghub API key"
@@ -41,7 +41,7 @@ def cli():
 def _get_apikey(suggestion='', endpoint=None):
     suggestion_txt = ' (%s)' % suggestion if suggestion else ''
     click.echo(
-        "Enter your API key from https://app.scrapinghub.com/account/apikey"
+        "Enter your API key from https://app.zyte.com/account/apikey"
     )
     while True:
         key = input('API key%s: ' % suggestion_txt) or suggestion

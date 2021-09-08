@@ -24,7 +24,7 @@ and ``-s`` options::
     or print items as they are being scraped:
         shub items -f 2/15
     or watch it running in Scrapinghub's web interface:
-        https://app.scrapinghub.com/p/12345/job/2/15
+        https://app.zyte.com/p/12345/job/2/15
 
 ::
 
@@ -35,7 +35,7 @@ and ``-s`` options::
     or print items as they are being scraped:
         shub items -f 2/15
     or watch it running in Scrapinghub's web interface:
-        https://app.scrapinghub.com/p/33333/job/2/15
+        https://app.zyte.com/p/33333/job/2/15
 
 You can also specify the amount of Scrapy Cloud units (``-u``) and the priority (``-p``)::
 
@@ -46,7 +46,7 @@ You can also specify the amount of Scrapy Cloud units (``-u``) and the priority 
     or print items as they are being scraped:
         shub items -f 2/16
     or watch it running in Scrapinghub's web interface:
-        https://app.scrapinghub.com/p/12345/job/2/16
+        https://app.zyte.com/p/12345/job/2/16
 
 shub provides commands to retrieve log entries, scraped items, or requests from
 jobs. If the job is still running, you can provide the ``-f`` (follow) option
@@ -67,5 +67,5 @@ to receive live updates::
 ::
 
     $ shub requests 1/1/1
-    {"status": 200, "fp": "1ff11f1543809f1dbd714e3501d8f460b92a7a95", "rs": 138137, "_key": "1/1/1/0", "url": "http://blog.scrapinghub.com", "time": 1449834387621, "duration": 238, "method": "GET"}
-    {"status": 200, "fp": "418a0964a93e139166dbf9b33575f10f31f17a1", "rs": 138137, "_key": "1/1/1/0", "url": "http://blog.scrapinghub.com", "time": 1449834390881, "duration": 163, "method": "GET"}
+    {"status": 200, "fp": "1ff11f1543809f1dbd714e3501d8f460b92a7a95", "rs": 138137, "_key": "1/1/1/0", "url": "http://blog.zyte.com", "time": 1449834387621, "duration": 238, "method": "GET"}
+    {"status": 200, "fp": "418a0964a93e139166dbf9b33575f10f31f17a1", "rs": 138137, "_key": "1/1/1/0", "url": "http://blog.zyte.com", "time": 1449834390881, "duration": 163, "method": "GET"}

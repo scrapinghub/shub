@@ -53,6 +53,9 @@ so there are commands bundled under :ref:`shub image <commands>` that allow to e
 Build
 ^^^^^
 
+.. warning::
+    check if images.scrapinghub.com is correct
+
 During the build stage Docker image is built from the given Dockerfile.
 This stage can be manually started with :ref:`shub image build <commands-build>` command::
 

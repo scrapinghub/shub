@@ -32,7 +32,7 @@ class TestDeployReqs(unittest.TestCase):
             for args, kwargs in m.call_args_list:
                 project, endpoint, apikey = args
                 self.assertEqual(project, 1)
-                self.assertIn('https://app.scrapinghub.com', endpoint)
+                self.assertIn('https://app.zyte.com', endpoint)
                 self.assertEqual(apikey, self.conf.apikeys['default'])
 
     def _write_tmp_requirements_file(self):

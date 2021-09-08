@@ -44,7 +44,7 @@ def test_cli(list_mocked, post_mocked, get_mocked):
 
     auth_cfg = '{"email": null, "password": " ", "username": "abcdef"}'
     post_mocked.assert_called_with(
-        'https://app.scrapinghub.com/api/releases/deploy.json',
+        'https://app.zyte.com/api/releases/deploy.json',
         allow_redirects=False,
         auth=('abcdef', ''),
         data={
@@ -77,7 +77,7 @@ def test_cli_insecure_registry(list_mocked, post_mocked, get_mocked):
     assert result.exit_code == 0
 
     post_mocked.assert_called_with(
-        'https://app.scrapinghub.com/api/releases/deploy.json',
+        'https://app.zyte.com/api/releases/deploy.json',
         allow_redirects=False,
         auth=('abcdef', ''),
         data={

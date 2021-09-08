@@ -178,6 +178,10 @@ and may have an extended structure.
 All the settings should replicate Dash API project ``/settings/get.json`` endpoint response
 (except ``job_settings`` if exists):
 
+
+.. warning::
+    This code doesn't work
+
 .. code-block:: bash
 
     http -a APIKEY: http://dash.scrapinghub.com/api/settings/get.json project==PROJECTID

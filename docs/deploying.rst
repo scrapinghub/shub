@@ -20,7 +20,7 @@ your ``scrapinghub.yml``, you can leave out the parameter completely::
     Packing version 3af023e-master
     Deploying to Scrapy Cloud project "12345"
     {"status": "ok", "project": 12345, "version": "3af023e-master", "spiders": 1}
-    Run your spiders at: https://app.scrapinghub.com/p/12345/
+    Run your spiders at: https://app.zyte.com/p/12345/
 
 You can also deploy your project from a Python egg, or build one without
 deploying::
@@ -29,7 +29,7 @@ deploying::
     Using egg: egg_name
     Deploying to Scrapy Cloud project "12345"
     {"status": "ok", "project": 12345, "version": "1.0.0", "spiders": 1}
-    Run your spiders at: https://app.scrapinghub.com/p/12345/
+    Run your spiders at: https://app.zyte.com/p/12345/
 
 ::
 
@@ -70,7 +70,7 @@ In case you use `pipenv`_ you may also specify a ``Pipfile``::
     requirements:
       file: Pipfile
 
-In this case the ``Pipfile`` must be locked and ``pipenv`` available in the 
+In this case the ``Pipfile`` must be locked and ``pipenv`` available in the
 environment.
 
 .. note::
@@ -149,4 +149,4 @@ It is also possible to define the stack per project for advanced use cases::
         stack: scrapy:1.3-py3
       prod: 33333  # will use Scrapinghub's default stack
 
-.. _`Scrapy Cloud stack`: https://helpdesk.scrapinghub.com/support/solutions/articles/22000200402-scrapy-cloud-stacks
+.. _`Scrapy Cloud stack`: https://helpdesk.zyte.com/support/solutions/articles/22000200402-scrapy-cloud-stacks

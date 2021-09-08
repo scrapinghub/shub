@@ -396,7 +396,7 @@ def _deploy_dependency_egg(project, endpoint, apikey, name=None, version=None, e
         files = {'egg': (egg_name, egg_fp)}
         make_deploy_request(url, data, files, auth, False, False)
 
-    success = "Deployed eggs list at: https://app.scrapinghub.com/p/%s/deploy/"
+    success = "Deployed eggs list at: https://app.zyte.com/p/%s/deploy/"
     click.echo(success % project)
 
 

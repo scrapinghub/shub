@@ -104,7 +104,7 @@ Option            Description                                   Scope
                   directory, via ``shub login``.
 ================  ============================================  ===============
 
-.. _`Scrapy Cloud stack`: https://helpdesk.scrapinghub.com/support/solutions/articles/22000200402-scrapy-cloud-stacks
+.. _`Scrapy Cloud stack`: https://helpdesk.zyte.com/support/solutions/articles/22000200402-scrapy-cloud-stacks
 
 .. _configuration-environment:
 

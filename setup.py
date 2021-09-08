@@ -16,12 +16,12 @@ setup(
     version='2.13.0',
     packages=find_packages(exclude=('tests', 'tests.*')),
     url=about['DOCS_LINK'],
-    description='Scrapinghub Command Line Client',
+    description='Zyte Command Line Client (cli)',
     long_description=open('README.rst').read(),
-    author='Scrapinghub',
-    author_email='info@scrapinghub.com',
-    maintainer='Scrapinghub',
-    maintainer_email='info@scrapinghub.com',
+    author='Zyte',
+    author_email='info@zyte.com',
+    maintainer='Zyte',
+    maintainer_email='info@zyte.com',
     license='BSD',
     entry_points={
         'console_scripts': ['shub = shub.tool:cli']
