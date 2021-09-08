@@ -505,7 +505,6 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
                 os.path.join(basepath, 'a', 'b'))
 
 
-@unittest.skip('broken by recent versions of `click`')
 class OnboardingWizardTestCase(unittest.TestCase):
 
     def setUp(self):
