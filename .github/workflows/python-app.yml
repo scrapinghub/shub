@@ -22,9 +22,13 @@ jobs:
         python-version: 3.9
     - name: Install dependencies
       run: |
+        sudo apt install python2.7 -h
+        sudo apt install python3.6 -h
+        sudo apt install python3.7 -h
+        sudo apt install python3.8 -h
         python -m pip install --upgrade pip
         pip install flake8 pytest tox
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        pip install -r tests/requirements.txt
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
