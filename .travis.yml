@@ -1,5 +1,5 @@
 language: python
-python: 3.6
+python: 3.9
 sudo: false
 env:
   - TOX_ENV=py27
@@ -48,11 +48,11 @@ matrix:
         - TOX_ENV=freeze
         - PYTHON_VERSION='3.6.9'
 
-branches:
-  only:
-    - master
-    - /^v\d+\.\d+\.\d+[\w\-]*$/
-    - update_dependencies
+#branches:
+#  only:
+#    - master
+#    - /^v\d+\.\d+\.\d+[\w\-]*$/
+#    - update_dependencies
 
 before_install: |
     if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
