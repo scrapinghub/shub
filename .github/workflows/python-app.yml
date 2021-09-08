@@ -22,7 +22,6 @@ jobs:
         python-version: 3.9
     - name: Install dependencies
       run: |
-        sudo apt-get install python2.7 -y
         sudo apt-get install python3.7 -y
         sudo apt-get install python3.8 -y
         python -m pip install --upgrade pip
