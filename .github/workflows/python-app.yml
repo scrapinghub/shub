@@ -22,10 +22,10 @@ jobs:
         python-version: 3.9
     - name: Install dependencies
       run: |
-        sudo apt install python2.7 -h
-        sudo apt install python3.6 -h
-        sudo apt install python3.7 -h
-        sudo apt install python3.8 -h
+        sudo apt install python2.7 -y
+        sudo apt install python3.6 -y
+        sudo apt install python3.7 -y
+        sudo apt install python3.8 -y
         python -m pip install --upgrade pip
         pip install flake8 pytest tox
         pip install -r tests/requirements.txt
