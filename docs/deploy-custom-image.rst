@@ -568,17 +568,17 @@ Or pass it to :ref:`upload <commands-upload>` command::
     $ shub image upload --username johndoe --password yourpass
 
 
-Container works locally but fails in scrapy cloud
+Container works locally but fails in Scrapy Cloud
 -------------------------------------------------
 
 Prior to running ``start-crawl`` in Scrapy Cloud, some configurations
 are set to ensure we can run an isolated process.
 This can lead to issues that are quite hard to debug and find the
 root cause.
-To aid in this process, below you willl find some steps that
-are quite similar to what actually runs in scrapy cloud.
+To aid in this process, below you will find some steps that
+are quite similar to what actually runs in Scrapy Cloud.
 
-Run your container in interactive with ``bash`` (or any other
+Run your container in interactive mode with ``bash`` (or any other
 terminal that is available). Please replace the 2 occurrences of
 ``<SPIDER-NAME>`` with the actual spider that is to run::
 
@@ -588,7 +588,7 @@ terminal that is available). Please replace the 2 occurrences of
     -e SHUB_JOB_DATA='{
         "_shub_worker": "kumo",
         "api_url": "https://app.zyte.com/api/",
-        "auth": "<AN AUTH KEY>",
+        "auth": "SOME AUTH KEY NOT REQUIRED FOR THIS TEST",
         "deploy_id": 1,
         "key": "123/4/5",
         "pending_time": 1632739881823,
