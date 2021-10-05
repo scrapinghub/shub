@@ -308,4 +308,4 @@ if not on_rtd:  # only import and set the theme if we're building docs locally
 # Wrap text in tables
 # https://github.com/snide/sphinx_rtd_theme/issues/117#issuecomment-41571653
 def setup(app):
-    app.add_stylesheet()
+    app.add_stylesheet("theme_overrides.css")
