@@ -4,17 +4,17 @@
 #
 #    pip-compile setup.py
 #
-certifi==2021.5.30
+certifi==2021.10.8
     # via requests
-charset-normalizer==2.0.4
+charset-normalizer==2.0.7
     # via requests
-click==8.0.1
+click==8.0.3
     # via shub (setup.py)
-docker==5.0.2
+docker==5.0.3
     # via shub (setup.py)
-idna==3.2
+idna==3.3
     # via requests
-pyyaml==5.4.1
+pyyaml==6.0
     # via shub (setup.py)
 requests==2.26.0
     # via
@@ -25,7 +25,8 @@ retrying==1.3.3
     # via
     #   scrapinghub
     #   shub (setup.py)
-scrapinghub==2.3.1
+# scrapinghub==2.3.1
+git+https://git@github.com/scrapinghub/python-scrapinghub.git@update_py310_minus_py27
     # via shub (setup.py)
 six==1.16.0
     # via
@@ -34,9 +35,9 @@ six==1.16.0
     #   shub (setup.py)
 toml==0.10.2
     # via shub (setup.py)
-tqdm==4.62.2
+tqdm==4.62.3
     # via shub (setup.py)
-urllib3==1.26.6
+urllib3==1.26.7
     # via requests
 websocket-client==1.2.1
     # via docker
