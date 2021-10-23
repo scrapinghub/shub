@@ -11,7 +11,7 @@ import re
 import time
 
 from collections import deque
-from six.moves.configparser import SafeConfigParser
+from six.moves.configparser import ConfigParser
 from distutils.spawn import find_executable
 from distutils.version import LooseVersion, StrictVersion
 from glob import glob
@@ -484,9 +484,9 @@ def inside_project():
 
 
 def get_config(use_closest=True):
-    """Get Scrapy config file as a SafeConfigParser"""
+    """Get Scrapy config file as a ConfigParser"""
     sources = get_sources(use_closest)
-    cfg = SafeConfigParser()
+    cfg = ConfigParser()
     cfg.read(sources)
     return cfg
 
@@ -505,7 +505,7 @@ def get_sources(use_closest=True):
 
 
 def get_scrapycfg_targets(cfgfiles=None):
-    cfg = SafeConfigParser()
+    cfg = ConfigParser()
     cfg.read(cfgfiles or [])
     baset = dict(cfg.items('deploy')) if cfg.has_section('deploy') else {}
     targets = {}
