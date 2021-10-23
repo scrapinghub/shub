@@ -4,7 +4,7 @@ start:
 
 requirements: requirements-test.txt
 
-requirements-test.txt: requirements.txt
+requirements-test.txt: requirements-test.in requirements.txt
 	pip-compile -qU requirements-test.in
 
 requirements.txt: setup.py
