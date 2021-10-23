@@ -84,3 +84,7 @@ def clean_progress_output(output):
                       #    ("ESC"  + single command character)
         """,
         '', output)
+
+
+def assert_is_dict_subset(a, b):
+    assert b == {**b, **a}

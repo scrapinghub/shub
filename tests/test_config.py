@@ -18,6 +18,8 @@ from shub.exceptions import (BadParameterException, BadConfigException,
                              ConfigParseException, MissingAuthException,
                              NotFoundException)
 
+from .utils import assert_is_dict_subset
+
 
 VALID_YAML_CFG = """
     projects:
@@ -111,7 +113,7 @@ class ShubConfigTest(unittest.TestCase):
         }
         self.assertEqual(projects, self.conf.projects)
         endpoints = {'external': 'ext_endpoint'}
-        self.assertDictContainsSubset(endpoints, self.conf.endpoints)
+        assert_is_dict_subset(endpoints, self.conf.endpoints)
         apikeys = {'default': 'key', 'otheruser': 'otherkey'}
         self.assertEqual(apikeys, self.conf.apikeys)
         stacks = {'dev': 'scrapy:v1.1'}
@@ -130,7 +132,7 @@ class ShubConfigTest(unittest.TestCase):
         """
         conf = self._get_conf_with_yml(yml)
         endpoints = {'external': 'ext_endpoint'}
-        self.assertDictContainsSubset(endpoints, conf.endpoints)
+        assert_is_dict_subset(endpoints, conf.endpoints)
         self.assertEqual(conf.projects, {})
         self.assertEqual(conf.apikeys, {})
         self.assertEqual(conf.images, {})
@@ -161,7 +163,7 @@ class ShubConfigTest(unittest.TestCase):
                 dev: dev_stack
             stack: prod_stack
         """
-        self.assertDictContainsSubset(
+        assert_is_dict_subset(
             self._get_conf_with_yml(yml).stacks,
             {'default': 'prod_stack', 'dev': 'dev_stack'},
         )

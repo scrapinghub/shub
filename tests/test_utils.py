@@ -26,7 +26,7 @@ from shub.exceptions import (
     NotFoundException, RemoteErrorException, SubcommandException
 )
 
-from .utils import AssertInvokeRaisesMixin, mock_conf
+from .utils import AssertInvokeRaisesMixin, mock_conf, assert_is_dict_subset
 
 
 class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
@@ -66,7 +66,7 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
             'print("Hello", file=sys.stderr)',
         ]
         self.assertEqual(utils.run_cmd(cmd), '')
-        with self.assertRaisesRegex(SubcommandException, 'STDERR[\s-]+Hello'):
+        with self.assertRaisesRegex(SubcommandException, r'STDERR[\s-]+Hello'):
             cmd[-1] += '; sys.exit(99)'
             utils.run_cmd(cmd)
 
@@ -274,16 +274,16 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
     def test_latest_github_release(self, mock_get):
         with self.runner.isolated_filesystem():
             mock_get.return_value.json.return_value = {'key': 'value'}
-            self.assertDictContainsSubset(
+            assert_is_dict_subset(
                 {'key': 'value'},
                 utils.latest_github_release(cache='./cache.txt'),
             )
             mock_get.return_value.json.return_value = {'key': 'newvalue'}
-            self.assertDictContainsSubset(
+            assert_is_dict_subset(
                 {'key': 'value'},
                 utils.latest_github_release(cache='./cache.txt'),
             )
-            self.assertDictContainsSubset(
+            assert_is_dict_subset(
                 {'key': 'newvalue'},
                 utils.latest_github_release(force_update=True,
                                             cache='./cache.txt'),
@@ -292,12 +292,12 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
             mock_get.return_value.json.return_value = {'key': 'value'}
             with open('./cache.txt', 'w') as f:
                 f.write('abc')
-            self.assertDictContainsSubset(
+            assert_is_dict_subset(
                 {'key': 'value'},
                 utils.latest_github_release(cache='./cache.txt'),
             )
             mock_get.return_value.json.return_value = {'key': 'newvalue'}
-            self.assertDictContainsSubset(
+            assert_is_dict_subset(
                 {'key': 'value'},
                 utils.latest_github_release(cache='./cache.txt'),
             )
@@ -306,12 +306,12 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
             with open('./cache.txt', 'w') as f:
                 f.write('abc')
             os.chmod('./cache.txt', stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
-            self.assertDictContainsSubset(
+            assert_is_dict_subset(
                 {'key': 'value'},
                 utils.latest_github_release(cache='./cache.txt'),
             )
             mock_get.return_value.json.return_value = {'key': 'newvalue'}
-            self.assertDictContainsSubset(
+            assert_is_dict_subset(
                 {'key': 'newvalue'},
                 utils.latest_github_release(cache='./cache.txt'),
             )

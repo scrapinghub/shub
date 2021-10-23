@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 import netrc
 import os
-import warnings
 from collections import namedtuple
 
 import click
@@ -326,7 +325,8 @@ class ShubConfig(object):
 
     def get_target(self, target, auth_required=True):
         """Return (project_id, endpoint, apikey) for given target."""
-        warnings.warn("get_target is deprecated, use get_target_conf instead")
+        # WARNING: deprecating is just annoying because this library's unit tests still use this method
+        # warnings.warn("get_target is deprecated, use get_target_conf instead")
         targetconf = self.get_target_conf(target, auth_required=auth_required)
         return (
             targetconf.project_id,
