@@ -29,7 +29,7 @@ setup(
     include_package_data=True,
     zip_safe=False,
     install_requires=[
-        'click',
+        'click>=7.0,
         'docker',
         'pyyaml',
         'retrying',
