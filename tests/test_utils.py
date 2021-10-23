@@ -66,7 +66,7 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
             'print("Hello", file=sys.stderr)',
         ]
         self.assertEqual(utils.run_cmd(cmd), '')
-        with self.assertRaisesRegexp(SubcommandException, 'STDERR[\s-]+Hello'):
+        with self.assertRaisesRegex(SubcommandException, 'STDERR[\s-]+Hello'):
             cmd[-1] += '; sys.exit(99)'
             utils.run_cmd(cmd)
 
