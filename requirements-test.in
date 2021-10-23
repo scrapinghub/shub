@@ -6,5 +6,8 @@ pytest-cov
 flake8
 pipenv
 
+# latest python-scrapinghub
+git+https://git@github.com/scrapinghub/python-scrapinghub.git@update_py310_minus_py27
+
 # CVE-2020-29651
 py>=1.10.0
