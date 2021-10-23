@@ -50,7 +50,7 @@ class LoginTest(AssertInvokeRaisesMixin, unittest.TestCase):
         with self.runner.isolated_filesystem() as fs:
             self._run(fs=fs)
             with open('.scrapinghub.yml', 'r') as f:
-                conf = yaml.load(f)
+                conf = yaml.safe_load(f)
             self.assertEqual(conf['apikeys']['default'], VALID_KEY)
 
     def test_write_key_to_existing_file(self):
@@ -62,7 +62,7 @@ class LoginTest(AssertInvokeRaisesMixin, unittest.TestCase):
             files = {'.scrapinghub.yml': VALID_SCRAPINGHUB_YML}
             self._run(files=files, fs=fs)
             with open('.scrapinghub.yml', 'r') as f:
-                conf = yaml.load(f)
+                conf = yaml.safe_load(f)
             self.assertEqual(conf['apikeys']['default'], VALID_KEY)
             self.assertEqual(conf['endpoints']['other'], "some_endpoint")
 
@@ -90,7 +90,7 @@ class LoginTest(AssertInvokeRaisesMixin, unittest.TestCase):
                 fs=fs,
             )
             with open('.scrapinghub.yml', 'r') as f:
-                conf = yaml.load(f)
+                conf = yaml.safe_load(f)
             self.assertEqual(conf['apikeys']['default'], apikey_suggestion)
 
     def test_login_attempt_after_login_doesnt_lead_to_an_error(self):
