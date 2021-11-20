@@ -30,6 +30,13 @@ class ReleaseUtilsTest(TestCase):
             assert get_project_dir() == tmpdir
 
     def test_get_docker_client(self):
+        # delete basic test environment
+        if os.environ.get('DOCKER_HOST', False):
+            del os.environ['DOCKER_HOST']
+        if os.environ.get('DOCKER_TLS_VERIFY', False):
+            del os.environ['DOCKER_TLS_VERIFY']
+        if os.environ.get('DOCKER_API_VERSION', False):
+            del os.environ['DOCKER_API_VERSION']
         mocked_docker = mock.Mock()
         sys.modules['docker'] = mocked_docker
         client_mock = mock.Mock()
