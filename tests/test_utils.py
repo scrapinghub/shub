@@ -66,7 +66,7 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
             'print("Hello", file=sys.stderr)',
         ]
         self.assertEqual(utils.run_cmd(cmd), '')
-        with self.assertRaisesRegexp(SubcommandException, 'STDERR[\s-]+Hello'):
+        with self.assertRaisesRegexp(SubcommandException, r'STDERR[\s-]+Hello'):
             cmd[-1] += '; sys.exit(99)'
             utils.run_cmd(cmd)
 
@@ -442,7 +442,7 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
     def test_update_yaml_dict_handles_file_errors(self):
         with CliRunner().isolated_filesystem():
             self.assertFalse(os.path.isfile('didnt_exist.yml'))
-            with utils.update_yaml_dict('didnt_exist.yml') as conf:
+            with utils.update_yaml_dict('didnt_exist.yml'):
                 pass
             self.assertTrue(os.path.isfile('didnt_exist.yml'))
 

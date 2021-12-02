@@ -4,7 +4,6 @@ import tempfile
 from unittest import TestCase
 
 import mock
-import click
 import pytest
 from shub.exceptions import BadConfigException, BadParameterException, NotFoundException
 from shub.image.utils import (
