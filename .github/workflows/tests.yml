@@ -10,7 +10,7 @@ on:
 
 jobs:
   tests-ubuntu:
-    name: "Test: py${{ matrix.python-version }}, {{ matrix.os }}"
+    name: "Test: py${{ matrix.python-version }}, ${{ matrix.os }}"
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
