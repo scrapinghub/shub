@@ -127,4 +127,7 @@ tags
 # Persistent undo
 [._]*.un~
 
+# PyCharm
+.idea/
+
 # End of https://www.gitignore.io/api/vim,python

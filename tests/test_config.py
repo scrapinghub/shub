@@ -18,6 +18,8 @@ from shub.exceptions import (BadParameterException, BadConfigException,
                              ConfigParseException, MissingAuthException,
                              NotFoundException)
 
+from .utils import assert_is_dict_subset
+
 
 VALID_YAML_CFG = """
     projects:
@@ -111,7 +113,7 @@ class ShubConfigTest(unittest.TestCase):
         }
         self.assertEqual(projects, self.conf.projects)
         endpoints = {'external': 'ext_endpoint'}
-        self.assertDictContainsSubset(endpoints, self.conf.endpoints)
+        assert_is_dict_subset(endpoints, self.conf.endpoints)
         apikeys = {'default': 'key', 'otheruser': 'otherkey'}
         self.assertEqual(apikeys, self.conf.apikeys)
         stacks = {'dev': 'scrapy:v1.1'}
@@ -130,7 +132,7 @@ class ShubConfigTest(unittest.TestCase):
         """
         conf = self._get_conf_with_yml(yml)
         endpoints = {'external': 'ext_endpoint'}
-        self.assertDictContainsSubset(endpoints, conf.endpoints)
+        assert_is_dict_subset(endpoints, conf.endpoints)
         self.assertEqual(conf.projects, {})
         self.assertEqual(conf.apikeys, {})
         self.assertEqual(conf.images, {})
@@ -161,7 +163,7 @@ class ShubConfigTest(unittest.TestCase):
                 dev: dev_stack
             stack: prod_stack
         """
-        self.assertDictContainsSubset(
+        assert_is_dict_subset(
             self._get_conf_with_yml(yml).stacks,
             {'default': 'prod_stack', 'dev': 'dev_stack'},
         )
@@ -353,7 +355,7 @@ class ShubConfigTest(unittest.TestCase):
                 """)
             conf.save('conf.yml')
             with open('conf.yml', 'r') as f:
-                self.assertEqual(yaml.load(f), {'project': 123})
+                self.assertEqual(yaml.safe_load(f), {'project': 123})
 
             conf = self._get_conf_with_yml("""
                 projects:
@@ -363,7 +365,7 @@ class ShubConfigTest(unittest.TestCase):
                 """)
             conf.save('conf.yml')
             with open('conf.yml', 'r') as f:
-                self.assertEqual(yaml.load(f), {
+                self.assertEqual(yaml.safe_load(f), {
                     'project': 123,
                     'requirements': {'file': 'reqs.txt'}}
                 )
@@ -373,7 +375,7 @@ class ShubConfigTest(unittest.TestCase):
         with CliRunner().isolated_filesystem():
             conf.save('conf.yml')
             with open('conf.yml', 'r') as f:
-                self.assertEqual(yaml.load(f), None)
+                self.assertEqual(yaml.safe_load(f), None)
 
     def test_save_shortcut(self):
         conf = ShubConfig()
@@ -391,7 +393,7 @@ class ShubConfigTest(unittest.TestCase):
         with CliRunner().isolated_filesystem():
             conf.save('conf.yml')
             with open('conf.yml', 'r') as f:
-                self.assertEqual(yaml.load(f), expected_yml_dict)
+                self.assertEqual(yaml.safe_load(f), expected_yml_dict)
 
     def test_save_shortcut_updated(self):
         OLD_YML = """\
@@ -446,11 +448,11 @@ class ShubConfigTest(unittest.TestCase):
             conf.save('conf.yml', options=['projects'])
             with open('conf.yml', 'r') as f:
                 self.assertEqual(
-                    yaml.load(f),
+                    yaml.safe_load(f),
                     {'project': 12345, 'stack': 'custom-stack'})
             conf.save('conf.yml')
             with open('conf.yml', 'r') as f:
-                self.assertEqual(yaml.load(f), {'project': 12345})
+                self.assertEqual(yaml.safe_load(f), {'project': 12345})
 
     def test_normalized_projects(self):
         expected_projects = {
@@ -563,7 +565,7 @@ class ShubConfigTest(unittest.TestCase):
             image: true
             stack: scrapy:1.3
         """)
-        with self.assertRaisesRegexp(BadConfigException, '(?i)ambiguous'):
+        with self.assertRaisesRegex(BadConfigException, '(?i)ambiguous'):
             self.conf.get_image('default')
 
     def test_get_image_ambiguous_global_image_and_project_stack(self):
@@ -578,9 +580,9 @@ class ShubConfigTest(unittest.TestCase):
                 stack: scrapy:1.3
             image: true
             """)
-        with self.assertRaisesRegexp(BadConfigException, '(?i)ambiguous'):
+        with self.assertRaisesRegex(BadConfigException, '(?i)ambiguous'):
             self.conf.get_image('bad')
-        with self.assertRaisesRegexp(BadConfigException, '(?i)disabled'):
+        with self.assertRaisesRegex(BadConfigException, '(?i)disabled'):
             self.conf.get_image('good')
 
     def test_get_image_ambiguous_project_image_and_project_stack(self):
@@ -591,7 +593,7 @@ class ShubConfigTest(unittest.TestCase):
                 image: true
                 stack: scrapy:1.3
             """)
-        with self.assertRaisesRegexp(BadConfigException, '(?i)ambiguous'):
+        with self.assertRaisesRegex(BadConfigException, '(?i)ambiguous'):
             self.conf.get_image('default')
 
     def test_get_target_conf(self):

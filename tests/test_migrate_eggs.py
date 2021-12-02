@@ -90,7 +90,7 @@ class MigrateEggsTest(unittest.TestCase):
         )
 
         with open('./scrapinghub.yml') as f:
-            abc = yaml.load(f)
+            abc = yaml.safe_load(f)
             eggs = abc['requirements'].pop('eggs')
             eggs = [e.replace('\\', '/') for e in eggs]
             self.assertEqual(
@@ -133,7 +133,7 @@ class MigrateEggsTest(unittest.TestCase):
         )
 
         with open('./scrapinghub.yml') as f:
-            abc = yaml.load(f)
+            abc = yaml.safe_load(f)
             self.assertDictEqual(
                 abc,
                 {
@@ -187,7 +187,7 @@ class MigrateEggsTest(unittest.TestCase):
         )
 
         with open('./scrapinghub.yml') as f:
-            abc = yaml.load(f)
+            abc = yaml.safe_load(f)
             self.assertDictEqual(
                 abc,
                 {

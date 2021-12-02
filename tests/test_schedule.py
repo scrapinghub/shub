@@ -9,7 +9,7 @@ from scrapinghub import ScrapinghubAPIError
 from shub import schedule
 from shub.exceptions import RemoteErrorException
 
-from .utils import mock_conf
+from .utils import mock_conf, assert_is_dict_subset
 
 
 class ScheduleTest(unittest.TestCase):
@@ -63,7 +63,7 @@ class ScheduleTest(unittest.TestCase):
             "--argument ARGWITHEQUAL=val2=val2".split(' '),
         )
         job_args = mock_proj.jobs.run.call_args[1]['job_args']
-        self.assertDictContainsSubset(
+        assert_is_dict_subset(
             {'ARG': 'val1', 'ARGWITHEQUAL': 'val2=val2'},
             job_args,
         )
@@ -116,7 +116,7 @@ class ScheduleTest(unittest.TestCase):
             "testspider -e VAR1=VAL1 --environment VAR2=VAL2".split(' '),
         )
         call_kwargs = mock_proj.jobs.run.call_args[1]
-        self.assertDictContainsSubset(
+        assert_is_dict_subset(
             {'VAR1': 'VAL1', 'VAR2': 'VAL2'},
             call_kwargs['environment'],
         )
