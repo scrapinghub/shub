@@ -566,3 +566,77 @@ If you are using a private repository to push your images to, make sure to pass 
 Or pass it to :ref:`upload <commands-upload>` command::
 
     $ shub image upload --username johndoe --password yourpass
+
+
+Container works locally but fails in Scrapy Cloud
+-------------------------------------------------
+
+Prior to running ``start-crawl`` in Scrapy Cloud, some configurations
+are set to ensure we can run an isolated process.
+This can lead to issues that are quite hard to debug and find the
+root cause.
+To aid in this process, below you will find some steps that
+are quite similar to what actually runs in Scrapy Cloud.
+
+Run your container in interactive mode with ``bash`` (or any other
+terminal that is available). Please replace the 2 occurrences of
+``<SPIDER-NAME>`` with the actual spider that is to run::
+
+    $ docker run \
+    -it \
+    -e SHUB_JOBKEY=123/4/5 \
+    -e SHUB_JOB_DATA='{
+        "_shub_worker": "kumo",
+        "api_url": "https://app.zyte.com/api/",
+        "auth": "SOME AUTH KEY NOT REQUIRED FOR THIS TEST",
+        "deploy_id": 1,
+        "key": "123/4/5",
+        "pending_time": 1632739881823,
+        "priority": 2,
+        "project": 123,
+        "running_time": 1632739882059,
+        "scheduled_by": "some_user",
+        "spider": "<SPIDER-NAME>",
+        "spider_type": "manual",
+        "started_by": "jobrunner",
+        "state": "running",
+        "tags": [],
+        "units": 1,
+        "version": "1.0"
+    }' \
+    -e SHUB_JOB_ENV='{}' \
+    -e SHUB_JOB_MEMORY_LIMIT=950 \
+    -e SHUB_JOB_UID=123 \
+    -e SHUB_SETTINGS='{
+        "deploy_id": 1,
+        "enabled_addons": [],
+        "job_settings": {},
+        "organization_settings": {},
+        "project_settings": {},
+        "spider_settings": {},
+        "status": "ok",
+        "version": "1.0"
+    }' \
+    -e SHUB_SPIDER=<SPIDER-NAME> \
+    --net bridge \
+    --volume=/scrapinghub \
+    --rm=true \
+    --name=scrapy-cloud-container \
+    my-docker-image \
+    /bin/bash
+
+Connect to the container in a new terminal window
+and open a named pipe to communicate through ``sh_scrapy``::
+
+    $ docker exec -it scrapy-cloud-container /bin/bash
+    $ mkfifo -m 0600 /dev/scrapinghub
+    $ chown 65534:65534 /dev/scrapinghub
+    $ cat /dev/scrapinghub
+
+Go back to the first window and start the crawling process::
+
+    $ export SHUB_FIFO_PATH=/dev/scrapinghub
+    $ start-crawl
+
+Switch back to the second window (the named pipe one)
+to see the results comming out.
