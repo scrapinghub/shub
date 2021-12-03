@@ -1,6 +1,10 @@
 Scrapinghub command line client
 ===============================
 
+.. image:: https://github.com/scrapinghub/shub/actions/workflows/tests.yml/badge.svg
+   :target: https://github.com/scrapinghub/shub/actions/workflows/tests.yml
+   :alt: Tests
+
 ``shub`` is the Scrapinghub command line client. It allows you to deploy
 projects or dependencies, schedule spiders, and retrieve scraped data or logs
 without leaving the command line.
@@ -9,7 +13,7 @@ without leaving the command line.
 Requirements
 ------------
 
-* Python 2.7+ or Python 3.5+
+* Python Python 3.6+
 
 
 Installation
