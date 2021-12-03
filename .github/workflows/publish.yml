@@ -1,0 +1,34 @@
+name: Publish
+
+on:
+#   release:
+#     types: [published]
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  freeze:
+    name: "Freeze: ${{ matrix.os }}"
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+
+    - name: Install tox
+      run: pip install tox
+
+    - name: Run tests
+      run: tox -e freeze
