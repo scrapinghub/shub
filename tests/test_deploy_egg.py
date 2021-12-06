@@ -11,8 +11,6 @@ import tempfile
 import unittest
 from zipfile import ZipFile
 
-import pytest
-
 from shub import deploy_egg
 from shub.exceptions import BadParameterException
 
@@ -58,7 +56,7 @@ class TestDeployEgg(unittest.TestCase):
 
         self.assertTrue('master' in data['version'])
 
-    @pytest.mark.xfail(reason="Not working with latest pip")
+    @unittest.skip('flaky')
     def test_can_deploy_an_egg_from_pypi(self):
         basepath = os.path.abspath('tests/samples/')
         pkg = os.path.join(basepath, 'deploy_egg_sample_project.zip')
