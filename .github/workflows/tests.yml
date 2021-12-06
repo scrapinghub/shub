@@ -10,7 +10,7 @@ on:
 
 jobs:
   tests-ubuntu:
-    name: "Test: py${{ matrix.python-version }}"
+    name: "Test: py${{ matrix.python-version }}, Ubuntu"
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -38,7 +38,7 @@ jobs:
         ./codecov
 
   tests-macos:
-    name: "Test: py${{ matrix.python-version }}"
+    name: "Test: py${{ matrix.python-version }}, macOS"
     runs-on: macos-latest
     strategy:
       fail-fast: false
@@ -60,7 +60,7 @@ jobs:
       run: tox -e py
 
   tests-windows:
-    name: "Test: py${{ matrix.python-version }}"
+    name: "Test: py${{ matrix.python-version }}, Windows"
     runs-on: windows-latest
     strategy:
       fail-fast: false
