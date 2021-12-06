@@ -37,7 +37,7 @@ jobs:
         chmod +x codecov
         ./codecov
 
-tests-macos:
+  tests-macos:
     name: "Test: py${{ matrix.python-version }}"
     runs-on: macos-latest
     strategy:
@@ -59,7 +59,7 @@ tests-macos:
     - name: Run tests
       run: tox -e py
 
-tests-windows:
+  tests-windows:
     name: "Test: py${{ matrix.python-version }}"
     runs-on: windows-latest
     strategy:
