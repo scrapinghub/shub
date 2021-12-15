@@ -35,7 +35,7 @@ jobs:
 
     - name: Pack binary (Windows)
       if: ${{ runner.os == 'Windows' }}
-      run: zip shub-${{ runner.os }}.zip dist_bin/shub.exe
+      run: 7z a shub-Windows.zip dist_bin/shub.exe
 
     - name: Pack binary (Linux/macOS)
       if: ${{ runner.os != 'Windows' }}
