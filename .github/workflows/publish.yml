@@ -1,14 +1,6 @@
 name: Publish
 
-on:
-#   release:
-#     types: [published]
-  push:
-    branches:
-      - master
-  pull_request:
-    branches:
-      - master
+on: push
 
 jobs:
   freeze:
@@ -30,5 +22,11 @@ jobs:
     - name: Install tox
       run: pip install tox
 
-    - name: Run tests
+    - name: Build binary
       run: tox -e freeze
+
+    - name: Upload binary
+      uses: actions/upload-artifact@v2
+      with:
+        name: shub-${{ matrix.os }}
+        path: dist_bin/shub
