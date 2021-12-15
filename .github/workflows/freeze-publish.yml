@@ -44,7 +44,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Release
+    - name: Download binaries
+      uses: actions/download-artifact@v2
+      with:
+        name: shub-*
+
+    - name: Draft release
       uses: softprops/action-gh-release@v1
       with:
         draft: true
