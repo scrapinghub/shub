@@ -47,10 +47,13 @@ jobs:
     - name: Download binaries
       uses: actions/download-artifact@v2
       with:
-        name: shub-*
+        path: binaries
+
+    - name: Display structure of downloaded files
+      run: ls -R binaries
 
     - name: Draft release
       uses: softprops/action-gh-release@v1
       with:
         draft: true
-        files: shub-*
+        files: binaries/*/shub-*
