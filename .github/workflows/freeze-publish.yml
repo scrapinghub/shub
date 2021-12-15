@@ -16,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, windows-latest]
         # os: [ubuntu-latest, macos-latest, windows-latest]
 
     steps:
@@ -33,13 +33,18 @@ jobs:
     - name: Build binary
       run: tox -e freeze
 
+    - name: Rename binary (Linux/macOS)
+      if: ${{ runner.os != 'Windows' }}
+      run: mv dist_bin/shub shub-${{ runner.os }}
+
+    - name: Rename binary (Windows)
+      if: ${{ runner.os == 'Windows' }}
+      run: mv dist_bin/shub.exe shub-${{ runner.os }}.exe
+
     - name: Upload binary
       uses: actions/upload-artifact@v2
       with:
-        name: shub-${{ runner.os }}
-        path: |
-          dist_bin/shub
-          dist_bin/shub.exe
+        path: shub-${{ runner.os }}
 
   publish:
     # if: startsWith(github.ref, 'refs/tags/v')
@@ -59,7 +64,4 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         draft: true
-        files: |
-          binaries/shub-Linux
-          binaries/shub-macOS
-          binaries/shub-Windows
+        files: binaries/**
