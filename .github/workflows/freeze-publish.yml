@@ -35,10 +35,8 @@ jobs:
     - name: Upload binary
       uses: actions/upload-artifact@v2
       with:
-        name: shub-${{ env.RUNNER_OS }}
-        path: |
-          dist_bin/shub
-          dist_bin\shub
+        name: shub-${{ runner.os }}
+        path: dist_bin/shub-*
 
   publish:
     # if: startsWith(github.ref, 'refs/tags/v')
