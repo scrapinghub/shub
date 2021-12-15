@@ -33,21 +33,21 @@ jobs:
     - name: Build binary
       run: tox -e freeze
 
-    - name: Rename binary (Linux/macOS)
-      if: ${{ runner.os != 'Windows' }}
-      run: mv dist_bin/shub shub-${{ runner.os }}
-
-    - name: Rename binary (Windows)
+    - name: Pack binary (Windows)
       if: ${{ runner.os == 'Windows' }}
-      run: mv dist_bin/shub.exe shub-${{ runner.os }}.exe
+      run: zip shub-${{ runner.os }}.zip dist_bin/shub.exe
+
+    - name: Pack binary (Linux/macOS)
+      if: ${{ runner.os != 'Windows' }}
+      run: tar -czvf shub-${{ runner.os }}.tar.gz dist_bin/shub
 
     - name: Upload binary
       uses: actions/upload-artifact@v2
       with:
         name: shub-${{ runner.os }}
         path: |
-          shub-${{ runner.os }}
-          shub-${{ runner.os }}.exe
+          shub-${{ runner.os }}.tar.gz
+          shub-${{ runner.os }}.zip
 
   publish:
     # if: startsWith(github.ref, 'refs/tags/v')
