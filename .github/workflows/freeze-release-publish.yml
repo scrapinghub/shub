@@ -67,3 +67,24 @@ jobs:
       with:
         draft: true
         files: binaries/**
+
+  publish:
+    # if: startsWith(github.ref, 'refs/tags/v')  # FIXME: uncomment before merging
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+
+    - name: Publish to PyPI
+      run: |
+        pip install --upgrade pip
+        pip install --upgrade setuptools wheel twine
+        python setup.py sdist bdist_wheel
+        export TWINE_USERNAME=__token__
+        export TWINE_PASSWORD=${{ secrets.PYPI_TOKEN }}
+        twine upload dist/*
