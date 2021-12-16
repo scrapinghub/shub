@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - master
-      - ci-github-actions  # FIXME: remove this line once merged
   pull_request:
     branches:
       - master
