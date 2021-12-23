@@ -21,7 +21,7 @@ without leaving the command line.
 Requirements
 ------------
 
-* Python Python 3.6+
+* Python >= 3.6
 
 
 Installation
@@ -31,6 +31,9 @@ If you have ``pip`` installed on your system, you can install ``shub`` from
 the Python Package Index::
 
     pip install shub
+
+Please note that if you are using Python < 3.6,
+you should pin `shub` to `2.13.0` or lower.
 
 We also supply stand-alone binaries. You can find them in our `latest GitHub
 release`_.
