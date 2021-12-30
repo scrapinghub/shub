@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import inspect
 from functools import wraps
 
 import mock

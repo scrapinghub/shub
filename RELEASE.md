@@ -1,8 +1,8 @@
 Release procedure for shub
 ==========================
 
-The Travis build is configured to release shub to PyPI whenever a new tag is
-committed.
+The GitHub Actions build is configured to release `shub` to PyPI whenever
+a new tag (starting with `v`, e.g. `v2.13.0`) is committed.
 
 The steps to do a release are:
 
@@ -11,7 +11,7 @@ The steps to do a release are:
 2. Make sure you're at the tip of master, and then run:
 
        bumpversion VERSION_PART
-    
+
    In place of `VERSION_PART`, use one of `patch`, `minor` or `major`, meaning
    the part of the version number to be updated.
 
@@ -28,7 +28,5 @@ The steps to do a release are:
 
        https://github.com/scrapinghub/shub/releases
 
-   Travis and AppVeyor will automatically create a release draft and attach the
-   binaries they built to it. Sometimes their timing leads to them creating
-   multiple release drafts, in which case we need to combine them such that we
-   have one release that has all three (Linux, OSX, Windows) binaries.
+   The GitHub action will automatically create a release draft and attach the
+   platform-specific binaries (built with the `freeze` tox environment) to it.

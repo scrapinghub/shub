@@ -64,8 +64,7 @@ class MigrateEggsTest(unittest.TestCase):
         with open('./requirements.txt') as f:
             content = f.read()
             self.assertIn('DISABLE_DASH_EGGS', content)
-            lines = content.split('\n')
-            requirements = [l for l in lines if '==' in l]
+            requirements = [line for line in content.split('\n') if '==' in line]
             self.assertListEqual(requirements, self.REQ_LIST)
 
     def test_full(self):
