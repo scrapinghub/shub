@@ -1,6 +1,7 @@
-import mock
+from unittest import mock, TestCase
+
 from click.testing import CliRunner
-from unittest import TestCase
+
 from shub.image.upload import cli
 
 

@@ -48,7 +48,7 @@ jobs:
           shub-${{ runner.os }}.zip
 
   release:
-    if: startsWith(github.ref, 'refs/tags/v')  # FIXME: uncomment before merging
+    if: startsWith(github.ref, 'refs/tags/v')
     needs: freeze
     runs-on: ubuntu-latest
 

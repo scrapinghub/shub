@@ -1,9 +1,8 @@
 from __future__ import absolute_import
+
 import unittest
-
 from collections import namedtuple
-
-import mock
+from unittest import mock
 
 from click.testing import CliRunner
 

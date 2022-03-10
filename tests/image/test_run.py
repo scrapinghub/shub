@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 import os.path
 import tempfile
+from unittest import mock
 
 try:
     from StringIO import StringIO
 except ImportError:
     from io import StringIO
 
-import mock
 import pytest
 from click.testing import CliRunner
 

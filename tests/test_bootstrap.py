@@ -1,7 +1,7 @@
 import os
 import zipfile
+from unittest import mock
 
-import mock
 import pytest
 import requests
 import yaml

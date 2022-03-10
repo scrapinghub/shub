@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from functools import wraps
+from unittest import mock
 
-import mock
 import pytest
 
 from shub.image.utils import ProgressBar

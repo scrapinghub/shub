@@ -3,6 +3,7 @@
 
 
 from __future__ import absolute_import
+
 import json
 import os
 import stat
@@ -10,13 +11,12 @@ import sys
 import unittest
 import textwrap
 import time
+from unittest.mock import Mock, MagicMock, patch
 
 import click
 import yaml
-
 from click.testing import CliRunner
 from collections import deque
-from mock import Mock, MagicMock, patch
 from scrapinghub import ScrapinghubAPIError
 
 from shub import utils

@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 import os
+from unittest import mock
 
-import mock
 import pytest
 from click.testing import CliRunner
 
 from shub import exceptions as shub_exceptions
 from shub.image.build import cli
+
 from ..utils import clean_progress_output, format_expected_progress
 
 

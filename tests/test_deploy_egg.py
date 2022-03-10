@@ -1,14 +1,13 @@
 #!/usr/bin/env python
 # coding=utf-8
 
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
 
-import mock
 import os
 import shutil
 import tempfile
 import unittest
+from unittest import mock
 from zipfile import ZipFile
 
 from shub import deploy_egg

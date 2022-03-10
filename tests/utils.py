@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
+
 import sys
 import re
+from unittest import mock
 
-import mock
 from click.testing import CliRunner
 from tqdm.utils import _supports_unicode
 
