@@ -5,6 +5,10 @@ Scrapinghub command line client
    :target: https://pypi.python.org/pypi/shub
    :alt: PyPI Version
 
+.. image:: https://img.shields.io/pypi/pyversions/shub.svg
+   :target: https://pypi.python.org/pypi/shub
+   :alt: Python Versions
+
 .. image:: https://github.com/scrapinghub/shub/actions/workflows/tests.yml/badge.svg
    :target: https://github.com/scrapinghub/shub/actions/workflows/tests.yml
    :alt: Tests
