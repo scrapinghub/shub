@@ -1,10 +1,10 @@
 import os
 import sys
 import tempfile
-from unittest import TestCase
+from unittest import mock, TestCase
 
-import mock
 import pytest
+
 from shub.exceptions import BadConfigException, BadParameterException, NotFoundException
 from shub.image.utils import (
     get_credentials,
@@ -17,6 +17,7 @@ from shub.image.utils import (
     STATUS_FILE_LOCATION,
     DEFAULT_DOCKER_API_VERSION,
 )
+
 from .utils import FakeProjectDirectory, add_sh_fake_config
 
 

@@ -1,9 +1,0 @@
-python-dateutil
-mock
-pytest
-pytest-cov
-flake8
-pipenv
-
-# CVE-2020-29651
-py>=1.10.0

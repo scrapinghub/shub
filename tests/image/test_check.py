@@ -1,10 +1,11 @@
-import mock
-from click.testing import CliRunner
-from unittest import TestCase
-from shub import exceptions as shub_exceptions
+from unittest import mock, TestCase
 
+from click.testing import CliRunner
+
+from shub import exceptions as shub_exceptions
 from shub.image.check import cli
 from shub.image import utils
+
 from .utils import FakeProjectDirectory
 
 

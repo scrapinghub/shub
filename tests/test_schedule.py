@@ -1,7 +1,7 @@
 from __future__ import absolute_import
-import unittest
 
-import mock
+import unittest
+from unittest import mock
 
 from click.testing import CliRunner
 from scrapinghub import ScrapinghubAPIError

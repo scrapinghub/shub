@@ -1,14 +1,14 @@
 from __future__ import absolute_import
+
 import os
 import shutil
-import six
 import tempfile
 import textwrap
 import unittest
+from unittest import mock
+
+import six
 import yaml
-
-import mock
-
 from click.testing import CliRunner
 
 from shub.config import (get_target, get_target_conf, get_version,

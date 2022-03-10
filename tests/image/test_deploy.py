@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 import json
 import time
+from unittest import mock
 
-import mock
 import pytest
 from click import command
 from click.testing import CliRunner
@@ -12,6 +12,7 @@ from shub.image.deploy import _LoggedDeployProgress, _DeployProgress
 from shub.image.deploy import _extract_scripts_from_project
 from shub.image.deploy import _prepare_deploy_params
 from shub.image.deploy import cli
+
 from ..utils import clean_progress_output, format_expected_progress
 
 

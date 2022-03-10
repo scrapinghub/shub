@@ -5,10 +5,10 @@ from __future__ import absolute_import
 
 import os
 import unittest
+from unittest.mock import patch
 
 import requests
 from click.testing import CliRunner
-from mock import patch
 from six import string_types
 
 from shub import deploy

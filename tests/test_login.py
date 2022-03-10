@@ -1,10 +1,11 @@
 from __future__ import absolute_import
-import unittest
-from mock import patch, MagicMock
-import textwrap
 
-from click.testing import CliRunner
+import unittest
+import textwrap
+from unittest.mock import patch, MagicMock
+
 import yaml
+from click.testing import CliRunner
 
 from shub import login
 from shub.exceptions import AlreadyLoggedInException

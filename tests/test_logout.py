@@ -1,9 +1,10 @@
 from __future__ import absolute_import
+
 import textwrap
 import unittest
+from unittest import mock
 
 from click.testing import CliRunner
-import mock
 
 from shub import config, logout
 

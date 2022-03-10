@@ -1,6 +1,8 @@
-import mock
+from unittest import mock
+
 import pytest
 from click.testing import CliRunner
+
 from shub import exceptions as shub_exceptions
 from shub.image.test import (
     cli, _run_docker_command, _check_image_size, _check_start_crawl_entry,

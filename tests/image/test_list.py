@@ -1,8 +1,8 @@
 import json
+from unittest import mock
 
 import six
 import docker
-import mock
 import pytest
 from click.testing import CliRunner
 
