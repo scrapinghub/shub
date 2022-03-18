@@ -787,6 +787,7 @@ def _update_conf_file(filename, target, project, repository):
 
 
 class _AnyParamType(ParamType):
+    name = "any"
 
     def convert(self, value, param, ctx):
         return value
