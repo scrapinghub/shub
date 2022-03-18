@@ -24,6 +24,7 @@ import click
 import pip
 import requests
 import yaml
+from click import ParamType
 
 # https://github.com/scrapinghub/shub/pull/309#pullrequestreview-113977920
 try:
@@ -785,6 +786,20 @@ def _update_conf_file(filename, target, project, repository):
         click.echo("Saved to %s." % filename)
 
 
+class _BooleanOrStringParamType(ParamType):
+
+    def convert(self, value, param, ctx):
+        if isinstance(value, bool):
+            return value
+        value = str(value)
+        lowercase_value = value.lower()
+        if lowercase_value == 'true':
+            return True
+        if lowercase_value == 'false':
+            return False
+        return value
+
+
 def create_scrapinghub_yml_wizard(conf, target='default', image=None):
     """
     Ask user for project ID, ensure they have access to that project, and save
@@ -830,6 +845,6 @@ def create_scrapinghub_yml_wizard(conf, target='default', image=None):
     if image or (image is None and _detect_custom_image_project()):
         repository = click.prompt(
             "Image repository (leave empty to use Scrapinghub's repository)",
-            default=True, show_default=False)
+            default=True, show_default=False, type=_BooleanOrStringParamType())
     _update_conf(conf, target, project, repository)
     _update_conf_file(closest_sh_yml, target, project, repository)
