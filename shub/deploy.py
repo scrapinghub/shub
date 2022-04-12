@@ -164,9 +164,14 @@ def _is_pipfile(name):
 
 def _get_pipfile_requirements(tmpdir=None):
     try:
-        from pipenv.utils import convert_deps_to_pip, prepare_pip_source_args
+        # moved in pipenv==2022.4.8
+        from pipenv.utils.dependencies import convert_deps_to_pip
+        from pipenv.utils.indexes import prepare_pip_source_args
     except ImportError:
-        raise ImportError('You need pipenv installed to deploy with Pipfile')
+        try:
+            from pipenv.utils import convert_deps_to_pip, prepare_pip_source_args
+        except ImportError:
+            raise ImportError('You need pipenv installed to deploy with Pipfile')
     try:
         with open('Pipfile.lock') as f:
             pipefile = json.load(f)
