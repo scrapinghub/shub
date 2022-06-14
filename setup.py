@@ -30,7 +30,7 @@ setup(
     zip_safe=False,
     python_requires='>=3.6',
     install_requires=[
-        'click==7.0',
+        'click',
         'docker',
         'pip',
         'PyYAML',

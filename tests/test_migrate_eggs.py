@@ -4,6 +4,7 @@ from unittest import mock
 
 import yaml
 from click.testing import CliRunner
+from yaml import CLoader as Loader
 
 from shub.migrate_eggs import main
 from shub.config import Target
@@ -89,7 +90,7 @@ class MigrateEggsTest(unittest.TestCase):
         )
 
         with open('./scrapinghub.yml') as f:
-            abc = yaml.load(f)
+            abc = yaml.load(f, Loader=Loader)
             eggs = abc['requirements'].pop('eggs')
             eggs = [e.replace('\\', '/') for e in eggs]
             self.assertEqual(
@@ -132,7 +133,7 @@ class MigrateEggsTest(unittest.TestCase):
         )
 
         with open('./scrapinghub.yml') as f:
-            abc = yaml.load(f)
+            abc = yaml.load(f, Loader=Loader)
             self.assertDictEqual(
                 abc,
                 {
@@ -186,7 +187,7 @@ class MigrateEggsTest(unittest.TestCase):
         )
 
         with open('./scrapinghub.yml') as f:
-            abc = yaml.load(f)
+            abc = yaml.load(f, Loader=Loader)
             self.assertDictEqual(
                 abc,
                 {

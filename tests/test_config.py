@@ -10,6 +10,7 @@ from unittest import mock
 import six
 import yaml
 from click.testing import CliRunner
+from yaml import CLoader as Loader
 
 from shub.config import (get_target, get_target_conf, get_version,
                          load_shub_config, ShubConfig, Target,
@@ -353,7 +354,7 @@ class ShubConfigTest(unittest.TestCase):
                 """)
             conf.save('conf.yml')
             with open('conf.yml', 'r') as f:
-                self.assertEqual(yaml.load(f), {'project': 123})
+                self.assertEqual(yaml.load(f, Loader=Loader), {'project': 123})
 
             conf = self._get_conf_with_yml("""
                 projects:
@@ -363,7 +364,7 @@ class ShubConfigTest(unittest.TestCase):
                 """)
             conf.save('conf.yml')
             with open('conf.yml', 'r') as f:
-                self.assertEqual(yaml.load(f), {
+                self.assertEqual(yaml.load(f, Loader=Loader), {
                     'project': 123,
                     'requirements': {'file': 'reqs.txt'}}
                 )
@@ -373,7 +374,7 @@ class ShubConfigTest(unittest.TestCase):
         with CliRunner().isolated_filesystem():
             conf.save('conf.yml')
             with open('conf.yml', 'r') as f:
-                self.assertEqual(yaml.load(f), None)
+                self.assertEqual(yaml.load(f, Loader=Loader), None)
 
     def test_save_shortcut(self):
         conf = ShubConfig()
@@ -391,7 +392,7 @@ class ShubConfigTest(unittest.TestCase):
         with CliRunner().isolated_filesystem():
             conf.save('conf.yml')
             with open('conf.yml', 'r') as f:
-                self.assertEqual(yaml.load(f), expected_yml_dict)
+                self.assertEqual(yaml.load(f, Loader=Loader), expected_yml_dict)
 
     def test_save_shortcut_updated(self):
         OLD_YML = """\
@@ -446,11 +447,11 @@ class ShubConfigTest(unittest.TestCase):
             conf.save('conf.yml', options=['projects'])
             with open('conf.yml', 'r') as f:
                 self.assertEqual(
-                    yaml.load(f),
+                    yaml.load(f, Loader=Loader),
                     {'project': 12345, 'stack': 'custom-stack'})
             conf.save('conf.yml')
             with open('conf.yml', 'r') as f:
-                self.assertEqual(yaml.load(f), {'project': 12345})
+                self.assertEqual(yaml.load(f, Loader=Loader), {'project': 12345})
 
     def test_normalized_projects(self):
         expected_projects = {
