@@ -190,14 +190,18 @@ def _get_pipfile_requirements(tmpdir=None):
         # Scrapy Cloud also doesn't support editable packages
         if 'editable' in v:
             del v['editable']
-    return open(_add_sources(convert_deps_to_pip(deps), _sources=sources.encode(), tmpdir=tmpdir), 'rb')
+    return open(_add_sources(convert_deps_to_pip(deps), _sources=sources, tmpdir=tmpdir), 'rb')
 
 
-def _add_sources(_reqs_file, _sources, tmpdir=None):
-    tmp = tempfile.NamedTemporaryFile(delete=False, suffix="-requirements.txt", dir=tmpdir)
-    tmp.write(_sources + b'\n')
-    with open(_reqs_file, 'rb') as f:
-        tmp.write(f.read())
+def _add_sources(_reqs, _sources, tmpdir=None):
+    tmp = tempfile.NamedTemporaryFile(mode='w', delete=False, suffix="-requirements.txt", dir=tmpdir)
+    tmp.write(_sources + '\n')
+    if isinstance(_reqs, list):
+        tmp.write('\n'.join(_reqs).rstrip())
+    # for python 3.6 
+    if isinstance(_reqs, str):
+        with open(_reqs, 'r') as f:
+            tmp.write(f.read().rstrip())
     tmp.flush()
     tmp.close()
     return tmp.name

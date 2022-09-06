@@ -1,0 +1,29 @@
+[[source]]
+url = "https://pypi.python.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+scrapy-inline-requests = "==0.3.1"
+scrapinghub = "==2.4.0"
+sentry-sdk = "==1.5.12"
+spidermon = "==1.15.2"
+scrapy = "==2.6.1"
+boto = "==2.49.0"
+jinja2 = "==2.10"
+markupsafe = "==2.0.1"
+botocore = "==1.20.62"
+scrapy-crawlera = "==1.7.2"
+schematics = "==2.1.1"
+importlib-metadata = "==1.7.0"
+antiban = {git = "https://53c2c11aa2ec6e8ed46142e791187c874307884e@github.com/scrapinghub/antiban-mixins.git"}
+itemadapter = "==0.6.0"
+scrapy-zyte-api = "==0.5.0"
+price-parser = "==0.3.4"
+scrapinghub-entrypoint-scrapy = "*"
+
+[dev-packages]
+shub = "==2.14.1"
+
+[requires]
+python_version = "3.9.5"
