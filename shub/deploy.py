@@ -196,8 +196,12 @@ def _get_pipfile_requirements(tmpdir=None):
 def _add_sources(_reqs_file, _sources, tmpdir=None):
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix="-requirements.txt", dir=tmpdir)
     tmp.write(_sources + b'\n')
-    with open(_reqs_file, 'rb') as f:
-        tmp.write(f.read())
+    # Keep backward compatibility with pipenv<=2022.4.8
+    try:
+        with open(_reqs_file, 'rb') as f:
+            tmp.write(f.read())
+    except TypeError:
+        tmp.write('\n'.join(_reqs_file).encode('utf-8'))
     tmp.flush()
     tmp.close()
     return tmp.name
