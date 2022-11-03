@@ -1,25 +1,25 @@
 from __future__ import absolute_import
-import os
+
 import glob
+import json
+import os
 import shutil
 import tempfile
-import json
-from six.moves.urllib.parse import urljoin
+from typing import AnyStr, Optional, Union
 
-import click
-import toml
 # Not used in code but needed in runtime, don't remove!
 import setuptools
 import setuptools.msvc  # noqa
 
-from shub.config import (list_targets_callback, load_shub_config,
-                         SH_IMAGES_REGISTRY)
-from shub.exceptions import (BadParameterException, NotFoundException,
-                             ShubException)
+import click
+import toml
+from six.moves.urllib.parse import urljoin
+
+from shub.config import SH_IMAGES_REGISTRY, list_targets_callback, load_shub_config
+from shub.exceptions import BadParameterException, NotFoundException, ShubException
+from shub.image.upload import upload_cmd
 from shub.utils import (create_default_setup_py, create_scrapinghub_yml_wizard,
                         inside_project, make_deploy_request, run_python)
-from shub.image.upload import upload_cmd
-
 
 HELP = """
 Deploy the current folder's Scrapy project to Scrapy Cloud.
@@ -193,11 +193,15 @@ def _get_pipfile_requirements(tmpdir=None):
     return open(_add_sources(convert_deps_to_pip(deps), _sources=sources.encode(), tmpdir=tmpdir), 'rb')
 
 
-def _add_sources(_reqs_file, _sources, tmpdir=None):
+def _add_sources(_requirements: Union[str, list], _sources: bytes, tmpdir: Optional[AnyStr] = None) -> str:
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix="-requirements.txt", dir=tmpdir)
     tmp.write(_sources + b'\n')
-    with open(_reqs_file, 'rb') as f:
-        tmp.write(f.read())
+    # Keep backward compatibility with pipenv<=2022.8.30
+    if isinstance(_requirements, list):
+        tmp.write('\n'.join(_requirements).encode('utf-8'))
+    else:
+        with open(_requirements, 'rb') as f:
+            tmp.write(f.read())
     tmp.flush()
     tmp.close()
     return tmp.name

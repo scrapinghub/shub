@@ -5,7 +5,7 @@ from __future__ import absolute_import
 
 import os
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 
 import requests
 from click.testing import CliRunner
@@ -255,6 +255,20 @@ class DeployFilesTest(unittest.TestCase):
         # but do upload the main egg if it's directly requested
         self.assertEqual(len(files_main['eggs']), 4)
         self.assertIn('main content', files_main['eggs'])
+
+    def test_add_sources(self):
+        convert_deps_to_pip = Mock(
+            side_effect=[
+                './requirements.txt',
+                ['package==0.0.0', 'hash-package==0.0.1', 'hash-package2==0.0.1'],
+            ],
+        )
+        _sources = (
+            b'-i https://pypi.python.org/simple '
+            b'--extra-index-url https://example.external-index.org/simple'
+        )
+        self.assertIsInstance(deploy._add_sources(convert_deps_to_pip(), _sources), str)
+        self.assertIsInstance(deploy._add_sources(convert_deps_to_pip(), _sources), str)
 
     def pipfile_test(self, req_name):
         with self.runner.isolated_filesystem():
