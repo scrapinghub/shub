@@ -7,17 +7,16 @@ import shutil
 import tempfile
 from typing import AnyStr, Optional, Union
 
-import click
 # Not used in code but needed in runtime, don't remove!
 import setuptools
 import setuptools.msvc  # noqa
 
+import click
 import toml
 from six.moves.urllib.parse import urljoin
 
-from shub.config import (SH_IMAGES_REGISTRY, list_targets_callback, load_shub_config)
-from shub.exceptions import (BadParameterException, NotFoundException,
-                             ShubException)
+from shub.config import SH_IMAGES_REGISTRY, list_targets_callback, load_shub_config
+from shub.exceptions import BadParameterException, NotFoundException,ShubException
 from shub.image.upload import upload_cmd
 from shub.utils import (create_default_setup_py, create_scrapinghub_yml_wizard,
                         inside_project, make_deploy_request, run_python)
@@ -170,7 +169,7 @@ def _get_pipfile_requirements(tmpdir=None):
         from pipenv.utils.indexes import prepare_pip_source_args
     except ImportError:
         try:
-            from pipenv.utils import (convert_deps_to_pip, prepare_pip_source_args)
+            from pipenv.utils import convert_deps_to_pip, prepare_pip_source_args
         except ImportError:
             raise ImportError('You need pipenv installed to deploy with Pipfile')
     try:
