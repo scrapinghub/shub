@@ -16,7 +16,7 @@ import toml
 from six.moves.urllib.parse import urljoin
 
 from shub.config import SH_IMAGES_REGISTRY, list_targets_callback, load_shub_config
-from shub.exceptions import BadParameterException, NotFoundException,ShubException
+from shub.exceptions import BadParameterException, NotFoundException, ShubException
 from shub.image.upload import upload_cmd
 from shub.utils import (create_default_setup_py, create_scrapinghub_yml_wizard,
                         inside_project, make_deploy_request, run_python)

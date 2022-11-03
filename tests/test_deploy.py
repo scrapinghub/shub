@@ -264,8 +264,8 @@ class DeployFilesTest(unittest.TestCase):
             ],
         )
         _sources = (
-            b'-i https://pypi.python.org/simple'
-            b'--extra-index-url https://example.external-index.org/simple',
+            b'-i https://pypi.python.org/simple '
+            b'--extra-index-url https://example.external-index.org/simple'
         )
         self.assertIsInstance(deploy._add_sources(convert_deps_to_pip(), _sources), str)
         self.assertIsInstance(deploy._add_sources(convert_deps_to_pip(), _sources), str)
