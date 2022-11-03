@@ -1,19 +1,18 @@
-import os
-import re
 import ast
 import json
-import time
+import os
+import re
 import textwrap
+import time
+from urllib.parse import urljoin
 
 import click
 import requests
 from retrying import retry
-from six.moves.urllib.parse import urljoin
 
 from shub.config import load_shub_config, list_targets_callback
 from shub.exceptions import ShubException
-from shub.image import utils
-from shub.image import list as list_mod
+from shub.image import list as list_mod, utils
 
 
 VALIDSPIDERNAME = re.compile('^[a-z0-9][-._a-z0-9]+$', re.I)

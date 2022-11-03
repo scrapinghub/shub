@@ -1,11 +1,11 @@
 from __future__ import absolute_import
+
+from urllib.parse import urljoin
+
 import click
 import requests
-from six.moves import input
-from six.moves.urllib.parse import urljoin
 
-from shub.config import (load_shub_config, GLOBAL_SCRAPINGHUB_YML_PATH,
-                         ShubConfig)
+from shub.config import load_shub_config, GLOBAL_SCRAPINGHUB_YML_PATH, ShubConfig
 from shub.exceptions import AlreadyLoggedInException
 from shub.utils import update_yaml_dict
 

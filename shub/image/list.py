@@ -1,10 +1,9 @@
 import json
+from urllib.parse import urljoin
 
 import click
 import docker
 import requests
-from six import string_types
-from six.moves.urllib.parse import urljoin
 
 from shub.exceptions import ShubException
 from shub.config import load_shub_config, list_targets_callback
@@ -145,7 +144,7 @@ def _extract_metadata_from_image_info_output(output):
         project_type = metadata.get('project_type')
     except (AttributeError, ValueError):
         raise_shub_image_info_error('output is not a valid JSON dict')
-    if not isinstance(project_type, string_types):
+    if not isinstance(project_type, str):
         raise_shub_image_info_error('"project_type" key is required and must be a string')
 
     spiders_list = metadata.get('spiders')
@@ -153,7 +152,7 @@ def _extract_metadata_from_image_info_output(output):
         raise_shub_image_info_error('"spiders" key is required and must be a list')
     spiders, scripts = [], []
     for name in spiders_list:
-        if not (name and isinstance(name, string_types)):
+        if not (name and isinstance(name, str)):
             raise_shub_image_info_error("spider name can't be empty or non-string")
         if project_type == 'scrapy' and name.startswith('py:'):
             scripts.append(name[3:])

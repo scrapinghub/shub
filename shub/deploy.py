@@ -6,6 +6,7 @@ import os
 import shutil
 import tempfile
 from typing import AnyStr, Optional, Union
+from urllib.parse import urljoin
 
 # Not used in code but needed in runtime, don't remove!
 import setuptools
@@ -13,7 +14,6 @@ import setuptools.msvc  # noqa
 
 import click
 import toml
-from six.moves.urllib.parse import urljoin
 
 from shub.config import SH_IMAGES_REGISTRY, list_targets_callback, load_shub_config
 from shub.exceptions import BadParameterException, NotFoundException, ShubException

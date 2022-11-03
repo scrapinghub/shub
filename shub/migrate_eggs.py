@@ -1,19 +1,17 @@
 from __future__ import absolute_import
 
+import errno
 import os
 import zipfile
-
-import errno
-
-from shub.compat import to_unicode
-from six.moves.urllib.parse import urljoin
-
 from io import BytesIO
+from urllib.parse import urljoin
 
 import click
 import requests
 
+from shub.compat import to_unicode
 from shub.config import get_target_conf, ShubConfig
+
 
 HELP = """
 Migrate eggs stored in Dash's "Code & Deploy" section.

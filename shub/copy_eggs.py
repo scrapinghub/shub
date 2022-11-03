@@ -1,14 +1,17 @@
 from __future__ import absolute_import
+
 import os
-from six.moves.urllib.parse import urljoin
+from shutil import rmtree
 from tempfile import mkdtemp
+from urllib.parse import urljoin
+
 import click
 import requests
-from shutil import rmtree
 
 from shub.config import get_target_conf
 from shub.fetch_eggs import fetch_eggs
 from shub.utils import decompress_egg_files, _deploy_dependency_egg
+
 
 SHORT_HELP = "Sync eggs from one project with other project"
 

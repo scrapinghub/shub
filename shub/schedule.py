@@ -1,12 +1,13 @@
 from __future__ import absolute_import
+
 import json
+from urllib.parse import urljoin
 
 import click
 from scrapinghub import ScrapinghubClient, ScrapinghubAPIError
-from six.moves.urllib.parse import urljoin
 
-from shub.exceptions import RemoteErrorException
 from shub.config import get_target_conf
+from shub.exceptions import RemoteErrorException
 
 
 HELP = """

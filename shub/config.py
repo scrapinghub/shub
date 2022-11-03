@@ -1,11 +1,12 @@
 from __future__ import absolute_import
+
 import netrc
 import os
 import warnings
 from collections import namedtuple
+from urllib.parse import urlparse, urlunparse
 
 import click
-import six
 import yaml
 
 from shub import DOCS_LINK, CONFIG_DOCS_LINK
@@ -16,6 +17,7 @@ from shub.exceptions import (BadParameterException, BadConfigException,
 from shub.utils import (closest_file, get_scrapycfg_targets, get_sources,
                         pwd_hg_version, pwd_git_version, pwd_version,
                         update_yaml_dict)
+
 
 APIKEY_SHOW_N_CHARS = 6
 SH_IMAGES_REGISTRY = 'images.scrapinghub.com'
@@ -54,9 +56,9 @@ class ShubConfig(object):
     def _check_endpoints(self):
         """Check the endpoints. Send warnings if necessary."""
         for endpoint, url in self.endpoints.items():
-            parsed = six.moves.urllib.parse.urlparse(url)
+            parsed = urlparse(url)
             if parsed.netloc == 'staging.scrapinghub.com':
-                self.endpoints[endpoint] = six.moves.urllib.parse.urlunparse(
+                self.endpoints[endpoint] = urlunparse(
                     parsed._replace(netloc='app.scrapinghub.com')
                 )
                 click.echo(
@@ -163,7 +165,7 @@ class ShubConfig(object):
         targets = get_scrapycfg_targets(sources)
         self._load_scrapycfg_target('default', targets['default'])
         del targets['default']
-        for tname, t in six.iteritems(targets):
+        for tname, t in targets.items():
             self._load_scrapycfg_target(tname, t)
         self._check_endpoints()
 

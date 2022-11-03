@@ -1,30 +1,29 @@
 from __future__ import absolute_import
-import setuptools  # noqa: F401
+
 import contextlib
 import datetime
 import errno
 import json
 import os
+import re
 import subprocess
 import sys
-import re
 import time
-
 from collections import deque
-from six.moves.configparser import SafeConfigParser
+from configparser import ConfigParser
 from distutils.spawn import find_executable
 from distutils.version import LooseVersion, StrictVersion
 from glob import glob
 from importlib import import_module
 from tempfile import NamedTemporaryFile, TemporaryFile
-from six.moves.urllib.parse import urljoin
-from six import string_types
+from urllib.parse import urljoin
 
 import click
 import pip
 import requests
+import setuptools  # noqa: F401
 import yaml
-from click import ParamType
+from scrapinghub import ScrapinghubClient, ScrapinghubAPIError, HubstorageClient
 
 # https://github.com/scrapinghub/shub/pull/309#pullrequestreview-113977920
 try:
@@ -40,8 +39,6 @@ except:  # noqa
         except ImportError:
             from pip._internal import main as pip_main
 
-from scrapinghub import ScrapinghubClient, ScrapinghubAPIError, HubstorageClient
-
 import shub
 from shub.compat import to_native_str
 from shub.exceptions import (
@@ -49,6 +46,7 @@ from shub.exceptions import (
     RemoteErrorException, SubcommandException, DeployRequestTooLargeException,
     print_warning,
 )
+
 
 SCRAPY_CFG_FILE = os.path.expanduser("~/.scrapy.cfg")
 FALLBACK_ENCODING = 'utf-8'
@@ -133,7 +131,7 @@ def _check_deploy_files_size(files):
     if not isinstance(files, list) or ctx and ctx.params.get('ignore-size'):
         return
     files_size = sum(
-        len(fp) if isinstance(fp, string_types)
+        len(fp) if isinstance(fp, str)
         else os.fstat(fp.fileno()).st_size
         for (fname, fp) in files
     )
@@ -485,9 +483,9 @@ def inside_project():
 
 
 def get_config(use_closest=True):
-    """Get Scrapy config file as a SafeConfigParser"""
+    """Get Scrapy config file as a ConfigParser"""
     sources = get_sources(use_closest)
-    cfg = SafeConfigParser()
+    cfg = ConfigParser()
     cfg.read(sources)
     return cfg
 
@@ -506,7 +504,7 @@ def get_sources(use_closest=True):
 
 
 def get_scrapycfg_targets(cfgfiles=None):
-    cfg = SafeConfigParser()
+    cfg = ConfigParser()
     cfg.read(cfgfiles or [])
     baset = dict(cfg.items('deploy')) if cfg.has_section('deploy') else {}
     targets = {}
@@ -786,7 +784,7 @@ def _update_conf_file(filename, target, project, repository):
         click.echo("Saved to %s." % filename)
 
 
-class _AnyParamType(ParamType):
+class _AnyParamType(click.ParamType):
     name = "any"
 
     def convert(self, value, param, ctx):
