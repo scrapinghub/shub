@@ -130,7 +130,7 @@ def make_deploy_request(url, data, files, auth, verbose, keep_log):
 def _check_deploy_files_size(files):
     """Ensure that request's files total size is less than current limit."""
     ctx = click.get_current_context(silent=True)
-    if not isinstance(files, list) or ctx and ctx.params.get('ignore-size'):
+    if not isinstance(files, list) or ctx and ctx.params.get('ignore_size'):
         return
     files_size = sum(
         len(fp) if isinstance(fp, string_types)
