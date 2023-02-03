@@ -1,4 +1,4 @@
-__version__ = '2.14.3'
+__version__ = '2.14.4'
 
 
 # Links to documentation to use over the project sources
