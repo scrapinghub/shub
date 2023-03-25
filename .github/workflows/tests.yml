@@ -49,11 +49,11 @@ jobs:
     - name: Run tests
       run: tox -e ${{ matrix.tox-env }}
 
-    - name: Upload coverage report
-      run: |
-        curl -Os https://uploader.codecov.io/latest/linux/codecov
-        chmod +x codecov
-        ./codecov
+    # - name: Upload coverage report
+    #   run: |
+    #     curl -Os https://uploader.codecov.io/latest/linux/codecov
+    #     chmod +x codecov
+    #     ./codecov
 
   tests-macos:
     name: "Test: py${{ matrix.python-version }}, macOS"
