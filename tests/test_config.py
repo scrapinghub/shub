@@ -33,6 +33,10 @@ VALID_YAML_CFG = """
         advanced_dev:
             id: 457
             stack: dev
+        some:
+            id: 345
+            requirements:
+                file: requirements-dev.txt
     endpoints:
         external: ext_endpoint
     apikeys:
@@ -109,6 +113,12 @@ class ShubConfigTest(unittest.TestCase):
                 'id': 457,
                 'stack': 'dev'
             },
+            'some': {
+                'id': 345,
+                'requirements': {
+                    'file': 'requirements-dev.txt'
+                }
+            }
         }
         self.assertEqual(projects, self.conf.projects)
         endpoints = {'external': 'ext_endpoint'}
@@ -461,6 +471,7 @@ class ShubConfigTest(unittest.TestCase):
             'advanced_prod': _project_dict(
                 456, extra={'stack': 'hworker:v1.0.0'}),
             'advanced_dev': _project_dict(457, extra={'stack': 'dev'}),
+            'some': _project_dict(345, extra={'requirements': {'file': 'requirements-dev.txt'}})
         }
         self.assertEqual(self.conf.normalized_projects, expected_projects)
 
@@ -643,6 +654,22 @@ class ShubConfigTest(unittest.TestCase):
         self.assertEqual(self.conf.get_target_conf(456), t)
         self.assertEqual(self.conf.get_target_conf('456'), t)
         self.assertEqual(self.conf.get_target_conf('default/456'), t)
+
+    def test_get_target_correct_requirements(self):
+        correct_reqs = {
+            'shproj': 'requirements.txt',
+            # 'externalproj': 'requirements.txt',
+            'notmeproj': 'requirements.txt',
+            'advanced_prod': 'requirements.txt',
+            'advanced_dev': 'requirements.txt',
+            'some': 'requirements-dev.txt'
+        }
+        for name, data in self.conf.normalized_projects.items():
+            reqs_file = correct_reqs.get(name)
+            if not reqs_file:
+                continue
+            target = self.conf.get_target_conf(name)
+            self.assertEqual(target.requirements_file, reqs_file)
 
     def test_get_undefined(self):
         self.assertEqual(
