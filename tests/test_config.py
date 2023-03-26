@@ -37,6 +37,9 @@ VALID_YAML_CFG = """
             id: 345
             requirements:
                 file: requirements-dev.txt
+                eggs:
+                - ./egg3.egg
+                - ./egg4.egg
     endpoints:
         external: ext_endpoint
     apikeys:
@@ -116,7 +119,8 @@ class ShubConfigTest(unittest.TestCase):
             'some': {
                 'id': 345,
                 'requirements': {
-                    'file': 'requirements-dev.txt'
+                    'file': 'requirements-dev.txt',
+                    'eggs': ['./egg3.egg', './egg4.egg']
                 }
             }
         }
@@ -471,7 +475,7 @@ class ShubConfigTest(unittest.TestCase):
             'advanced_prod': _project_dict(
                 456, extra={'stack': 'hworker:v1.0.0'}),
             'advanced_dev': _project_dict(457, extra={'stack': 'dev'}),
-            'some': _project_dict(345, extra={'requirements': {'file': 'requirements-dev.txt'}})
+            'some': _project_dict(345, extra={'requirements': {'file': 'requirements-dev.txt', 'eggs': ['./egg3.egg', './egg4.egg']}})
         }
         self.assertEqual(self.conf.normalized_projects, expected_projects)
 
@@ -658,18 +662,34 @@ class ShubConfigTest(unittest.TestCase):
     def test_get_target_correct_requirements(self):
         correct_reqs = {
             'shproj': 'requirements.txt',
-            # 'externalproj': 'requirements.txt',
             'notmeproj': 'requirements.txt',
             'advanced_prod': 'requirements.txt',
             'advanced_dev': 'requirements.txt',
             'some': 'requirements-dev.txt'
         }
-        for name, data in self.conf.normalized_projects.items():
+        for name in self.conf.normalized_projects.keys():
             reqs_file = correct_reqs.get(name)
             if not reqs_file:
                 continue
             target = self.conf.get_target_conf(name)
             self.assertEqual(target.requirements_file, reqs_file)
+
+    def test_get_target_correct_eggs(self):
+        # FIXME: !!!
+        correct_eggs = {
+            'shproj': 'requirements.txt',
+            'notmeproj': 'requirements.txt',
+            'advanced_prod': 'requirements.txt',
+            'advanced_dev': 'requirements.txt',
+            'some': 'requirements-dev.txt'
+        }
+        for name in self.conf.normalized_projects.keys():
+            reqs_file = correct_eggs.get(name)
+            if not reqs_file:
+                continue
+            target = self.conf.get_target_conf(name)
+            # self.assertEqual(target.requirements_file, reqs_file)
+            ...
 
     def test_get_undefined(self):
         self.assertEqual(
