@@ -670,12 +670,12 @@ class ShubConfigTest(unittest.TestCase):
         for name in self.conf.normalized_projects.keys():
             reqs_file = correct_reqs.get(name)
             if not reqs_file:
+                # externalproj doesn't have requirements
                 continue
             target = self.conf.get_target_conf(name)
             self.assertEqual(target.requirements_file, reqs_file)
 
     def test_get_target_correct_eggs(self):
-        # FIXME: !!!
         correct_eggs = {
             'shproj': ["./egg1.egg", "./egg2.egg"],
             'notmeproj': ["./egg1.egg", "./egg2.egg"],
@@ -686,10 +686,10 @@ class ShubConfigTest(unittest.TestCase):
         for name in self.conf.normalized_projects.keys():
             eggs = correct_eggs.get(name)
             if not eggs:
+                # externalproj doesn't have eggs
                 continue
             target = self.conf.get_target_conf(name)
             self.assertEqual(target.eggs, eggs)
-            ...
 
     def test_get_undefined(self):
         self.assertEqual(
