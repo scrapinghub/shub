@@ -30,7 +30,7 @@ VERSION = __version__.rsplit('.', 1)[0]
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
-# needs_sphinx = '1.0'
+needs_sphinx = '6.0'
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -308,4 +308,4 @@ if not on_rtd:  # only import and set the theme if we're building docs locally
 # Wrap text in tables
 # https://github.com/snide/sphinx_rtd_theme/issues/117#issuecomment-41571653
 def setup(app):
-    app.add_stylesheet("theme_overrides.css")
+    app.add_css_file("theme_overrides.css")
