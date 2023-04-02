@@ -475,7 +475,14 @@ class ShubConfigTest(unittest.TestCase):
             'advanced_prod': _project_dict(
                 456, extra={'stack': 'hworker:v1.0.0'}),
             'advanced_dev': _project_dict(457, extra={'stack': 'dev'}),
-            'some': _project_dict(345, extra={'requirements': {'file': 'requirements-dev.txt', 'eggs': ['./egg3.egg', './egg4.egg']}})
+            'some': _project_dict(
+                345, extra={
+                    'requirements': {
+                        'file': 'requirements-dev.txt',
+                        'eggs': ['./egg3.egg', './egg4.egg']
+                    }
+                }
+            )
         }
         self.assertEqual(self.conf.normalized_projects, expected_projects)
 
@@ -667,11 +674,7 @@ class ShubConfigTest(unittest.TestCase):
             'advanced_dev': 'requirements.txt',
             'some': 'requirements-dev.txt'
         }
-        for name in self.conf.normalized_projects.keys():
-            reqs_file = correct_reqs.get(name)
-            if not reqs_file:
-                # externalproj doesn't have requirements
-                continue
+        for name, reqs_file in correct_reqs.items():
             target = self.conf.get_target_conf(name)
             self.assertEqual(target.requirements_file, reqs_file)
 
@@ -683,11 +686,7 @@ class ShubConfigTest(unittest.TestCase):
             'advanced_dev': ["./egg1.egg", "./egg2.egg"],
             'some': ["./egg3.egg", "./egg4.egg"]
         }
-        for name in self.conf.normalized_projects.keys():
-            eggs = correct_eggs.get(name)
-            if not eggs:
-                # externalproj doesn't have eggs
-                continue
+        for name, eggs in correct_eggs.items():
             target = self.conf.get_target_conf(name)
             self.assertEqual(target.eggs, eggs)
 
