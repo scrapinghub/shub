@@ -81,9 +81,9 @@ The following is a list of all available configuration options:
 ================  ============================================  ===============
 Option            Description                                   Scope
 ================  ============================================  ===============
-``requirements``  Path to the project's requirements file, and  global only
-                  to any additional eggs that should be
-                  deployed to Scrapy Cloud. See
+``requirements``  Path to the project's requirements file, and  global default
+                  to any additional eggs that should be         and project-\
+                  deployed to Scrapy Cloud. See                 specific
                   :ref:`deploying-dependencies`.
 ``stack``         `Scrapy Cloud stack`_ to use (this is the     global default
                   environment that your project will run in,    and project-\
@@ -236,3 +236,20 @@ as well as different API endpoints::
     apikeys:
       default: 0bbf4f0f691e0d9378ae00ca7bcf7f0c
       vagrant: a1aeecc4cd52744730b1ea6cd3e8412a
+
+Global and project-specific requirements. ``requirements.txt`` is used for projects ``prod`` and ``some``, ``requirements-dev.txt`` and eggs for ``dev``::
+
+  projects:
+    prod: 12345
+    dev:
+        id: 345
+        requirements:
+            file: requirements-dev.txt
+            eggs:
+            - ./egg1.egg
+            - ./egg2.egg
+    some: 567
+  requirements:
+    file: requirements.txt
+  stacks:
+    default: "scrapy:2.8"

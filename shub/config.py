@@ -292,6 +292,9 @@ class ShubConfig(object):
                            "" % proj['endpoint'])
                 raise MissingAuthException(msg)
             apikey = None
+        proj_requirements = proj.get('requirements', {})
+        requirements = proj_requirements.get('file', self.requirements_file)
+        eggs = proj_requirements.get('eggs', self.eggs)
         return Target(
             project_id=proj['id'],
             endpoint=self.endpoints[proj['endpoint']],
@@ -299,9 +302,9 @@ class ShubConfig(object):
             stack=(self.stacks.get(proj['stack'], proj['stack'])
                    if 'stack' in proj else self.stacks.get('default')),
             image=self._select_image_for_project(target, proj),
-            requirements_file=self.requirements_file,
+            requirements_file=requirements,
             version=self.get_version(),
-            eggs=self.eggs,
+            eggs=eggs,
         )
 
     def _select_image_for_project(self, target, project):
