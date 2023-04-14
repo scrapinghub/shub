@@ -237,7 +237,7 @@ as well as different API endpoints::
       default: 0bbf4f0f691e0d9378ae00ca7bcf7f0c
       vagrant: a1aeecc4cd52744730b1ea6cd3e8412a
 
-Global and project-specific requirements, ``requirements.txt`` is used for projects ``prod`` and ``some`` and ``requirements-dev.txt`` and eggs for ``dev``::
+Global and project-specific requirements. ``requirements.txt`` is used for projects ``prod`` and ``some``, ``requirements-dev.txt`` and eggs for ``dev``::
 
   projects:
     prod: 12345
