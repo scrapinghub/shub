@@ -28,7 +28,7 @@ NETRC_PATH = os.path.expanduser('~/_netrc' if os.name == 'nt' else '~/.netrc')
 
 class ShubConfig(object):
 
-    DEFAULT_ENDPOINT = 'https://app.scrapinghub.com/api/'
+    DEFAULT_ENDPOINT = 'https://app.zyte.com/api/'
 
     # Dictionary option name: Shortcut to set 'default' key
     SHORTCUTS = {
@@ -57,11 +57,11 @@ class ShubConfig(object):
             parsed = six.moves.urllib.parse.urlparse(url)
             if parsed.netloc == 'staging.scrapinghub.com':
                 self.endpoints[endpoint] = six.moves.urllib.parse.urlunparse(
-                    parsed._replace(netloc='app.scrapinghub.com')
+                    parsed._replace(netloc='app.zyte.com')
                 )
                 click.echo(
                     'WARNING: Endpoint "%s" is still using %s which has been '
-                    'obsoleted. shub has updated it to app.scrapinghub.com '
+                    'obsoleted. shub has updated it to app.zyte.com '
                     'for this time only. Please update your configuration.' % (
                         endpoint, parsed.netloc,
                     ),
