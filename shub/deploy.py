@@ -193,12 +193,15 @@ def _get_pipfile_requirements(tmpdir=None):
     return open(_add_sources(convert_deps_to_pip(deps), _sources=sources.encode(), tmpdir=tmpdir), 'rb')
 
 
-def _add_sources(_requirements: Union[str, list], _sources: bytes, tmpdir: Optional[AnyStr] = None) -> str:
+def _add_sources(_requirements: Union[str, list,dict], _sources: bytes, tmpdir: Optional[AnyStr] = None) -> str:
     tmp = tempfile.NamedTemporaryFile(delete=False, suffix="-requirements.txt", dir=tmpdir)
     tmp.write(_sources + b'\n')
     # Keep backward compatibility with pipenv<=2022.8.30
     if isinstance(_requirements, list):
         tmp.write('\n'.join(_requirements).encode('utf-8'))
+    # Keep compatible with pipenv>=v2023.10.24
+    elif isinstance(_requirements, dict):
+        tmp.write('\n'.join(_requirements.values()).encode('utf-8'))
     else:
         with open(_requirements, 'rb') as f:
             tmp.write(f.read())
