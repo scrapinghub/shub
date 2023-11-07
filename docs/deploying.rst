@@ -20,7 +20,7 @@ your ``scrapinghub.yml``, you can leave out the parameter completely::
     Packing version 3af023e-master
     Deploying to Scrapy Cloud project "12345"
     {"status": "ok", "project": 12345, "version": "3af023e-master", "spiders": 1}
-    Run your spiders at: https://app.scrapinghub.com/p/12345/
+    Run your spiders at: https://app.zyte.com/p/12345/
 
 You can also deploy your project from a Python egg, or build one without
 deploying::
@@ -29,7 +29,7 @@ deploying::
     Using egg: egg_name
     Deploying to Scrapy Cloud project "12345"
     {"status": "ok", "project": 12345, "version": "1.0.0", "spiders": 1}
-    Run your spiders at: https://app.scrapinghub.com/p/12345/
+    Run your spiders at: https://app.zyte.com/p/12345/
 
 ::
 

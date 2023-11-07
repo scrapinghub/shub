@@ -24,7 +24,7 @@ and ``-s`` options::
     or print items as they are being scraped:
         shub items -f 2/15
     or watch it running in Scrapinghub's web interface:
-        https://app.scrapinghub.com/p/12345/job/2/15
+        https://app.zyte.com/p/12345/job/2/15
 
 ::
 
@@ -35,7 +35,7 @@ and ``-s`` options::
     or print items as they are being scraped:
         shub items -f 2/15
     or watch it running in Scrapinghub's web interface:
-        https://app.scrapinghub.com/p/33333/job/2/15
+        https://app.zyte.com/p/33333/job/2/15
 
 You can also specify the amount of Scrapy Cloud units (``-u``) and the priority (``-p``)::
 
@@ -46,7 +46,7 @@ You can also specify the amount of Scrapy Cloud units (``-u``) and the priority 
     or print items as they are being scraped:
         shub items -f 2/16
     or watch it running in Scrapinghub's web interface:
-        https://app.scrapinghub.com/p/12345/job/2/16
+        https://app.zyte.com/p/12345/job/2/16
 
 shub provides commands to retrieve log entries, scraped items, or requests from
 jobs. If the job is still running, you can provide the ``-f`` (follow) option

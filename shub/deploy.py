@@ -107,7 +107,7 @@ def deploy_cmd(target, version, debug, egg, build_egg, verbose, keep_log,
                         version, auth, verbose, keep_log, targetconf.stack,
                         targetconf.requirements_file, targetconf.eggs, tmpdir)
             click.echo("Run your spiders at: "
-                       "https://app.scrapinghub.com/p/%s/"
+                       "https://app.zyte.com/p/%s/"
                        "" % targetconf.project_id)
     finally:
         if tmpdir:
@@ -201,6 +201,9 @@ def _add_sources(
     # Keep backward compatibility with pipenv<=2022.8.30
     if isinstance(_requirements, list):
         tmp.write('\n'.join(_requirements).encode('utf-8'))
+    # Keep compatible with pipenv>=v2023.10.24
+    elif isinstance(_requirements, dict):
+        tmp.write('\n'.join(_requirements.values()).encode('utf-8'))
     else:
         with open(_requirements, 'rb') as f:
             tmp.write(f.read())
