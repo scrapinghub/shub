@@ -25,9 +25,9 @@ Contract statements
 1. Docker image should be able to run via ``start-crawl`` command without arguments.
    ``start-crawl`` should be :ref:`executable and located on the search path <scripts-example>`.
 
-.. code-block:: bash
+    .. code-block:: bash
 
-    docker run myscrapyimage start-crawl
+        docker run myscrapyimage start-crawl
 
    Crawler will be started by unpriviledged user ``nobody`` in a writable directory ``/scrapinghub``.
    ``HOME`` environment variable will be set to ``/scrapinghub`` as well. Beware that this directory is added
