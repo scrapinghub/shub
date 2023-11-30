@@ -9,7 +9,6 @@ import click
 import yaml
 from tqdm import tqdm
 from six import binary_type
-import pkg_resources
 
 from shub import config as shub_config
 from shub import utils as shub_utils
@@ -17,6 +16,11 @@ from shub.exceptions import (
     ShubException, NotFoundException, BadConfigException, RemoteErrorException,
     ShubDeprecationWarning, print_warning, BadParameterException,
 )
+
+if sys.version_info < (3, 8):
+    import importlib_metadata as metadata
+else:
+    from importlib import metadata
 
 
 DEFAULT_DOCKER_API_VERSION = '1.21'
@@ -83,8 +87,8 @@ def get_docker_client(validate=True):
         import docker
     except ImportError:
         raise ImportError(DOCKER_PY_UNAVAILABLE_MSG)
-    for dep in pkg_resources.working_set:
-        if dep.project_name == 'docker-py':
+    for dep in metadata.distributions():
+        if dep.name == 'docker-py':
             raise ImportError(DOCKER_PY_UNAVAILABLE_MSG)
 
     docker_host = os.environ.get('DOCKER_HOST')

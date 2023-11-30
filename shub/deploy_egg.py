@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 import os
 import tempfile
+from shutil import which
 
 import click
 
@@ -9,7 +10,7 @@ from shub.config import get_target_conf
 from shub.exceptions import (BadParameterException, NotFoundException,
                              SubcommandException)
 from shub.utils import (decompress_egg_files, download_from_pypi,
-                        find_executable, run_cmd)
+                        run_cmd)
 
 
 HELP = """
@@ -86,7 +87,7 @@ def _checkout(repo, git_branch=None, target_dir='egg-tmp-clone'):
     ]
     missing_exes = []
     for cmd in vcs_commands:
-        exe = find_executable(cmd[0])
+        exe = which(cmd[0])
         if not exe:
             missing_exes.append(cmd[0])
             continue
@@ -109,7 +110,7 @@ def _checkout(repo, git_branch=None, target_dir='egg-tmp-clone'):
 
     if git_branch:
         try:
-            run_cmd([find_executable('git'), 'checkout', git_branch])
+            run_cmd([which('git'), 'checkout', git_branch])
         except SubcommandException:
             raise BadParameterException("Branch %s is not valid" % git_branch)
         click.echo("%s branch was checked out" % git_branch)

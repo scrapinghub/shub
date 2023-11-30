@@ -34,6 +34,12 @@ jobs:
         - python-version: '3.10'
           os: ubuntu-latest
           tox-env: py
+        - python-version: '3.11'
+          os: ubuntu-latest
+          tox-env: py
+        - python-version: '3.12'
+          os: ubuntu-latest
+          tox-env: py
 
     steps:
     - uses: actions/checkout@v2
@@ -74,6 +80,10 @@ jobs:
           tox-env: py
         - python-version: '3.10'
           tox-env: py
+        - python-version: '3.11'
+          tox-env: py
+        - python-version: '3.12'
+          tox-env: py
 
     steps:
     - uses: actions/checkout@v2
@@ -107,6 +117,10 @@ jobs:
         - python-version: '3.9'
           tox-env: py
         - python-version: '3.10'
+          tox-env: py
+        - python-version: '3.11'
+          tox-env: py
+        - python-version: '3.12'
           tox-env: py
 
     steps:

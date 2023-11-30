@@ -63,9 +63,9 @@ class ScheduleTest(unittest.TestCase):
             "--argument ARGWITHEQUAL=val2=val2".split(' '),
         )
         job_args = mock_proj.jobs.run.call_args[1]['job_args']
-        self.assertDictContainsSubset(
-            {'ARG': 'val1', 'ARGWITHEQUAL': 'val2=val2'},
-            job_args,
+        self.assertLessEqual(
+            {'ARG': 'val1', 'ARGWITHEQUAL': 'val2=val2'}.items(),
+            job_args.items(),
         )
         job_settings = mock_proj.jobs.run.call_args[1]['job_settings']
         self.assertEqual(
@@ -116,9 +116,9 @@ class ScheduleTest(unittest.TestCase):
             "testspider -e VAR1=VAL1 --environment VAR2=VAL2".split(' '),
         )
         call_kwargs = mock_proj.jobs.run.call_args[1]
-        self.assertDictContainsSubset(
-            {'VAR1': 'VAL1', 'VAR2': 'VAL2'},
-            call_kwargs['environment'],
+        self.assertLessEqual(
+            {'VAR1': 'VAL1', 'VAR2': 'VAL2'}.items(),
+            call_kwargs['environment'].items(),
         )
 
 
