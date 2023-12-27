@@ -4,6 +4,7 @@
 from __future__ import absolute_import
 
 import os
+import sys
 import unittest
 from unittest.mock import patch, Mock
 
@@ -323,7 +324,9 @@ class DeployFilesTest(unittest.TestCase):
             'package==0.0.0',
             'hash-package==0.0.1',
             'hash-package2==0.0.1',
-            'git+https://github.com/vcs/package.git@master#egg=vcs-package',
+            'git+https://github.com/vcs/package.git@master#egg=vcs-package'
+            if sys.version_info < (3, 8)
+            else 'vcs-package@ git+https://github.com/vcs/package.git@master'
         })
 
     def test_pipfile_names(self):
