@@ -73,7 +73,7 @@ def cli(spider, argument, set, environment, priority, units, tag):
                "".format(short_key))
     click.echo("or print items as they are being scraped:\n    shub items -f "
                "{}".format(short_key))
-    click.echo("or watch it running in Scrapinghub's web interface:\n    {}"
+    click.echo("or watch it running in Zyte's web interface:\n    {}"
                "".format(watch_url))
 
 
