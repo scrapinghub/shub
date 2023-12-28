@@ -8,7 +8,6 @@ import contextlib
 import click
 import yaml
 from tqdm import tqdm
-from six import binary_type
 
 from shub import config as shub_config
 from shub import utils as shub_utils

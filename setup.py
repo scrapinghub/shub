@@ -1,4 +1,3 @@
-import io
 import os
 from setuptools import setup, find_packages
 
@@ -37,7 +36,6 @@ setup(
         'retrying',
         'requests',
         'scrapinghub>=2.3.1',
-        'six>=1.7.0',
         'tqdm==4.55.1',
         'toml',
     ],

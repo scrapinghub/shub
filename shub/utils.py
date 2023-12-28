@@ -17,7 +17,6 @@ from glob import glob
 from importlib import import_module
 from tempfile import NamedTemporaryFile, TemporaryFile
 from urllib.parse import urljoin
-from six import string_types
 
 import click
 import pip

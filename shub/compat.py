@@ -1,6 +1,3 @@
-import six
-
-
 def to_unicode(text, encoding=None, errors='strict'):
     """Return the unicode representation of `text`.
 

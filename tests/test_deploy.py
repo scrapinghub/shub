@@ -8,7 +8,6 @@ from unittest.mock import patch, Mock
 
 import requests
 from click.testing import CliRunner
-from six import string_types
 
 from shub import deploy
 from shub.exceptions import (

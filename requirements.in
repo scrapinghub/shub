@@ -2,10 +2,9 @@ docker
 PyYAML
 requests
 retrying
-six
 toml
 
-click==7.0
+click
 tqdm==4.55.1
 scrapinghub>=2.4
 

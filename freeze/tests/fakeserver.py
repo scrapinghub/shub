@@ -1,13 +1,10 @@
 #!/usr/bin/env python
 import json
 import multiprocessing
-import six
 from threading import Thread
-from argparse import ArgumentParser
 from socketserver import TCPServer
 from http.server import SimpleHTTPRequestHandler
-from six.moves import urllib
-
+import urllib.parse
 
 class Handler(SimpleHTTPRequestHandler):
 

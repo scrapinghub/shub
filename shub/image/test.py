@@ -1,5 +1,3 @@
-import sys
-
 import click
 
 from shub import exceptions as shub_exceptions

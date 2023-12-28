@@ -1,7 +1,6 @@
 import json
 from unittest import mock
 
-import six
 import docker
 import pytest
 from click.testing import CliRunner
@@ -33,10 +32,8 @@ def _convert_str(data, to_binary=False):
     to corresponding string or binary representation depending on Python
     version and boolean `to_binary` parameter.
     """
-    if to_binary and six.PY3:
+    if to_binary:
         return data.encode('utf-8')
-    elif not to_binary and six.PY2:
-        return data.decode('utf-8')
     return data
 
 

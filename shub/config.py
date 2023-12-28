@@ -2,9 +2,9 @@ import netrc
 import os
 import warnings
 from collections import namedtuple
+from urllib.parse import urlparse, urlunparse
 
 import click
-import six
 import yaml
 
 from shub import DOCS_LINK, CONFIG_DOCS_LINK
@@ -53,9 +53,9 @@ class ShubConfig:
     def _check_endpoints(self):
         """Check the endpoints. Send warnings if necessary."""
         for endpoint, url in self.endpoints.items():
-            parsed = six.moves.urllib.parse.urlparse(url)
+            parsed = urlparse(url)
             if parsed.netloc == 'staging.scrapinghub.com':
-                self.endpoints[endpoint] = six.moves.urllib.parse.urlunparse(
+                self.endpoints[endpoint] = urlunparse(
                     parsed._replace(netloc='app.zyte.com')
                 )
                 click.echo(
@@ -399,7 +399,7 @@ class Target(_Target):
 
     def __new__(cls, project_id, endpoint, apikey, *args, **kwargs):
         cls._inst = super().__new__(cls, project_id, endpoint,
-                                               APIkey(apikey), *args, **kwargs)
+                                    APIkey(apikey), *args, **kwargs)
         return cls._inst
 
 

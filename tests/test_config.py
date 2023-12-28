@@ -4,8 +4,8 @@ import tempfile
 import textwrap
 import unittest
 from unittest import mock
+from io import StringIO
 
-import six
 import yaml
 from click.testing import CliRunner
 from yaml import CLoader as Loader
@@ -87,7 +87,7 @@ class ShubConfigTest(unittest.TestCase):
 
     def _get_conf_with_yml(self, yml):
         conf = ShubConfig()
-        conf.load(six.StringIO(textwrap.dedent(yml)))
+        conf.load(StringIO(textwrap.dedent(yml)))
         return conf
 
     def setUp(self):

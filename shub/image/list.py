@@ -3,7 +3,6 @@ import json
 import click
 import docker
 import requests
-from six import string_types
 from urllib.parse import urljoin
 
 from shub.exceptions import ShubException
