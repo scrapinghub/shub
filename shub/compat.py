@@ -10,9 +10,9 @@ def to_unicode(text, encoding=None, errors='strict'):
     Otherwise, raise an error.
 
     """
-    if isinstance(text, six.text_type):
+    if isinstance(text, str):
         return text
-    if not isinstance(text, (six.binary_type, bytearray)):
+    if not isinstance(text, (bytes, bytearray)):
         raise TypeError('to_unicode must receive a bytes, str or unicode '
                         'object, got %s' % type(text).__name__)
     if encoding is None:
@@ -27,11 +27,11 @@ def to_bytes(text, encoding=None, errors='strict'):
     If `text` is a ``unicode`` object, encode it using `encoding`.
 
     Otherwise, raise an error."""
-    if isinstance(text, six.binary_type):
+    if isinstance(text, bytes):
         return text
     if isinstance(text, bytearray):
         return bytes(text)
-    if not isinstance(text, six.text_type):
+    if not isinstance(text, str):
         raise TypeError('to_bytes must receive a unicode, str or bytes '
                         'object, got %s' % type(text).__name__)
     if encoding is None:
@@ -45,7 +45,4 @@ def to_native_str(text, encoding=None, errors='strict'):
     ``str`` representation means ``bytes`` in PY2 and ``unicode`` in PY3.
 
     """
-    if six.PY2:
-        return to_bytes(text, encoding, errors)
-    else:
-        return to_unicode(text, encoding, errors)
+    return to_unicode(text, encoding, errors)

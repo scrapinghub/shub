@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 import os
 import shutil
 import tempfile
@@ -367,7 +365,7 @@ class ShubConfigTest(unittest.TestCase):
                     default: 123
                 """)
             conf.save('conf.yml')
-            with open('conf.yml', 'r') as f:
+            with open('conf.yml') as f:
                 self.assertEqual(yaml.load(f, Loader=Loader), {'project': 123})
 
             conf = self._get_conf_with_yml("""
@@ -377,7 +375,7 @@ class ShubConfigTest(unittest.TestCase):
                     file: reqs.txt
                 """)
             conf.save('conf.yml')
-            with open('conf.yml', 'r') as f:
+            with open('conf.yml') as f:
                 self.assertEqual(yaml.load(f, Loader=Loader), {
                     'project': 123,
                     'requirements': {'file': 'reqs.txt'}}
@@ -387,7 +385,7 @@ class ShubConfigTest(unittest.TestCase):
         conf = ShubConfig()
         with CliRunner().isolated_filesystem():
             conf.save('conf.yml')
-            with open('conf.yml', 'r') as f:
+            with open('conf.yml') as f:
                 self.assertEqual(yaml.load(f, Loader=Loader), None)
 
     def test_save_shortcut(self):
@@ -405,7 +403,7 @@ class ShubConfigTest(unittest.TestCase):
         }
         with CliRunner().isolated_filesystem():
             conf.save('conf.yml')
-            with open('conf.yml', 'r') as f:
+            with open('conf.yml') as f:
                 self.assertEqual(yaml.load(f, Loader=Loader), expected_yml_dict)
 
     def test_save_shortcut_updated(self):
@@ -423,7 +421,7 @@ class ShubConfigTest(unittest.TestCase):
             del conf.projects['prod']
             print(conf.projects)
             conf.save('scrapinghub.yml')
-            with open('scrapinghub.yml', 'r') as f:
+            with open('scrapinghub.yml') as f:
                 new_yml = yaml.safe_load(f)
             # Should not contain 'projects'
             self.assertEqual(new_yml, {'project': 12345})
@@ -433,7 +431,7 @@ class ShubConfigTest(unittest.TestCase):
             # Should also work in reverse
             conf.projects['prod'] = 33333
             conf.save('scrapinghub.yml')
-            with open('scrapinghub.yml', 'r') as f:
+            with open('scrapinghub.yml') as f:
                 new_yml = yaml.safe_load(f)
             # Should not contain 'project' singleton
             self.assertEqual(
@@ -459,12 +457,12 @@ class ShubConfigTest(unittest.TestCase):
             del conf.projects['prod']
             del conf.stacks['default']
             conf.save('conf.yml', options=['projects'])
-            with open('conf.yml', 'r') as f:
+            with open('conf.yml') as f:
                 self.assertEqual(
                     yaml.load(f, Loader=Loader),
                     {'project': 12345, 'stack': 'custom-stack'})
             conf.save('conf.yml')
-            with open('conf.yml', 'r') as f:
+            with open('conf.yml') as f:
                 self.assertEqual(yaml.load(f, Loader=Loader), {'project': 12345})
 
     def test_normalized_projects(self):
@@ -860,7 +858,7 @@ class LoadShubConfigTest(unittest.TestCase):
         os.remove(self.netrcpath)
         load_shub_config()
         self.assertTrue(os.path.isfile(self.globalpath))
-        with open(self.globalpath, 'r') as f:
+        with open(self.globalpath) as f:
             self.assertEqual(f.read(), "")
 
     def test_automigrate_to_global_scrapinghub_yml(self):

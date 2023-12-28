@@ -34,7 +34,7 @@ class ReleaseUtilsTest(TestCase):
         sys.modules['docker'] = mocked_docker
         client_mock = mock.Mock()
 
-        class DockerClientMock(object):
+        class DockerClientMock:
 
             def __init__(self, *args, **kwargs):
                 client_mock(*args, **kwargs)
@@ -133,17 +133,17 @@ class StatusUrlsTest(TestCase):
         # create and add first entry
         store_status_url('http://test0', 2)
         assert os.path.exists(self.status_file)
-        with open(self.status_file, 'r') as f:
+        with open(self.status_file) as f:
             assert f.read() == '0: http://test0\n'
         # add another one
         store_status_url('http://test1', 2)
-        with open(self.status_file, 'r') as f:
+        with open(self.status_file) as f:
             assert f.read() == '0: http://test0\n1: http://test1\n'
         # replacement
         assert store_status_url('http://test2', 2) == 2
-        with open(self.status_file, 'r') as f:
+        with open(self.status_file) as f:
             assert f.read() == '1: http://test1\n2: http://test2\n'
         # existing
         assert store_status_url('http://test1', 2) == 1
-        with open(self.status_file, 'r') as f:
+        with open(self.status_file) as f:
             assert f.read() == '1: http://test1\n2: http://test2\n'

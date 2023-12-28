@@ -66,7 +66,7 @@ def push_cmd(target, version, username, password, email, apikey, insecure,
         _execute_push_login(
             client, image, username, password, email, reauth)
     image_name = utils.format_image_name(image, version)
-    click.echo("Pushing {} to the registry.".format(image_name))
+    click.echo(f"Pushing {image_name} to the registry.")
     events = client.push(image_name, stream=True, decode=True)
     if utils.is_verbose():
         push_progress_cls = _LoggedPushProgress
@@ -74,7 +74,7 @@ def push_cmd(target, version, username, password, email, apikey, insecure,
         push_progress_cls = _PushProgress
     push_progress = push_progress_cls(events)
     push_progress.show()
-    click.echo("The image {} pushed successfully.".format(image_name))
+    click.echo(f"The image {image_name} pushed successfully.")
 
 
 def _execute_push_login(client, image, username, password, email, reauth):
@@ -86,7 +86,7 @@ def _execute_push_login(client, image, username, password, email, reauth):
             ('Status' in resp and resp['Status'] == 'Login Succeeded')):
         raise shub_exceptions.RemoteErrorException(
             "Docker registry login error.")
-    click.echo("Login to {} succeeded.".format(registry))
+    click.echo(f"Login to {registry} succeeded.")
 
 
 class _LoggedPushProgress(utils.BaseProgress):
@@ -102,7 +102,7 @@ class _LoggedPushProgress(utils.BaseProgress):
                "credentials are correct and try again with --reauth flag.")
             raise shub_exceptions.RemoteErrorException(
                 "Docker registry authentication error")
-        super(_LoggedPushProgress, self).handle_event(event)
+        super().handle_event(event)
         if 'status' in event:
             self.handle_status_event(event)
 
@@ -118,7 +118,7 @@ class _PushProgress(_LoggedPushProgress):
     """
 
     def __init__(self, push_events):
-        super(_PushProgress, self).__init__(push_events)
+        super().__init__(push_events)
         # Total bar repesents total progress in terms of amount of layers.
         self.total_bar = self._create_total_bar()
         self.layers = set()
@@ -157,7 +157,7 @@ class _PushProgress(_LoggedPushProgress):
         self.total_bar.refresh()
 
     def show(self):
-        super(_PushProgress, self).show()
+        super().show()
         self.total_bar.close()
         for bar in self.layers_bars.values():
             bar.close()

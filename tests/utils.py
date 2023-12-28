@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import
-
 import sys
 import re
 from unittest import mock
@@ -11,7 +8,7 @@ from tqdm.utils import _supports_unicode
 from shub import config
 
 
-class AssertInvokeRaisesMixin(object):
+class AssertInvokeRaisesMixin:
     def assertInvokeRaises(self, exc, *args, **kwargs):
         """
         Invoke self.runner (or a new runner if nonexistent) with given *args

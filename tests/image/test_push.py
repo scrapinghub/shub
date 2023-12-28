@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from unittest import mock
 
 import pytest
@@ -138,8 +137,8 @@ def test_cli_with_custom_login(docker_client_mock, test_mock):
               "--password", "pass", "--email", "mail"])
     assert result.exit_code == 0
     docker_client_mock.login.assert_called_with(
-        email=u'mail', password=u'pass',
-        reauth=False, registry='registry.io', username=u'user')
+        email='mail', password='pass',
+        reauth=False, registry='registry.io', username='user')
     docker_client_mock.push.assert_called_with(
         'registry.io/user/project:test', decode=True, stream=True)
     test_mock.assert_called_with("dev", "test")

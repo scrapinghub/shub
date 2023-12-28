@@ -55,7 +55,7 @@ def list_recommended_python_reqs(ctx, param, value):
         return
     click.echo("Recommended Python deps list:")
     for dep in RECOMMENDED_PYTHON_DEPS:
-        click.echo('- {}'.format(dep))
+        click.echo(f'- {dep}')
     ctx.exit()
 
 
@@ -108,7 +108,7 @@ def cli(project, base_image, base_deps, add_deps, requirements):
     results = results.replace('\n\n', '\n')
     with open(dockefile_path, 'w') as dockerfile:
         dockerfile.write(results)
-    click.echo("Dockerfile is saved to {}".format(dockefile_path))
+    click.echo(f"Dockerfile is saved to {dockefile_path}")
 
 
 def _format_system_deps(base_deps, add_deps):
@@ -157,7 +157,7 @@ def _format_requirements(project_dir, requirements):
             reqs_file.writelines("%s\n" % line for line in RECOMMENDED_PYTHON_DEPS)
         click.echo('Created base requirements.txt in project dir.')
     rows = [
-        'COPY ./{} {}/requirements.txt'.format(rel_reqs_path, DOCKER_APP_DIR),
+        f'COPY ./{rel_reqs_path} {DOCKER_APP_DIR}/requirements.txt',
         'RUN pip install --no-cache-dir -r requirements.txt',
     ]
     return '\n'.join(rows)

@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 import logging
 from datetime import datetime
 
@@ -50,7 +49,7 @@ def cli(job_id, follow, tail, json_):
             click.echo(item)
         else:
             click.echo(
-                u"{} {} {}".format(
+                "{} {} {}".format(
                     datetime.utcfromtimestamp(item['time']/1000),
                     logging.getLevelName(int(item['level'])),
                     item['message']

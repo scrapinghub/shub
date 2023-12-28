@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 import glob
 import json
 import os
@@ -13,7 +11,7 @@ import setuptools.msvc  # noqa
 
 import click
 import toml
-from six.moves.urllib.parse import urljoin
+from urllib.parse import urljoin
 
 from shub.config import SH_IMAGES_REGISTRY, list_targets_callback, load_shub_config
 from shub.exceptions import BadParameterException, NotFoundException, ShubException
@@ -150,8 +148,8 @@ def _upload_egg(endpoint, eggpath, project, version, auth, verbose, keep_log,
             requirements_file = open(requirements_file, 'rb')
         if requirements_file:
             files.append(('requirements', requirements_file))
-    except IOError as e:
-        raise ShubException("%s %s" % (e.strerror, e.filename))
+    except OSError as e:
+        raise ShubException(f"{e.strerror} {e.filename}")
     files.append(('egg', open(eggpath, 'rb')))
     url = _url(endpoint, 'scrapyd/addversion.json')
     click.echo('Deploying to Scrapy Cloud project "%s"' % project)
@@ -178,7 +176,7 @@ def _get_pipfile_requirements(tmpdir=None):
             deps = pipefile['default']
             sources_list = prepare_pip_source_args(pipefile['_meta']['sources'])
             sources = ' '.join(sources_list)
-    except IOError:
+    except OSError:
         raise ShubException('Please lock your Pipfile before deploying')
     # We must remove any hash from the pipfile before converting to play nice
     # with vcs packages
@@ -222,7 +220,7 @@ def _is_poetry(name):
 def _get_poetry_requirements():
     try:
         data = toml.load('poetry.lock')
-    except IOError:
+    except OSError:
         raise ShubException('Please make sure the poetry lock file is present')
     # Adapted from poetry 1.0.0a2 poetry/utils/exporter.py
     lines = []

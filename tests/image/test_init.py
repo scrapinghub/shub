@@ -26,7 +26,7 @@ def test_cli_default_settings(project_dir):
     runner = CliRunner()
     result = runner.invoke(cli, [])
     assert result.exit_code == 0
-    msg = 'Dockerfile is saved to {}'.format(dockerfile_path)
+    msg = f'Dockerfile is saved to {dockerfile_path}'
     assert msg in result.output
     assert os.path.exists(dockerfile_path)
 

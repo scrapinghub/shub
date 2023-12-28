@@ -147,7 +147,7 @@ def test_shub_image_info_fallback(get_docker_client_mock, _,
     get_docker_client_mock().logs.return_value = 'abc\ndef\n'
     result = list_cmd('image_name', 111, 'endpoint', 'apikey')
     assert get_docker_client_mock().start.call_count == 2
-    assert result == {'spiders': [u'abc', u'def'], 'project_type': 'scrapy'}
+    assert result == {'spiders': ['abc', 'def'], 'project_type': 'scrapy'}
 
 
 @pytest.mark.parametrize('output,error_msg', [

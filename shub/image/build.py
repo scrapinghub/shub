@@ -67,7 +67,7 @@ def build_cmd(target, version, skip_tests, no_cache, build_arg, filename='Docker
         build_progress_cls = _LoggedBuildProgress
     else:
         build_progress_cls = _BuildProgress
-    click.echo("Building {}.".format(image_name))
+    click.echo(f"Building {image_name}.")
     events = client.build(
         path=project_dir,
         tag=image_name,
@@ -79,7 +79,7 @@ def build_cmd(target, version, skip_tests, no_cache, build_arg, filename='Docker
     )
     build_progress = build_progress_cls(events)
     build_progress.show()
-    click.echo("The image {} build is completed.".format(image_name))
+    click.echo(f"The image {image_name} build is completed.")
     # Test the image content after building it
     if not skip_tests:
         test_cmd(target, version)
@@ -91,7 +91,7 @@ class _LoggedBuildProgress(utils.BaseProgress):
     Output all the events received from the docker daemon.
     """
     def handle_event(self, event):
-        super(_LoggedBuildProgress, self).handle_event(event)
+        super().handle_event(event)
         if 'stream' in event:
             self.handle_stream_event(event)
 
@@ -106,7 +106,7 @@ class _BuildProgress(_LoggedBuildProgress):
     """
 
     def __init__(self, events):
-        super(_BuildProgress, self).__init__(events)
+        super().__init__(events)
         self.bar = utils.create_progress_bar(
             total=1,
             desc='Steps',
@@ -116,7 +116,7 @@ class _BuildProgress(_LoggedBuildProgress):
         self.is_built = False
 
     def show(self):
-        super(_BuildProgress, self).show()
+        super().show()
         if self.bar:
             self.bar.close()
         if not self.is_built:
@@ -130,7 +130,7 @@ class _BuildProgress(_LoggedBuildProgress):
         step_row = BUILD_STEP_REGEX.match(event['stream'])
         if not step_row:
             return
-        step_id, total = [int(val) for val in step_row.groups()]
+        step_id, total = (int(val) for val in step_row.groups())
         self.bar.total = max(self.bar.total, total)
         # ignore onbuild sub-steps
         if step_id > self.bar.n and self.bar.total == total:

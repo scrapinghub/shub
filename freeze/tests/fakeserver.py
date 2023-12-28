@@ -1,13 +1,11 @@
 #!/usr/bin/env python
-from __future__ import absolute_import
-from __future__ import print_function
 import json
 import multiprocessing
 import six
 from threading import Thread
 from argparse import ArgumentParser
-from six.moves.socketserver import TCPServer
-from six.moves.SimpleHTTPServer import SimpleHTTPRequestHandler
+from socketserver import TCPServer
+from http.server import SimpleHTTPRequestHandler
 from six.moves import urllib
 
 
@@ -19,10 +17,7 @@ class Handler(SimpleHTTPRequestHandler):
         query = urllib.parse.parse_qs(querystr)
         content_len = int(self.headers.get('content-length', 0))
         body = self.rfile.read(content_len)
-        if six.PY2:
-            headers = self.headers.getplist()
-        else:
-            headers = self.headers.get_params()
+        headers = self.headers.get_params()
         print(self)
 
         self.server.pipe.send({

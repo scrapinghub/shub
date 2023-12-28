@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 import setuptools  # noqa: F401
 import contextlib
 import datetime
@@ -17,7 +16,7 @@ from packaging.version import Version
 from glob import glob
 from importlib import import_module
 from tempfile import NamedTemporaryFile, TemporaryFile
-from six.moves.urllib.parse import urljoin
+from urllib.parse import urljoin
 from six import string_types
 
 import click
@@ -96,7 +95,7 @@ def create_default_setup_py(**kwargs):
                 kwargs['settings'] = get_config().get('settings', 'default')
             with open('setup.py', 'w') as f:
                 f.write(_SETUP_PY_TEMPLATE % kwargs)
-            click.echo("Created setup.py at {}".format(os.getcwd()))
+            click.echo(f"Created setup.py at {os.getcwd()}")
 
 
 def make_deploy_request(url, data, files, auth, verbose, keep_log):
@@ -121,10 +120,10 @@ def make_deploy_request(url, data, files, auth, verbose, keep_log):
                          '\n---------- END OF REMOTE TRACEBACK ----------')
         except (ValueError, TypeError, KeyError):
             error = rsp.text or "Status %d" % rsp.status_code
-        msg = "Deploy failed ({}):\n{}".format(rsp.status_code, error)
+        msg = f"Deploy failed ({rsp.status_code}):\n{error}"
         raise RemoteErrorException(msg)
     except requests.RequestException as exc:
-        raise RemoteErrorException("Deploy failed: {}".format(exc))
+        raise RemoteErrorException(f"Deploy failed: {exc}")
 
 
 def _check_deploy_files_size(files):
@@ -133,7 +132,7 @@ def _check_deploy_files_size(files):
     if not isinstance(files, list) or ctx and ctx.params.get('ignore_size'):
         return
     files_size = sum(
-        len(fp) if isinstance(fp, string_types)
+        len(fp) if isinstance(fp, str)
         else os.fstat(fp.fileno()).st_size
         for (fname, fp) in files
     )
@@ -164,7 +163,7 @@ def write_and_echo_logs(keep_log, last_logs, rsp, verbose):
                 last_log = last_logs[-1]
             except IndexError:
                 last_log = "(No log messages)"
-            raise RemoteErrorException("Deploy failed: {}".format(last_log))
+            raise RemoteErrorException(f"Deploy failed: {last_log}")
 
 
 def echo_short_log_if_deployed(deployed, last_logs, log_file=None, verbose=False):
@@ -217,7 +216,7 @@ def patch_sys_executable():
 def find_exe(exe_name):
     exe = which(exe_name)
     if not exe:
-        raise NotFoundException("Please install {}".format(exe_name))
+        raise NotFoundException(f"Please install {exe_name}")
     return exe
 
 
@@ -289,7 +288,7 @@ def pwd_git_version():
         except SubcommandException:
             return None
     branch = run_cmd([git, 'rev-parse', '--abbrev-ref', 'HEAD'])
-    return '%s-%s' % (commit_id, branch)
+    return f'{commit_id}-{branch}'
 
 
 def pwd_hg_version():
@@ -301,7 +300,7 @@ def pwd_hg_version():
     except SubcommandException:
         return None
     branch = run_cmd([hg, 'branch'])
-    return 'r%s-%s' % (commit_id, branch)
+    return f'r{commit_id}-{branch}'
 
 
 def pwd_bzr_version():
@@ -394,7 +393,7 @@ def _deploy_dependency_egg(project, endpoint, apikey, name=None, version=None, e
     data = {'project': project, 'name': name, 'version': version}
     auth = (apikey, '')
 
-    click.echo('Deploying dependency {} {} to Scrapy Cloud project {}'.format(name, version, project))
+    click.echo(f'Deploying dependency {name} {version} to Scrapy Cloud project {project}')
 
     with open(egg_path, 'rb') as egg_fp:
         files = {'egg': (egg_name, egg_fp)}
@@ -447,7 +446,7 @@ def get_job_specs(job):
     # XXX: Lazy import due to circular dependency
     from shub.config import get_target_conf
     targetconf = get_target_conf(match.group(2) or 'default')
-    return ("{}/{}".format(targetconf.project_id, match.group(3)),
+    return (f"{targetconf.project_id}/{match.group(3)}",
             targetconf.apikey)
 
 
@@ -456,7 +455,7 @@ def get_job(job):
     hsc = HubstorageClient(auth=apikey)
     job = hsc.get_job(jobid)
     if not job.metadata:
-        raise NotFoundException('Job {} does not exist'.format(jobid))
+        raise NotFoundException(f'Job {jobid} does not exist')
     return job
 
 
@@ -565,7 +564,7 @@ def job_resource_iter(job, resource, output_json=False, follow=True,
         # This is the last entry to be skipped, i.e. it will NOT be displayed
         last_item = total_nr_items - tail - 1
         if last_item >= 0:
-            last_item_key = '{}/{}'.format(job.key, last_item)
+            last_item_key = f'{job.key}/{last_item}'
     if not job_live(job):
         follow = False
     resource_iter = resource.iter_json if output_json else resource.iter_values
@@ -596,7 +595,7 @@ def latest_github_release(force_update=False, timeout=1., cache=None):
                                   'last_release.txt')
     today = datetime.date.today().toordinal()
     if not force_update and os.path.isfile(cache):
-        with open(cache, 'r') as f:
+        with open(cache) as f:
             try:
                 release_data = json.load(f)
             except Exception:
@@ -674,9 +673,9 @@ def update_yaml_dict(conf_path=None):
         from shub.config import GLOBAL_SCRAPINGHUB_YML_PATH
         conf_path = GLOBAL_SCRAPINGHUB_YML_PATH
     try:
-        with open(conf_path, 'r') as f:
+        with open(conf_path) as f:
             conf = yaml.safe_load(f) or {}
-    except IOError as e:
+    except OSError as e:
         if e.errno != errno.ENOENT:
             raise
         conf = {}

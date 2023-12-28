@@ -8,7 +8,7 @@ import textwrap
 import click
 import requests
 from retrying import retry
-from six.moves.urllib.parse import urljoin
+from urllib.parse import urljoin
 
 from shub.config import load_shub_config, list_targets_callback
 from shub.exceptions import ShubException
@@ -80,8 +80,8 @@ def deploy_cmd(target, version, username, password, email,
         target_conf.project_id, version, image_name, endpoint, apikey,
         username, password, email)
 
-    click.echo("Deploying {}".format(image_name))
-    utils.debug_log('Deploy parameters: {}'.format(params))
+    click.echo(f"Deploying {image_name}")
+    utils.debug_log(f'Deploy parameters: {params}')
     req = requests.post(
         urljoin(endpoint, '/api/releases/deploy.json'),
         data=params,
@@ -133,10 +133,10 @@ class _LoggedDeployProgress(utils.BaseProgress):
 
     def show(self):
         click.echo("Deploy results:")
-        super(_LoggedDeployProgress, self).show()
+        super().show()
 
     def handle_event(self, event):
-        click.echo("{}".format(event))
+        click.echo(f"{event}")
 
 
 class _DeployProgress(utils.BaseProgress):
@@ -145,12 +145,12 @@ class _DeployProgress(utils.BaseProgress):
     Uses a progress bar to track total progress.
     """
     def __init__(self, events):
-        super(_DeployProgress, self).__init__(events)
+        super().__init__(events)
         self.progress_bar = self._create_progress_bar()
         self.result_event = None
 
     def show(self):
-        super(_DeployProgress, self).show()
+        super().show()
         # it's possible that release process finishes instantly without
         # providing enough information to fill progress bar completely
         if (
@@ -164,7 +164,7 @@ class _DeployProgress(utils.BaseProgress):
         # last event with non-waiting status contains successful result or
         # error result from the service with error details
         if self.result_event:
-            click.echo("Deploy results:\n{}".format(self.result_event))
+            click.echo(f"Deploy results:\n{self.result_event}")
 
     def handle_event(self, event):
         if 'progress' in event and 'total' in event:
@@ -231,7 +231,7 @@ def _extract_scripts_from_project(setup_filename='setup.py'):
         __setup_calls__.append((args, kwargs))
     ''')
     parsed_mock_setup = ast.parse(mock_setup, filename=setup_filename)
-    with open(setup_filename, 'rt') as setup_file:
+    with open(setup_filename) as setup_file:
         parsed = ast.parse(setup_file.read())
         for index, node in enumerate(parsed.body[:]):
             if (not isinstance(node, ast.Expr) or

@@ -1,7 +1,5 @@
 #!/usr/bin/env python
-# coding=utf-8
 
-from __future__ import absolute_import
 
 import os
 import sys
@@ -171,7 +169,7 @@ class DeployFilesTest(unittest.TestCase):
         files = {}
         for name, file in self.request.call_args[0][2]:
             files.setdefault(name, []).append(
-                file if isinstance(file, string_types)
+                file if isinstance(file, str)
                 else file.read().decode('utf-8'))
 
         return files
