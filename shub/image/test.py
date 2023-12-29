@@ -4,8 +4,6 @@ from shub import exceptions as shub_exceptions
 from shub.config import load_shub_config, list_targets_callback
 from shub.image import utils
 
-long = int
-
 SHORT_HELP = "Test a built image with Scrapy Cloud contract"
 HELP = """
 A command to test an image after build step to make sure it fits contract.
@@ -77,11 +75,11 @@ def _check_image_size(image_name, docker_client):
     from docker.errors import NotFound
     try:
         size = docker_client.inspect_image(image_name).get('Size')
-        if size and isinstance(size, (int, long)) and size > IMAGE_SIZE_LIMIT:
+        if size and isinstance(size, int) and size > IMAGE_SIZE_LIMIT:
             raise shub_exceptions.CustomImageTooLargeException(
                 IMAGE_TOO_LARGE_WARNING)
     except NotFound as exc:
-        utils.debug_log(f"{exc}")
+        utils.debug_log(exc)
         raise shub_exceptions.NotFoundException(
             "The image doesn't exist yet, please use build command at first.")
 

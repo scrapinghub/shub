@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import unittest
 from click.testing import CliRunner
 from shub import tool

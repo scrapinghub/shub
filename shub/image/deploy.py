@@ -136,7 +136,7 @@ class _LoggedDeployProgress(utils.BaseProgress):
         super().show()
 
     def handle_event(self, event):
-        click.echo(f"{event}")
+        click.echo(event)
 
 
 class _DeployProgress(utils.BaseProgress):

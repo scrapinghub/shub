@@ -1,6 +1,3 @@
-#!/usr/bin/env python
-
-
 import os
 import sys
 import unittest
@@ -257,7 +254,7 @@ class DeployFilesTest(unittest.TestCase):
     def test_add_sources(self):
         convert_deps_to_pip = Mock(
             side_effect=[
-                './requirements.txt',
+                './tests/requirements.txt',
                 ['package==0.0.0', 'hash-package==0.0.1', 'hash-package2==0.0.1'],
             ],
         )
