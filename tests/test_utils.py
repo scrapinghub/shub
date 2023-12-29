@@ -386,13 +386,13 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
         last_logs = ["last log line"]
 
         deployed = True
-        for verbose, expected in zip([True, False], ["", "last log line\n"]):
+        for verbose, expected in ((True, ""), (False, "last log line\n")):
             with patch('sys.stdout', new_callable=StringIO) as stdout:
                 utils.echo_short_log_if_deployed(deployed, last_logs, verbose=verbose)
             self.assertEqual(expected, stdout.getvalue())
 
         deployed = False
-        for verbose, expected in zip([True, False], ["", "Deploy log last 1 lines:\nlast log line\n"]):
+        for verbose, expected in ((True, ""), (False, "Deploy log last 1 lines:\nlast log line\n")):
             with patch('sys.stdout', new_callable=StringIO) as stdout:
                 utils.echo_short_log_if_deployed(deployed, last_logs, verbose=verbose)
             self.assertEqual(expected, stdout.getvalue())
