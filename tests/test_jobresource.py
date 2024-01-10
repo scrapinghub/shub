@@ -75,7 +75,3 @@ class JobResourceTest(unittest.TestCase):
             result = self.runner.invoke(log.cli, (jobid,))
             mock_gj.assert_called_once_with(jobid)
             self.assertIn('1970-01-01 00:00:00 INFO jarzębina', result.output)
-
-
-if __name__ == '__main__':
-    unittest.main()

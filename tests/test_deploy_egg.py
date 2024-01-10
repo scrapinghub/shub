@@ -99,7 +99,3 @@ class TestDeployEgg(unittest.TestCase):
         self.assertEqual('test_project', data['name'])
 
         return data
-
-
-if __name__ == '__main__':
-    unittest.main()

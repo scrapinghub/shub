@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 A helper wrapper over start-crawl to run a custom image locally.
 

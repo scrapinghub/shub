@@ -42,7 +42,3 @@ class TestDeployReqs(unittest.TestCase):
                 f.write(os.path.abspath(os.path.join(basepath, egg)) + "\n")
 
         return requirements_file
-
-
-if __name__ == '__main__':
-    unittest.main()

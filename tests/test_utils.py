@@ -689,7 +689,3 @@ class OnboardingWizardTestCase(unittest.TestCase):
         assert conf.apikeys == {'default': 'abc'}
         assert conf.images == {'default': 'repo'}
         assert sh_yml == {'project': 12345, 'image': 'repo'}
-
-
-if __name__ == '__main__':
-    unittest.main()

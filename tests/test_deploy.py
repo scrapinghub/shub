@@ -427,7 +427,3 @@ class DeployFilesTest(unittest.TestCase):
                 cm.exception.message,
                 'Please make sure the poetry lock file is present',
             )
-
-
-if __name__ == '__main__':
-    unittest.main()
