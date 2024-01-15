@@ -32,6 +32,8 @@ setup(
     install_requires=[
         'click',
         'docker',
+        'importlib-metadata; python_version < "3.8"',
+        'packaging',
         'pip',
         'PyYAML',
         'retrying',
@@ -52,6 +54,8 @@ setup(
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
+        'Programming Language :: Python :: 3.11',
+        'Programming Language :: Python :: 3.12',
         'Operating System :: OS Independent',
         'Environment :: Console',
         'Topic :: Internet :: WWW/HTTP',

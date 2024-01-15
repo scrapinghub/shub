@@ -11,9 +11,9 @@ import re
 import time
 
 from collections import deque
-from six.moves.configparser import SafeConfigParser
-from distutils.spawn import find_executable
-from distutils.version import LooseVersion, StrictVersion
+from configparser import ConfigParser
+from shutil import which
+from packaging.version import Version
 from glob import glob
 from importlib import import_module
 from tempfile import NamedTemporaryFile, TemporaryFile
@@ -143,17 +143,21 @@ def _check_deploy_files_size(files):
 
 def write_and_echo_logs(keep_log, last_logs, rsp, verbose):
     """It will write logs to temporal file and echo if verbose is True."""
-    with NamedTemporaryFile(prefix='shub_deploy_', suffix='.log',
-                            delete=(not keep_log)) as log_file:
-        for line in rsp.iter_lines():
-            if verbose:
-                click.echo(line)
-            last_logs.append(line)
-            log_file.write(line + b'\n')
+    log_contents = b""
+    for line in rsp.iter_lines():
+        if verbose:
+            click.echo(line)
+        last_logs.append(line)
+        log_contents += line + b'\n'
+    deployed = _is_deploy_successful(last_logs)
+    if not deployed:
+        keep_log = True
+    echo_short_log_if_deployed(deployed, last_logs, verbose=verbose)
 
-        deployed = _is_deploy_successful(last_logs)
-        echo_short_log_if_deployed(deployed, last_logs, log_file, verbose)
-        if not log_file.delete:
+    with NamedTemporaryFile(prefix='shub_deploy_', suffix='.log',
+                            delete=not keep_log) as log_file:
+        log_file.write(log_contents)
+        if keep_log:
             click.echo("Deploy log location: %s" % log_file.name)
         if not deployed:
             try:
@@ -163,12 +167,11 @@ def write_and_echo_logs(keep_log, last_logs, rsp, verbose):
             raise RemoteErrorException("Deploy failed: {}".format(last_log))
 
 
-def echo_short_log_if_deployed(deployed, last_logs, log_file, verbose):
+def echo_short_log_if_deployed(deployed, last_logs, log_file=None, verbose=False):
     if deployed:
         if not verbose:
             click.echo(last_logs[-1])
     else:
-        log_file.delete = False
         if not verbose:
             click.echo("Deploy log last %s lines:" % len(last_logs))
             for line in last_logs:
@@ -212,7 +215,7 @@ def patch_sys_executable():
 
 
 def find_exe(exe_name):
-    exe = find_executable(exe_name)
+    exe = which(exe_name)
     if not exe:
         raise NotFoundException("Please install {}".format(exe_name))
     return exe
@@ -275,7 +278,7 @@ def pwd_version():
 
 
 def pwd_git_version():
-    git = find_executable('git')
+    git = which('git')
     if not git:
         return None
     try:
@@ -290,7 +293,7 @@ def pwd_git_version():
 
 
 def pwd_hg_version():
-    hg = find_executable('hg')
+    hg = which('hg')
     if not hg:
         return None
     try:
@@ -302,7 +305,7 @@ def pwd_hg_version():
 
 
 def pwd_bzr_version():
-    bzr = find_executable('bzr')
+    bzr = which('bzr')
     if not bzr:
         return None
     try:
@@ -485,9 +488,9 @@ def inside_project():
 
 
 def get_config(use_closest=True):
-    """Get Scrapy config file as a SafeConfigParser"""
+    """Get Scrapy config file as a ConfigParser"""
     sources = get_sources(use_closest)
-    cfg = SafeConfigParser()
+    cfg = ConfigParser()
     cfg.read(sources)
     return cfg
 
@@ -506,7 +509,7 @@ def get_sources(use_closest=True):
 
 
 def get_scrapycfg_targets(cfgfiles=None):
-    cfg = SafeConfigParser()
+    cfg = ConfigParser()
     cfg.read(cfgfiles or [])
     baset = dict(cfg.items('deploy')) if cfg.has_section('deploy') else {}
     targets = {}
@@ -627,8 +630,8 @@ def update_available(silent_fail=True):
     """
     try:
         release_data = latest_github_release()
-        latest_rls = StrictVersion(release_data['name'].lstrip('v'))
-        used_rls = StrictVersion(shub.__version__)
+        latest_rls = Version(release_data['name'].lstrip('v'))
+        used_rls = Version(shub.__version__)
         if used_rls >= latest_rls:
             return None
         return release_data['html_url']
@@ -643,15 +646,15 @@ def download_from_pypi(dest, pkg=None, reqfile=None, extra_args=None):
     if (not pkg and not reqfile) or (pkg and reqfile):
         raise ValueError('Call with either pkg or reqfile')
     extra_args = extra_args or []
-    pip_version = LooseVersion(getattr(pip, '__version__', '1.0'))
+    pip_version = Version(getattr(pip, '__version__', '1.0'))
     cmd = 'install'
     no_wheel = []
     target = [pkg] if pkg else ['-r', reqfile]
-    if pip_version >= LooseVersion('1.4'):
+    if pip_version >= Version('1.4'):
         no_wheel = ['--no-use-wheel']
-    if pip_version >= LooseVersion('7'):
+    if pip_version >= Version('7'):
         no_wheel = ['--no-binary=:all:']
-    if pip_version >= LooseVersion('8'):
+    if pip_version >= Version('8'):
         cmd = 'download'
     with patch_sys_executable():
         pip_main([cmd, '-d', dest, '--no-deps'] + no_wheel + extra_args +

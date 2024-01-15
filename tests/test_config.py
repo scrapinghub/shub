@@ -126,7 +126,7 @@ class ShubConfigTest(unittest.TestCase):
         }
         self.assertEqual(projects, self.conf.projects)
         endpoints = {'external': 'ext_endpoint'}
-        self.assertDictContainsSubset(endpoints, self.conf.endpoints)
+        self.assertLessEqual(endpoints.items(), self.conf.endpoints.items())
         apikeys = {'default': 'key', 'otheruser': 'otherkey'}
         self.assertEqual(apikeys, self.conf.apikeys)
         stacks = {'dev': 'scrapy:v1.1'}
@@ -145,7 +145,7 @@ class ShubConfigTest(unittest.TestCase):
         """
         conf = self._get_conf_with_yml(yml)
         endpoints = {'external': 'ext_endpoint'}
-        self.assertDictContainsSubset(endpoints, conf.endpoints)
+        self.assertLessEqual(endpoints.items(), conf.endpoints.items())
         self.assertEqual(conf.projects, {})
         self.assertEqual(conf.apikeys, {})
         self.assertEqual(conf.images, {})
@@ -176,9 +176,9 @@ class ShubConfigTest(unittest.TestCase):
                 dev: dev_stack
             stack: prod_stack
         """
-        self.assertDictContainsSubset(
-            self._get_conf_with_yml(yml).stacks,
-            {'default': 'prod_stack', 'dev': 'dev_stack'},
+        self.assertLessEqual(
+            self._get_conf_with_yml(yml).stacks.items(),
+            {'default': 'prod_stack', 'dev': 'dev_stack'}.items()
         )
 
     def test_load_shortcut_conflict(self):
@@ -586,7 +586,7 @@ class ShubConfigTest(unittest.TestCase):
             image: true
             stack: scrapy:1.3
         """)
-        with self.assertRaisesRegexp(BadConfigException, '(?i)ambiguous'):
+        with self.assertRaisesRegex(BadConfigException, '(?i)ambiguous'):
             self.conf.get_image('default')
 
     def test_get_image_ambiguous_global_image_and_project_stack(self):
@@ -601,9 +601,9 @@ class ShubConfigTest(unittest.TestCase):
                 stack: scrapy:1.3
             image: true
             """)
-        with self.assertRaisesRegexp(BadConfigException, '(?i)ambiguous'):
+        with self.assertRaisesRegex(BadConfigException, '(?i)ambiguous'):
             self.conf.get_image('bad')
-        with self.assertRaisesRegexp(BadConfigException, '(?i)disabled'):
+        with self.assertRaisesRegex(BadConfigException, '(?i)disabled'):
             self.conf.get_image('good')
 
     def test_get_image_ambiguous_project_image_and_project_stack(self):
@@ -614,7 +614,7 @@ class ShubConfigTest(unittest.TestCase):
                 image: true
                 stack: scrapy:1.3
             """)
-        with self.assertRaisesRegexp(BadConfigException, '(?i)ambiguous'):
+        with self.assertRaisesRegex(BadConfigException, '(?i)ambiguous'):
             self.conf.get_image('default')
 
     def test_get_target_conf(self):
