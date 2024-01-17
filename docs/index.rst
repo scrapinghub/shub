@@ -22,3 +22,4 @@ Contents
    scheduling
    deploy-custom-image
    custom-images-contract
+   changes
