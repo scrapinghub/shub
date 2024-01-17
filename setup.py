@@ -10,7 +10,7 @@ with open(os.path.join(here, 'shub', '__init__.py'), encoding='utf-8') as f:
 
 setup(
     name='shub',
-    version='2.15.1',
+    version='2.15.2',
     packages=find_packages(exclude=('tests', 'tests.*')),
     url=about['DOCS_LINK'],
     description='Scrapinghub Command Line Client',
