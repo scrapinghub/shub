@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 import os
 import shutil
 import tempfile
@@ -9,7 +7,7 @@ import click
 import requests
 import yaml
 from click.formatting import HelpFormatter
-from six import BytesIO
+from io import BytesIO
 
 from shub.exceptions import (
     BadParameterException, NotFoundException, RemoteErrorException)
@@ -73,7 +71,7 @@ def cli(project, target_dir):
             "to get a list of all available projects." % project)
     click.echo("Downloading custom image examples")
     repo_zip = get_repo_zip(EXAMPLE_REPO)
-    click.echo("Cloning project '%s' into %s" % (project, target_dir))
+    click.echo(f"Cloning project '{project}' into {target_dir}")
     unzip_project(repo_zip, project=projects[project], target_dir=target_dir)
 
 

@@ -21,7 +21,6 @@ should be rewritten in the future with something more basic and
 lightweight, to get rid of dependence on Python.
 """
 
-from __future__ import print_function
 
 import os
 import sys

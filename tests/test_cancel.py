@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 import unittest
 from collections import namedtuple
 from unittest import mock
@@ -107,7 +105,3 @@ class CancelTest(AssertInvokeRaisesMixin, unittest.TestCase):
 
         with self.assertRaises(BadParameterException):
             cancel.validate_job_key('123456', '')
-
-
-if __name__ == '__main__':
-    unittest.main()

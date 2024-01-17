@@ -1,8 +1,6 @@
-from __future__ import absolute_import
 import click
 import requests
-from six.moves import input
-from six.moves.urllib.parse import urljoin
+from urllib.parse import urljoin
 
 from shub.config import (load_shub_config, GLOBAL_SCRAPINGHUB_YML_PATH,
                          ShubConfig)

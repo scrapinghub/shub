@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 import click
 
 from scrapinghub import ScrapinghubAPIError
@@ -80,7 +78,7 @@ def cli(target_or_key, keys, force):
 
 
 def validate_job_key(project_id, short_key):
-    job_key = "%s/%s" % (project_id, short_key)
+    job_key = f"{project_id}/{short_key}"
 
     if len(short_key.split("/")) != 2:
         raise BadParameterException(

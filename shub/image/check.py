@@ -19,4 +19,4 @@ def cli(id):
     status_req = requests.get(status_url, timeout=300)
     status_req.raise_for_status()
     result = status_req.json()
-    click.echo("Deploy results: {}".format(result))
+    click.echo(f"Deploy results: {result}")

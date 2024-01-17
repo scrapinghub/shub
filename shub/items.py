@@ -1,4 +1,3 @@
-from __future__ import absolute_import
 import click
 
 from shub.utils import job_resource_iter, get_job

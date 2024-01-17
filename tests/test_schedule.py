@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 import unittest
 from unittest import mock
 
@@ -120,7 +118,3 @@ class ScheduleTest(unittest.TestCase):
             {'VAR1': 'VAL1', 'VAR2': 'VAL2'}.items(),
             call_kwargs['environment'].items(),
         )
-
-
-if __name__ == '__main__':
-    unittest.main()

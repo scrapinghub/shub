@@ -1,12 +1,10 @@
-from __future__ import absolute_import
-
 import os
 import zipfile
 
 import errno
 
 from shub.compat import to_unicode
-from six.moves.urllib.parse import urljoin
+from urllib.parse import urljoin
 
 from io import BytesIO
 
@@ -48,7 +46,7 @@ def main(target):
         Migrator(mfile).start()
 
 
-class Migrator(object):
+class Migrator:
     def __init__(self, mfile):
         self.mfile = mfile
         self.sh_yml = './scrapinghub.yml'
@@ -72,7 +70,7 @@ class Migrator(object):
 
     def migrate_eggs(self):
         eggsdir = './eggs'
-        msg = "Eggs will be stored in {}, are you sure ? ".format(eggsdir)
+        msg = f"Eggs will be stored in {eggsdir}, are you sure ? "
         click.confirm(msg)
         try:
             os.mkdir(eggsdir)

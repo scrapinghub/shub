@@ -3,8 +3,7 @@ import json
 import click
 import docker
 import requests
-from six import string_types
-from six.moves.urllib.parse import urljoin
+from urllib.parse import urljoin
 
 from shub.exceptions import ShubException
 from shub.config import load_shub_config, list_targets_callback
@@ -90,7 +89,7 @@ def list_cmd(image_name, project, endpoint, apikey):
 
 
 def _get_project_settings(project, endpoint, apikey):
-    utils.debug_log('Getting settings for {} project:'.format(project))
+    utils.debug_log(f'Getting settings for {project} project:')
     req = requests.get(
         urljoin(endpoint, '/api/settings/get.json'),
         params={'project': project},
@@ -99,7 +98,7 @@ def _get_project_settings(project, endpoint, apikey):
         allow_redirects=False
     )
     req.raise_for_status()
-    utils.debug_log("Response: {}".format(req.json()))
+    utils.debug_log(f"Response: {req.json()}")
     return {k: v for k, v in req.json().items() if k in SETTING_TYPES}
 
 
@@ -137,7 +136,7 @@ def _extract_metadata_from_image_info_output(output):
 
     def raise_shub_image_info_error(error):
         """Helper to raise ShubException with prefix and output"""
-        msg = "shub-image-info: {} \n[output '{}']".format(error, output)
+        msg = f"shub-image-info: {error} \n[output '{output}']"
         raise ShubException(msg)
 
     try:
@@ -145,7 +144,7 @@ def _extract_metadata_from_image_info_output(output):
         project_type = metadata.get('project_type')
     except (AttributeError, ValueError):
         raise_shub_image_info_error('output is not a valid JSON dict')
-    if not isinstance(project_type, string_types):
+    if not isinstance(project_type, str):
         raise_shub_image_info_error('"project_type" key is required and must be a string')
 
     spiders_list = metadata.get('spiders')
@@ -153,7 +152,7 @@ def _extract_metadata_from_image_info_output(output):
         raise_shub_image_info_error('"spiders" key is required and must be a list')
     spiders, scripts = [], []
     for name in spiders_list:
-        if not (name and isinstance(name, string_types)):
+        if not (name and isinstance(name, str)):
             raise_shub_image_info_error("spider name can't be empty or non-string")
         if project_type == 'scrapy' and name.startswith('py:'):
             scripts.append(name[3:])

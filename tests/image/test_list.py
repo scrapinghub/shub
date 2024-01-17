@@ -1,7 +1,6 @@
 import json
 from unittest import mock
 
-import six
 import docker
 import pytest
 from click.testing import CliRunner
@@ -33,10 +32,8 @@ def _convert_str(data, to_binary=False):
     to corresponding string or binary representation depending on Python
     version and boolean `to_binary` parameter.
     """
-    if to_binary and six.PY3:
+    if to_binary:
         return data.encode('utf-8')
-    elif not to_binary and six.PY2:
-        return data.decode('utf-8')
     return data
 
 
@@ -147,7 +144,7 @@ def test_shub_image_info_fallback(get_docker_client_mock, _,
     get_docker_client_mock().logs.return_value = 'abc\ndef\n'
     result = list_cmd('image_name', 111, 'endpoint', 'apikey')
     assert get_docker_client_mock().start.call_count == 2
-    assert result == {'spiders': [u'abc', u'def'], 'project_type': 'scrapy'}
+    assert result == {'spiders': ['abc', 'def'], 'project_type': 'scrapy'}
 
 
 @pytest.mark.parametrize('output,error_msg', [

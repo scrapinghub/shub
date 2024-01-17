@@ -1,9 +1,8 @@
-from __future__ import absolute_import
 import json
 
 import click
 from scrapinghub import ScrapinghubClient, ScrapinghubAPIError
-from six.moves.urllib.parse import urljoin
+from urllib.parse import urljoin
 
 from shub.exceptions import RemoteErrorException
 from shub.config import get_target_conf
@@ -68,7 +67,7 @@ def cli(spider, argument, set, environment, priority, units, tag):
         '../p/{}/{}/{}'.format(*job_key.split('/')),
     )
     short_key = job_key.split('/', 1)[1] if target == 'default' else job_key
-    click.echo("Spider {} scheduled, job ID: {}".format(spider, job_key))
+    click.echo(f"Spider {spider} scheduled, job ID: {job_key}")
     click.echo("Watch the log on the command line:\n    shub log -f {}"
                "".format(short_key))
     click.echo("or print items as they are being scraped:\n    shub items -f "

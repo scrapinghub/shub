@@ -1,8 +1,3 @@
-#!/usr/bin/env python
-# coding=utf-8
-
-from __future__ import absolute_import
-
 import os
 import sys
 import unittest
@@ -10,7 +5,6 @@ from unittest.mock import patch, Mock
 
 import requests
 from click.testing import CliRunner
-from six import string_types
 
 from shub import deploy
 from shub.exceptions import (
@@ -171,7 +165,7 @@ class DeployFilesTest(unittest.TestCase):
         files = {}
         for name, file in self.request.call_args[0][2]:
             files.setdefault(name, []).append(
-                file if isinstance(file, string_types)
+                file if isinstance(file, str)
                 else file.read().decode('utf-8'))
 
         return files
@@ -260,7 +254,7 @@ class DeployFilesTest(unittest.TestCase):
     def test_add_sources(self):
         convert_deps_to_pip = Mock(
             side_effect=[
-                './requirements.txt',
+                './tests/requirements.txt',
                 ['package==0.0.0', 'hash-package==0.0.1', 'hash-package2==0.0.1'],
             ],
         )
@@ -433,7 +427,3 @@ class DeployFilesTest(unittest.TestCase):
                 cm.exception.message,
                 'Please make sure the poetry lock file is present',
             )
-
-
-if __name__ == '__main__':
-    unittest.main()

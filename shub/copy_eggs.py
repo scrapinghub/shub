@@ -1,6 +1,5 @@
-from __future__ import absolute_import
 import os
-from six.moves.urllib.parse import urljoin
+from urllib.parse import urljoin
 from tempfile import mkdtemp
 import click
 import requests
@@ -41,7 +40,7 @@ def copy_eggs(project, endpoint, apikey, new_project, new_endpoint, new_apikey,
     fetch_eggs(project, endpoint, apikey, destfile)
     # Decompress project bundle (so temp_dir will contain all project eggs)
     decompress_egg_files(directory=temp_dir)
-    destdir = os.path.join(temp_dir, "eggs-{}".format(project))
+    destdir = os.path.join(temp_dir, f"eggs-{project}")
     for egg_name in os.listdir(destdir):
         if egg_name == "__main__.egg" and not copy_main:
             continue
@@ -65,7 +64,7 @@ def copy_eggs(project, endpoint, apikey, new_project, new_endpoint, new_apikey,
 
 
 def get_eggs_versions(project, endpoint, apikey):
-    click.echo('Getting eggs list from project {}...'.format(project))
+    click.echo(f'Getting eggs list from project {project}...')
     list_endpoint = urljoin(endpoint, "eggs/list.json")
     response = requests.get(list_endpoint, params={"project": project},
                             auth=(apikey, ''))

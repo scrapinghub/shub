@@ -1,8 +1,3 @@
-#!/usr/bin/env python
-# coding=utf-8
-
-from __future__ import absolute_import, print_function
-
 import os
 import shutil
 import tempfile
@@ -104,7 +99,3 @@ class TestDeployEgg(unittest.TestCase):
         self.assertEqual('test_project', data['name'])
 
         return data
-
-
-if __name__ == '__main__':
-    unittest.main()

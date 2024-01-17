@@ -5,7 +5,6 @@ Exit codes follow the sysexits.h convention:
 https://www.freebsd.org/cgi/man.cgi?query=sysexits&sektion=3
 """
 
-from __future__ import absolute_import
 
 import sys
 import warnings
@@ -15,7 +14,7 @@ from click import BadParameter, ClickException
 
 class ShubException(ClickException):
     def __init__(self, msg=None):
-        super(ShubException, self).__init__(msg or self.default_msg)
+        super().__init__(msg or self.default_msg)
 
 
 class MissingAuthException(ShubException):
@@ -99,7 +98,7 @@ def print_warning(msg, category=ShubWarning):
         try:
             sys.stderr.write("WARNING: " + str(message) + '\n')
         # stderr is invalid - this warning just gets lost
-        except (IOError, UnicodeError):
+        except (OSError, UnicodeError):
             pass
 
     old_showwarning = warnings.showwarning

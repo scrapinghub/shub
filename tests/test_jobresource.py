@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import absolute_import
-
 import unittest
 import time
 import json
@@ -69,7 +66,7 @@ class JobResourceTest(unittest.TestCase):
 
     def test_log_unicode(self):
         objects = [
-            {'time': 0, 'level': 20, 'message': u'jarzębina'}
+            {'time': 0, 'level': 20, 'message': 'jarzębina'}
         ]
         jobid = '1/2/3'
         with mock.patch.object(log, 'get_job', autospec=True) as mock_gj:
@@ -77,8 +74,4 @@ class JobResourceTest(unittest.TestCase):
             mock_gj.return_value.logs.iter_values.return_value = objects
             result = self.runner.invoke(log.cli, (jobid,))
             mock_gj.assert_called_once_with(jobid)
-            self.assertIn(u'1970-01-01 00:00:00 INFO jarzębina', result.output)
-
-
-if __name__ == '__main__':
-    unittest.main()
+            self.assertIn('1970-01-01 00:00:00 INFO jarzębina', result.output)

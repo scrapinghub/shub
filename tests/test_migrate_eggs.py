@@ -30,7 +30,7 @@ class MigrateEggsTest(unittest.TestCase):
     def run(self, *a, **kw):
         runner = CliRunner()
         with runner.isolated_filesystem():
-            super(MigrateEggsTest, self).run(*a, **kw)
+            super().run(*a, **kw)
 
     def setUp(self):
         self.clickm = mock.patch('shub.migrate_eggs.click').start()

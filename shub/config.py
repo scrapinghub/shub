@@ -1,11 +1,10 @@
-from __future__ import absolute_import
 import netrc
 import os
 import warnings
 from collections import namedtuple
+from urllib.parse import urlparse, urlunparse
 
 import click
-import six
 import yaml
 
 from shub import DOCS_LINK, CONFIG_DOCS_LINK
@@ -26,7 +25,7 @@ GLOBAL_SCRAPINGHUB_YML_PATH = os.path.expanduser(
 NETRC_PATH = os.path.expanduser('~/_netrc' if os.name == 'nt' else '~/.netrc')
 
 
-class ShubConfig(object):
+class ShubConfig:
 
     DEFAULT_ENDPOINT = 'https://app.zyte.com/api/'
 
@@ -54,9 +53,9 @@ class ShubConfig(object):
     def _check_endpoints(self):
         """Check the endpoints. Send warnings if necessary."""
         for endpoint, url in self.endpoints.items():
-            parsed = six.moves.urllib.parse.urlparse(url)
+            parsed = urlparse(url)
             if parsed.netloc == 'staging.scrapinghub.com':
-                self.endpoints[endpoint] = six.moves.urllib.parse.urlunparse(
+                self.endpoints[endpoint] = urlunparse(
                     parsed._replace(netloc='app.zyte.com')
                 )
                 click.echo(
@@ -129,7 +128,7 @@ class ShubConfig(object):
     def load_file(self, filename):
         """Load Scrapinghub configuration from YAML file. """
         try:
-            with open(filename, 'r') as f:
+            with open(filename) as f:
                 self.load(f)
         except ConfigParseException:
             raise ConfigParseException(
@@ -163,7 +162,7 @@ class ShubConfig(object):
         targets = get_scrapycfg_targets(sources)
         self._load_scrapycfg_target('default', targets['default'])
         del targets['default']
-        for tname, t in six.iteritems(targets):
+        for tname, t in targets.items():
             self._load_scrapycfg_target(tname, t)
         self._check_endpoints()
 
@@ -382,7 +381,7 @@ _Target = namedtuple('Target', ['project_id', 'endpoint', 'apikey', 'stack',
 class APIkey(str):
 
     def __new__(cls, *args, **kwargs):
-        cls._inst = super(APIkey, cls).__new__(cls, *args, **kwargs)
+        cls._inst = super().__new__(cls, *args, **kwargs)
         return cls._inst
 
     def __init__(self, value=None):
@@ -399,8 +398,8 @@ class APIkey(str):
 class Target(_Target):
 
     def __new__(cls, project_id, endpoint, apikey, *args, **kwargs):
-        cls._inst = super(Target, cls).__new__(cls, project_id, endpoint,
-                                               APIkey(apikey), *args, **kwargs)
+        cls._inst = super().__new__(cls, project_id, endpoint,
+                                    APIkey(apikey), *args, **kwargs)
         return cls._inst
 
 
@@ -438,7 +437,7 @@ def _migrate_to_global_scrapinghub_yml():
     try:
         info = netrc.netrc(NETRC_PATH)
         netrc_key, _, _ = info.authenticators("scrapinghub.com")
-    except (IOError, TypeError):
+    except (OSError, TypeError):
         netrc_key = None
     if netrc_key:
         conf.apikeys['default'] = netrc_key

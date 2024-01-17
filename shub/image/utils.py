@@ -8,7 +8,6 @@ import contextlib
 import click
 import yaml
 from tqdm import tqdm
-from six import binary_type
 
 from shub import config as shub_config
 from shub import utils as shub_utils
@@ -134,7 +133,7 @@ def format_image_name(image_name, image_tag):
     if not image_tag:
         config = shub_config.load_shub_config()
         image_tag = config.get_version()
-    return '{}:{}'.format(image_name, image_tag)
+    return f'{image_name}:{image_tag}'
 
 
 def get_image_registry(image_name):
@@ -191,7 +190,7 @@ def store_status_url(status_url, limit):
         return 0
     for stored_id, stored_url in data.items():
         if stored_url == status_url:
-            click.echo("Found same status_url: {}".format(stored_id))
+            click.echo(f"Found same status_url: {stored_id}")
             return stored_id
     status_id = max(data.keys()) + 1
     data[status_id] = status_url
@@ -205,7 +204,7 @@ def load_status_url(status_id):
     """ Load status url from file by status_id"""
     if not os.path.isfile(STATUS_FILE_LOCATION):
         raise NotFoundException(
-            'Status file is not found at {}'.format(STATUS_FILE_LOCATION))
+            f'Status file is not found at {STATUS_FILE_LOCATION}')
     data = _load_status_file(STATUS_FILE_LOCATION)
     # return latest status url if status id is not provided
     if not isinstance(status_id, int) and data:
@@ -215,7 +214,7 @@ def load_status_url(status_id):
         return data[max_status_id]
     if status_id not in data:
         raise NotFoundException(
-            "Status url with id {} is not found".format(status_id))
+            f"Status url with id {status_id} is not found")
     return data[status_id]
 
 
@@ -224,15 +223,15 @@ def _load_status_file(path):
     data = {}
     if not os.path.isfile(path):
         return data
-    with open(path, 'r') as f:
+    with open(path) as f:
         try:
             data = yaml.safe_load(f)
         except yaml.YAMLError as exc:
             raise BadConfigException(
-                "Error reading releases file:\n{}".format(exc))
+                f"Error reading releases file:\n{exc}")
     if not isinstance(data, dict):
         raise BadConfigException(
-            "Releases file has wrong format ({}).".format(data))
+            f"Releases file has wrong format ({data}).")
     return data
 
 
@@ -253,10 +252,10 @@ def valid_spiders(entries):
 
 
 def ensure_unicode(s, encoding='utf-8'):
-    return s.decode(encoding) if isinstance(s, binary_type) else s
+    return s.decode(encoding) if isinstance(s, bytes) else s
 
 
-class BaseProgress(object):
+class BaseProgress:
     """Small helper class to track progress.
 
     Base implementation stores events iterator and walks through it with
@@ -280,7 +279,7 @@ class ProgressBar(tqdm):
     """Fixed version of tqdm.tqdm progress bar."""
 
     def moveto(self, *args, **kwargs):
-        super(ProgressBar, self).moveto(*args, **kwargs)
+        super().moveto(*args, **kwargs)
         if hasattr(self.fp, 'flush'):
             self.fp.flush()
 

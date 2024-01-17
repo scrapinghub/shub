@@ -1,8 +1,3 @@
-#!/usr/bin/env python
-# coding=utf-8
-
-from __future__ import absolute_import
-
 import unittest
 import os
 import tempfile
@@ -47,7 +42,3 @@ class TestDeployReqs(unittest.TestCase):
                 f.write(os.path.abspath(os.path.join(basepath, egg)) + "\n")
 
         return requirements_file
-
-
-if __name__ == '__main__':
-    unittest.main()

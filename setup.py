@@ -1,13 +1,10 @@
-from __future__ import absolute_import
-import io
 import os
 from setuptools import setup, find_packages
 
 
 about = {}
 here = os.path.abspath(os.path.dirname(__file__))
-with io.open(os.path.join(here, 'shub', '__init__.py'),
-             mode='r', encoding='utf-8') as f:
+with open(os.path.join(here, 'shub', '__init__.py'), encoding='utf-8') as f:
     exec(f.read(), about)
 
 
@@ -39,7 +36,6 @@ setup(
         'retrying',
         'requests',
         'scrapinghub>=2.3.1',
-        'six>=1.7.0',
         'tqdm==4.55.1',
         'toml',
     ],

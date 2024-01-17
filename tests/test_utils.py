@@ -1,9 +1,3 @@
-#!/usr/bin/env python
-# coding=utf-8
-
-
-from __future__ import absolute_import
-
 import json
 import os
 import stat
@@ -151,7 +145,7 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
 
     @patch('shub.utils.HubstorageClient', autospec=True)
     def test_get_job(self, mock_HSC):
-        class MockJob(object):
+        class MockJob:
             metadata = {'some': 'val'}
         mockjob = MockJob()
         mock_HSC.return_value.get_job.return_value = mockjob
@@ -316,7 +310,7 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
                 {'key': 'newvalue'}.items(),
                 utils.latest_github_release(cache='./cache.txt').items(),
             )
-            with open('./cache.txt', 'r') as f:
+            with open('./cache.txt') as f:
                 self.assertEqual(f.read(), 'abc')
 
     @patch('shub.utils.latest_github_release', autospec=True)
@@ -434,7 +428,7 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
             with utils.update_yaml_dict('conf.yml') as conf:
                 conf['b']['key1'] = 'newval1'
                 conf['b']['key3'] = 'val3'
-            with open('conf.yml', 'r') as f:
+            with open('conf.yml') as f:
                 self.assertEqual(yaml.safe_load(f), DICT_EXPECTED)
                 f.seek(0)
                 self.assertIn("key1: newval1", f.read())
@@ -536,7 +530,7 @@ class OnboardingWizardTestCase(unittest.TestCase):
                 conf.load_file('scrapinghub.yml')
             result = self.runner.invoke(call_wizard, **kwargs)
             if os.path.exists('scrapinghub.yml'):
-                with open('scrapinghub.yml', 'r') as f:
+                with open('scrapinghub.yml') as f:
                     sh_yml = yaml.safe_load(f.read())
             else:
                 sh_yml = None
@@ -695,7 +689,3 @@ class OnboardingWizardTestCase(unittest.TestCase):
         assert conf.apikeys == {'default': 'abc'}
         assert conf.images == {'default': 'repo'}
         assert sh_yml == {'project': 12345, 'image': 'repo'}
-
-
-if __name__ == '__main__':
-    unittest.main()
