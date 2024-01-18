@@ -16,10 +16,7 @@ from shub.exceptions import (
     ShubDeprecationWarning, print_warning, BadParameterException,
 )
 
-if sys.version_info < (3, 8):
-    import importlib_metadata as metadata
-else:
-    from importlib import metadata
+from importlib import metadata
 
 
 DEFAULT_DOCKER_API_VERSION = '1.21'
