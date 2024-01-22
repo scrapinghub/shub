@@ -57,7 +57,11 @@ jobs:
 
     - name: Run off-tox tests
       # https://github.com/scrapinghub/shub/issues/441
-      run: python -c "from shub.exceptions import ShubException; from shub.image.utils import get_docker_client; get_docker_client(validate=False)"
+      run: |
+        python -m venv venv
+        . venv/bin/activate
+        pip install .
+        python -c "from shub.exceptions import ShubException; from shub.image.utils import get_docker_client; get_docker_client(validate=False)"
 
     - name: Upload coverage report
       run: |
