@@ -29,7 +29,7 @@ setup(
     install_requires=[
         'click',
         'docker',
-        'importlib-metadata; python_version < "3.8"',
+        'importlib-metadata; python_version < "3.10"',
         'packaging',
         'pip',
         'PyYAML',
