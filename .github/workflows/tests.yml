@@ -61,7 +61,7 @@ jobs:
         python -m venv venv
         . venv/bin/activate
         pip install .
-        python -c "from shub.exceptions import ShubException; from shub.image.utils import get_docker_client; get_docker_client(validate=False)"
+        python -c "from shub.image.utils import get_docker_client; get_docker_client(validate=False)"
 
     - name: Upload coverage report
       run: |
