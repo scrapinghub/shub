@@ -55,6 +55,14 @@ jobs:
     - name: Run tests
       run: tox -e ${{ matrix.tox-env }}
 
+    - name: Run off-tox tests
+      # https://github.com/scrapinghub/shub/issues/441
+      run: |
+        python -m venv venv
+        . venv/bin/activate
+        pip install .
+        python -c "from shub.image.utils import get_docker_client; get_docker_client(validate=False)"
+
     - name: Upload coverage report
       run: |
         curl -Os https://uploader.codecov.io/latest/linux/codecov
