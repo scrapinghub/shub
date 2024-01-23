@@ -2,7 +2,7 @@
 Changes
 =======
 
-2.15.3 (unreleased)
+2.15.3 (2024-01-23)
 ===================
 
 -   Fix ``shub image deploy`` failing on Python 3.8 and 3.9.
