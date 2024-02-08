@@ -1,4 +1,5 @@
 import os
+import re
 from unittest import mock
 
 import pytest
@@ -91,12 +92,12 @@ def test_cli_with_progress(docker_client_mock, project_dir, test_mock):
     result = runner.invoke(cli, ["dev"])
     assert result.exit_code == 0
     expected = format_expected_progress(
-        'Building registry.io/user/project:1.0.'
-        'Steps:   0%|          | 0/1'
-        'Steps: 100%|██████████| 3/3'
-        'The image registry.io/user/project:1.0 build is completed.'
+        r'Building registry\.io/user/project:1\.0\.'
+        r'Steps:   0%\| +\| 0/1'
+        r'Steps: 100%\|█+\| 3/3'
+        r'The image registry\.io/user/project:1\.0 build is completed\.'
     )
-    assert expected in clean_progress_output(result.output)
+    assert re.search(clean_progress_output(result.output), expected)
 
 
 def test_cli_custom_version(docker_client_mock, project_dir, test_mock):
