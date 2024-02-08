@@ -2,7 +2,7 @@
 Changes
 =======
 
-2.15.4 (unreleased)
+2.15.4 (2024-02-08)
 ===================
 
 -   Support Docker server 25+.
