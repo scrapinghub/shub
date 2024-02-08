@@ -15,7 +15,6 @@ from shub.image.utils import (
     load_status_url,
     store_status_url,
     STATUS_FILE_LOCATION,
-    DEFAULT_DOCKER_API_VERSION,
 )
 
 from .utils import FakeProjectDirectory, add_sh_fake_config
@@ -44,8 +43,7 @@ class ReleaseUtilsTest(TestCase):
 
         mocked_docker.APIClient = DockerClientMock
         assert get_docker_client()
-        client_mock.assert_called_with(
-            base_url=None, tls=None, version=DEFAULT_DOCKER_API_VERSION)
+        client_mock.assert_called_with(base_url=None, tls=None, version='auto')
         # set basic test environment
         os.environ['DOCKER_HOST'] = 'http://127.0.0.1'
         os.environ['DOCKER_API_VERSION'] = '1.40'
