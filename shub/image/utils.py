@@ -22,7 +22,6 @@ else:
     from importlib import metadata
 
 
-DEFAULT_DOCKER_API_VERSION = '1.21'
 STATUS_FILE_LOCATION = '.releases'
 _VALIDSPIDERNAME = re.compile('^[a-z0-9][-._a-z0-9]+$', re.I)
 
@@ -39,10 +38,10 @@ that's essential for running shub image command. To check that run command
     docker version
 
 and check its output: it should contain Docker client and server versions and
-should not contain any errors. The minimum API Version is: {}
+should not contain any errors.
 
 You can learn about Docker at https://www.docker.com/.
-""".format(DEFAULT_DOCKER_API_VERSION)
+"""
 
 
 def is_verbose():
@@ -103,7 +102,7 @@ def get_docker_client(validate=True):
             verify=apply_path_fun('ca.pem'),
             assert_hostname=False)
         docker_host = docker_host.replace('tcp://', 'https://')
-    version = os.environ.get('DOCKER_API_VERSION', DEFAULT_DOCKER_API_VERSION)
+    version = os.environ.get('DOCKER_API_VERSION', 'auto')
 
     # If it returns an error, check if you have the old docker-py installed
     # together with the new docker lib, and uninstall docker-py.
