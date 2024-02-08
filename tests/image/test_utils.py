@@ -1,4 +1,5 @@
 import os
+import shutil
 import sys
 import tempfile
 from unittest import mock, TestCase
@@ -110,11 +111,15 @@ class ReleaseUtilsTest(TestCase):
 class StatusUrlsTest(TestCase):
 
     def setUp(self):
-        tmpdir = tempfile.gettempdir()
-        os.chdir(tmpdir)
-        self.status_file = os.path.join(tmpdir, STATUS_FILE_LOCATION)
+        self.curdir = os.getcwd()
+        self.tmp_dir = tempfile.gettempdir()
+        os.chdir(self.tmp_dir)
+        self.status_file = os.path.join(self.tmp_dir, STATUS_FILE_LOCATION)
         if os.path.exists(self.status_file):
             os.remove(self.status_file)
+
+    def tearDown(self):
+        os.chdir(self.curdir)
 
     def test_load_status_url(self):
         self.assertRaises(NotFoundException, load_status_url, 0)

@@ -1,18 +1,11 @@
-import os
 from setuptools import setup, find_packages
-
-
-about = {}
-here = os.path.abspath(os.path.dirname(__file__))
-with open(os.path.join(here, 'shub', '__init__.py'), encoding='utf-8') as f:
-    exec(f.read(), about)
 
 
 setup(
     name='shub',
     version='2.15.3',
     packages=find_packages(exclude=('tests', 'tests.*')),
-    url=about['DOCS_LINK'],
+    url="https://shub.readthedocs.io/en/stable/",
     description='Scrapinghub Command Line Client',
     long_description=open('README.rst').read(),
     author='Scrapinghub',

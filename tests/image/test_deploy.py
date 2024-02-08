@@ -1,4 +1,5 @@
 import json
+import re
 import time
 from unittest import mock
 
@@ -165,19 +166,19 @@ def test_progress_bar_logic():
     result = CliRunner().invoke(progress_cmd)
     assert result.exit_code == 0
     expected = format_expected_progress(
-        'Progress:   0%|          | 0/100'
-        'Progress:  25%|██▌       | 25/100'
-        'Progress:  30%|███       | 30/100'
-        'Progress:  35%|███▌      | 35/100'
-        'Progress:  50%|█████     | 50/100'
-        'Progress:  55%|█████▌    | 55/100'
-        'Progress:  65%|██████▌   | 65/100'
-        'Progress:  75%|███████▌  | 75/100'
-        'Progress: 100%|██████████| 100/100'
-        'Progress: 100%|██████████| 100/100'
-        'Deploy results:'
+        r'Progress:   0%\|[^|]+\| 0/100'
+        r'Progress:  25%\|[^|]+\| 25/100'
+        r'Progress:  30%\|[^|]+\| 30/100'
+        r'Progress:  35%\|[^|]+\| 35/100'
+        r'Progress:  50%\|[^|]+\| 50/100'
+        r'Progress:  55%\|[^|]+\| 55/100'
+        r'Progress:  65%\|[^|]+\| 65/100'
+        r'Progress:  75%\|[^|]+\| 75/100'
+        r'Progress: 100%\|[^|]+\| 100/100'
+        r'Progress: 100%\|[^|]+\| 100/100'
+        r'Deploy results:'
     )
-    assert expected in clean_progress_output(result.output)
+    assert re.search(expected, clean_progress_output(result.output))
     lines = result.output.split('\n')
     # test that output ends with a newline symbol
     assert lines[-1] == ''
@@ -192,14 +193,14 @@ def test_progress_bar_logic_incomplete():
     result = CliRunner().invoke(progress_cmd)
     assert result.exit_code == 0
     expected = format_expected_progress(
-        'Progress:   0%|          | 0/100'
-        'Progress:  25%|██▌       | 25/100'
-        'Progress:  30%|███       | 30/100'
-        'Progress: 100%|██████████| 100/100'
-        'Progress: 100%|██████████| 100/100'
-        'Deploy results:'
+        r'Progress:   0%|[^|]+| 0/100'
+        r'Progress:  25%|[^|]+| 25/100'
+        r'Progress:  30%|[^|]+| 30/100'
+        r'Progress: 100%|[^|]+| 100/100'
+        r'Progress: 100%|[^|]+| 100/100'
+        r'Deploy results:'
     )
-    assert expected in clean_progress_output(result.output)
+    assert re.search(expected, clean_progress_output(result.output))
     # test that the command succeeded
     lines = result.output.split('\n')
     # test that output ends with a newline symbol

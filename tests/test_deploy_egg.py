@@ -25,7 +25,7 @@ class TestDeployEgg(unittest.TestCase):
         self.curdir = os.getcwd()
         self.fake_requester = FakeRequester()
         deploy_egg.utils.make_deploy_request = self.fake_requester.fake_request
-        self.tmp_dir = tempfile.mktemp(prefix="shub-test-deploy-eggs")
+        self.tmp_dir = tempfile.mkdtemp(prefix="shub-test-deploy-eggs")
 
     def tearDown(self):
         os.chdir(self.curdir)
@@ -35,7 +35,7 @@ class TestDeployEgg(unittest.TestCase):
     def test_parses_project_information_correctly(self):
         # this test's assertions are based on the values
         # defined on this folder's setup.py file
-        shutil.copytree('tests/samples/deploy_egg_sample_project/', self.tmp_dir)
+        shutil.copytree('tests/samples/deploy_egg_sample_project', self.tmp_dir, dirs_exist_ok=True)
         os.chdir(self.tmp_dir)
 
         data = self.call_main_and_check_request_data()
