@@ -375,14 +375,16 @@ It is a shortcut for the build -> push -> deploy chain of commands.
 
 ::
 
-    $ shub image upload --version 1.0.4 \
-    --username johndoe --password johndoepwd private
+    $ shub image upload private --version 1.0.4 \
+    --username johndoe --password johndoepwd
 
 
 Options for upload
 ^^^^^^^^^^^^^^^^^^
 
-The ``upload`` command accepts the same parameters as the :ref:`deploy <commands-deploy>` command except `--target` which can be passed as an argument.
+The ``upload`` command accepts the same parameters as the :ref:`deploy
+<commands-deploy>` command, except for ``--target``, which can be passed as an
+argument.
 
 
 .. _commands-check:
