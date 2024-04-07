@@ -16,10 +16,7 @@ from shub.exceptions import (
     ShubDeprecationWarning, print_warning, BadParameterException,
 )
 
-if sys.version_info < (3, 10):
-    import importlib_metadata as metadata
-else:
-    from importlib import metadata
+from importlib import metadata
 
 
 STATUS_FILE_LOCATION = '.releases'
@@ -86,7 +83,7 @@ def get_docker_client(validate=True):
     except ImportError:
         raise ImportError(DOCKER_PY_UNAVAILABLE_MSG)
     for dep in metadata.distributions():
-        if dep.name == 'docker-py':
+        if dep.metadata['Name'] == 'docker-py':
             raise ImportError(DOCKER_PY_UNAVAILABLE_MSG)
 
     docker_host = os.environ.get('DOCKER_HOST')

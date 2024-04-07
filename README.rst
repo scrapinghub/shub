@@ -25,7 +25,7 @@ without leaving the command line.
 Requirements
 ------------
 
-* Python >= 3.6
+* Python >= 3.8
 
 
 Installation
@@ -36,8 +36,8 @@ the Python Package Index::
 
     pip install shub
 
-Please note that if you are using Python < 3.6,
-you should pin `shub` to `2.13.0` or lower.
+Please note that if you are using Python < 3.8,
+you should pin to `shub<=2.15.4`.
 
 We also supply stand-alone binaries. You can find them in our `latest GitHub
 release`_.
