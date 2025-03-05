@@ -96,8 +96,8 @@ If you use `Poetry`_ you can specify your ``pyproject.toml``::
 This will use Poetry's ``export`` command to create a requirements.txt file. For
 Poetry >= 2.0 this command is no longer installed by default and needs to manually
 added as described in the
-`plugin's documentation<https://github.com/python-poetry/poetry-plugin-export>`_.
-If ``poetry.lock``does not exist yet, it will be created during this process.
+`plugin's documentation <https://github.com/python-poetry/poetry-plugin-export>`_.
+If ``poetry.lock`` does not exist yet, it will be created during this process.
 
 .. note::
 
