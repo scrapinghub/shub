@@ -17,7 +17,7 @@ from shub.config import SH_IMAGES_REGISTRY, list_targets_callback, load_shub_con
 from shub.exceptions import BadParameterException, NotFoundException, ShubException
 from shub.image.upload import upload_cmd
 from shub.utils import (create_default_setup_py, create_scrapinghub_yml_wizard,
-                        inside_project, make_deploy_request, run_python)
+                        inside_project, make_deploy_request, run_cmd, run_python)
 
 HELP = """
 Deploy the current folder's Scrapy project to Scrapy Cloud.
@@ -218,32 +218,7 @@ def _is_poetry(name):
 
 
 def _get_poetry_requirements():
-    try:
-        data = toml.load('poetry.lock')
-    except OSError:
-        raise ShubException('Please make sure the poetry lock file is present')
-    # Adapted from poetry 1.0.0a2 poetry/utils/exporter.py
-    lines = []
-    for package in data['package']:
-        source = package.get('source') or {}
-        source_type = source.get('type')
-        if source_type == 'git':
-            line = 'git+{}@{}#egg={}'.format(
-                source['url'], source['reference'], package['name']
-            )
-        elif source_type in ['directory', 'file']:
-            line = ''
-            line += source['url']
-        else:
-            line = '{}=={}'.format(package['name'], package['version'])
-
-            if source_type == 'legacy' and source['url']:
-                line += ' \\\n'
-                line += '    --index-url {}'.format(source['url'])
-
-        line += '\n'
-        lines.append(line)
-    return ''.join(lines)
+    return run_cmd([shutil.which("poetry"), "export", "--without-hashes", "-f", "requirements.txt"])
 
 
 def _build_egg():

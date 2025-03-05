@@ -3,8 +3,11 @@ import sys
 import unittest
 from unittest.mock import patch, Mock
 
+from cleo.testers.command_tester import CommandTester
 from packaging.version import parse
 from pipenv import __version__ as pipenv_version
+from poetry.console.application import Application
+from poetry_plugin_export.command import ExportCommand
 import requests
 from click.testing import CliRunner
 
@@ -13,7 +16,7 @@ from shub.exceptions import (
     NotFoundException, ShubException, BadParameterException,
     DeployRequestTooLargeException,
 )
-from shub.utils import create_default_setup_py, _SETUP_PY_TEMPLATE
+from shub.utils import create_default_setup_py, _SETUP_PY_TEMPLATE, STDOUT_ENCODING
 
 from .utils import AssertInvokeRaisesMixin, mock_conf
 
@@ -350,23 +353,40 @@ class DeployFilesTest(unittest.TestCase):
                 'Please lock your Pipfile before deploying',
             )
 
-    def poetry_test(self, req_name):
+    @patch("poetry.packages.locker.Locker.is_fresh")
+    @patch("subprocess.check_output")
+    def poetry_test(self, req_name, mock_check_output, mock_is_fresh):
         with self.runner.isolated_filesystem():
             with open('./main.egg', 'w') as f:
                 f.write('main content')
             with open('./pyproject.toml', 'w') as f:
                 f.write("""
+                [project]
+                name = "test_project"
+                version = "1.2.0"
+
                 [tool.poetry]
+
+                [tool.poetry.requires-plugins]
+                poetry-plugin-export = ">=1.8"
                 """)
             with open('./poetry.lock', 'w') as f:
                 f.write("""
                 [[package]]
                 name = "package"
                 version = "0.0.0"
+                optional = false
+                python-versions = "*"
+                groups = ["main"]
+                files = []
 
                 [[package]]
                 name = "vcs-package"
                 version = "0.0.1"
+                optional = false
+                python-versions = "*"
+                groups = ["main"]
+                files = []
 
                 [package.source]
                 reference = "master"
@@ -376,60 +396,63 @@ class DeployFilesTest(unittest.TestCase):
                 [[package]]
                 name = "file-package"
                 version = "0.0.1"
+                optional = false
+                python-versions = "*"
+                groups = ["main"]
+                files = []
 
                 [package.source]
-                reference = ""
                 type = "file"
                 url = "/path/to/package.tar.gz"
 
                 [[package]]
                 name = "dir-package"
                 version = "0.0.1"
+                optional = false
+                python-versions = "*"
+                groups = ["main"]
+                files = []
 
                 [package.source]
-                reference = ""
                 type = "directory"
                 url = "/path/to/package"
 
-                [metadata.hashes]
-                package = ["hash"]
-                vcs-package = ["hash1"]
+                [metadata]
+                lock-version = "2.1"
                 """)
             with open('./1.egg', 'w') as f:
                 f.write('1.egg content')
             with open('./2.egg', 'w') as f:
                 f.write('2.egg content')
+
+            # Skip check if lockfile is in sync with pyproject.toml
+            mock_is_fresh.return_value = True
+
+            def mock_check_output_side_effect(cmd, *args, **kwargs):
+                application = Application()
+                application.add(ExportCommand())
+                cmd = application.find("export")
+                cmd_tester = CommandTester(cmd)
+                cmd_tester.execute("--format requirements.txt")
+                self.assertIsNot(cmd_tester.status_code, 1, cmd_tester.io.fetch_error())
+                return cmd_tester.io.fetch_output().encode(STDOUT_ENCODING)
+
+            mock_check_output.side_effect = mock_check_output_side_effect
+
             files = self._deploy(req=req_name)
+
+        self.assertTrue(mock_is_fresh.called)
+        self.assertTrue(mock_check_output.called)
 
         reqs = set(files['requirements'][0].split('\n'))
         self.assertEqual(reqs, {
-            'package==0.0.0',
-            'git+https://github.com/vcs/package.git@master#egg=vcs-package',
-            '/path/to/package',
-            '/path/to/package.tar.gz',
-            '',
+            'package==0.0.0 ; python_version == "2.7" or python_version >= "3.4"',
+            'vcs-package @ git+https://github.com/vcs/package.git@master'
+            + ' ; python_version == "2.7" or python_version >= "3.4"',
+            'dir-package @ file:///path/to/package ; python_version == "2.7" or python_version >= "3.4"',
+            'file-package @ file:///path/to/package.tar.gz'
+            + ' ; python_version == "2.7" or python_version >= "3.4"',
         })
 
     def test_poetry_names(self):
         self.poetry_test('pyproject.toml')
-
-    def test_poetry_lock_missing(self):
-        with self.runner.isolated_filesystem():
-            with open('./pyproject.toml', 'w') as f:
-                f.write("""
-                [tool.poetry]
-                """)
-            with open('./main.egg', 'w') as f:
-                f.write('main content')
-            with open('./1.egg', 'w') as f:
-                f.write('1.egg content')
-            with open('./2.egg', 'w') as f:
-                f.write('2.egg content')
-
-            with self.assertRaises(ShubException) as cm:
-                self._deploy(req='pyproject.toml')
-
-            self.assertEqual(
-                cm.exception.message,
-                'Please make sure the poetry lock file is present',
-            )

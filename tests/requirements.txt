@@ -3,3 +3,6 @@ pytest
 pytest-cov
 flake8
 pipenv
+cleo
+poetry-core
+poetry-plugin-export
