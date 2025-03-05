@@ -3,6 +3,8 @@ import sys
 import unittest
 from unittest.mock import patch, Mock
 
+from packaging.version import parse
+from pipenv import __version__ as pipenv_version
 import requests
 from click.testing import CliRunner
 
@@ -320,7 +322,11 @@ class DeployFilesTest(unittest.TestCase):
             'hash-package2==0.0.1',
             'git+https://github.com/vcs/package.git@master#egg=vcs-package'
             if sys.version_info < (3, 8)
-            else 'vcs-package@ git+https://github.com/vcs/package.git@master'
+            else (
+                'vcs-package@ git+https://github.com/vcs/package.git@master'
+                if parse(pipenv_version) < parse("2024.3.0")
+                else 'vcs-package @ git+https://github.com/vcs/package.git@master'
+            )
         })
 
     def test_pipfile_names(self):
