@@ -78,16 +78,16 @@ jobs:
         include:
         - python-version: '3.6'
           tox-env: min
-          os: macos-latest-large
+          os: macos-13
         - python-version: '3.6'
           tox-env: py
-          os: macos-latest-large
+          os: macos-13
         - python-version: '3.7'
           tox-env: py
-          os: macos-latest-large
+          os: macos-13
         - python-version: '3.8'
           tox-env: py
-          os: macos-latest-large
+          os: macos-13
         - python-version: '3.9'
           tox-env: py
         - python-version: '3.10'
