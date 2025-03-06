@@ -455,10 +455,15 @@ class DeployFilesTest(unittest.TestCase):
             self.assertEqual(
                 files['requirements'][0],
                 (
-                    'dir-package @ file:///path/to/package ; python_version == "2.7" or python_version >= "3.4"\n'
-                    'file-package @ file:///path/to/package.tar.gz ; python_version == "2.7" or python_version >= "3.4"\n'
-                    'package==0.0.0 ; python_version == "2.7" or python_version >= "3.4"\n'
-                    'vcs-package @ git+https://github.com/vcs/package.git@master ; python_version == "2.7" or python_version >= "3.4"'
+                    'dir-package @ file:///path/to/package ; '
+                    'python_version == "2.7" or python_version >= "3.4"\n'
+                    'file-package @ file:///path/to/package.tar.gz ; '
+                    'python_version == "2.7" or python_version >= "3.4"\n'
+                    'package==0.0.0 ; '
+                    'python_version == "2.7" or python_version >= "3.4"\n'
+                    'vcs-package @ '
+                    'git+https://github.com/vcs/package.git@master ; '
+                    'python_version == "2.7" or python_version >= "3.4"'
                 ),
             )
 
