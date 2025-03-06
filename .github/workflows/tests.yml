@@ -80,22 +80,21 @@ jobs:
           tox-env: min
           os: macos-13
         - python-version: '3.6'
-          tox-env: py
+          tox-env: min-poetry
+          os: macos-13
+        - python-version: '3.6'
           os: macos-13
         - python-version: '3.7'
-          tox-env: py
           os: macos-13
         - python-version: '3.8'
-          tox-env: py
           os: macos-13
         - python-version: '3.9'
-          tox-env: py
         - python-version: '3.10'
-          tox-env: py
         - python-version: '3.11'
-          tox-env: py
         - python-version: '3.12'
-          tox-env: py
+        - python-version: '3.13'
+        - python-version: '3.13'
+          tox-env: poetry
 
     steps:
     - uses: actions/checkout@v2
@@ -109,7 +108,7 @@ jobs:
       run: pip install tox
 
     - name: Run tests
-      run: tox -e ${{ matrix.tox-env }}
+      run: tox -e ${{ matrix.tox-env || 'py' }}
 
   tests-windows:
     name: "Test: py${{ matrix.python-version }}, Windows"
