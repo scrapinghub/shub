@@ -1,4 +1,5 @@
 import os
+import platform
 import sys
 import unittest
 from unittest.mock import patch, Mock
@@ -456,12 +457,14 @@ class DeployFilesTest(unittest.TestCase):
             self.assertTrue(mock_is_fresh.called)
             self.assertTrue(mock_check_output.called)
 
+            path_prefix = "C:/" if platform.system() == "Windows" else ""
+
             self.assertEqual(
                 files['requirements'][0],
                 (
-                    'dir-package @ file:///path/to/package ; '
+                    f'dir-package @ file:///{path_prefix}path/to/package ; '
                     'python_version == "2.7" or python_version >= "3.4"\n'
-                    'file-package @ file:///path/to/package.tar.gz ; '
+                    f'file-package @ file:///{path_prefix}path/to/package.tar.gz ; '
                     'python_version == "2.7" or python_version >= "3.4"\n'
                     'package==0.0.0 ; '
                     'python_version == "2.7" or python_version >= "3.4"\n'
