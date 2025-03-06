@@ -549,15 +549,21 @@ class DeployFilesTest(unittest.TestCase):
             with self.assertRaises(ShubException) as cm:
                 self._deploy(req='pyproject.toml')
 
-            try:
-                version("poetry")
-            except PackageNotFoundError:
-                self.assertIn(
-                    "poetry executable not found",
-                    cm.exception.message,
-                )
-            else:
+            if sys.version_info < (3, 8):
                 self.assertIn(
                     "The Poetry configuration is invalid",
                     cm.exception.message,
                 )
+            else:
+                try:
+                    version("poetry")
+                except PackageNotFoundError:
+                    self.assertIn(
+                        "poetry executable not found",
+                        cm.exception.message,
+                    )
+                else:
+                    self.assertIn(
+                        "The Poetry configuration is invalid",
+                        cm.exception.message,
+                    )
