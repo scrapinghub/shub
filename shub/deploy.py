@@ -14,10 +14,10 @@ import toml
 from urllib.parse import urljoin
 
 from shub.config import SH_IMAGES_REGISTRY, list_targets_callback, load_shub_config
-from shub.exceptions import BadParameterException, NotFoundException, ShubException
+from shub.exceptions import BadParameterException, NotFoundException, ShubException, SubcommandException
 from shub.image.upload import upload_cmd
 from shub.utils import (create_default_setup_py, create_scrapinghub_yml_wizard,
-                        inside_project, make_deploy_request, run_python)
+                        inside_project, make_deploy_request, run_cmd, run_python)
 
 HELP = """
 Deploy the current folder's Scrapy project to Scrapy Cloud.
@@ -217,11 +217,8 @@ def _is_poetry(name):
     return 'poetry' in (data.get('tool') or {})
 
 
-def _get_poetry_requirements():
-    try:
-        data = toml.load('poetry.lock')
-    except OSError:
-        raise ShubException('Please make sure the poetry lock file is present')
+def _get_poetry_requirements_fallback():
+    data = toml.load('poetry.lock')
     # Adapted from poetry 1.0.0a2 poetry/utils/exporter.py
     lines = []
     for package in data['package']:
@@ -244,6 +241,22 @@ def _get_poetry_requirements():
         line += '\n'
         lines.append(line)
     return ''.join(lines)
+
+
+def _get_poetry_requirements():
+    executable = shutil.which("poetry")
+    if executable is None:
+        try:
+            return _get_poetry_requirements_fallback()
+        except Exception:
+            raise NotFoundException("poetry executable not found.")
+    try:
+        return run_cmd([executable, "export", "--without-hashes", "-f", "requirements.txt"])
+    except SubcommandException as original_exception:
+        try:
+            return _get_poetry_requirements_fallback()
+        except Exception:
+            raise original_exception
 
 
 def _build_egg():

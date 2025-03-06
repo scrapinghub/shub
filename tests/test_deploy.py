@@ -1,4 +1,5 @@
 import os
+import platform
 import sys
 import unittest
 from unittest.mock import patch, Mock
@@ -6,6 +7,7 @@ from unittest.mock import patch, Mock
 from packaging.version import parse
 from pipenv import __version__ as pipenv_version
 import requests
+from cleo.testers.command_tester import CommandTester
 from click.testing import CliRunner
 
 from shub import deploy
@@ -13,10 +15,22 @@ from shub.exceptions import (
     NotFoundException, ShubException, BadParameterException,
     DeployRequestTooLargeException,
 )
-from shub.utils import create_default_setup_py, _SETUP_PY_TEMPLATE
+from shub.utils import create_default_setup_py, _SETUP_PY_TEMPLATE, STDOUT_ENCODING
 
 from .utils import AssertInvokeRaisesMixin, mock_conf
 
+try:
+    from importlib.metadata import version, PackageNotFoundError
+except ImportError:
+    POETRY_VERSION = None
+else:
+    try:
+        POETRY_VERSION = parse(version("poetry"))
+    except PackageNotFoundError:
+        try:
+            POETRY_VERSION = parse(version("poetry-core"))
+        except PackageNotFoundError:
+            POETRY_VERSION = None
 
 VALID_SCRAPY_CFG = """
 [settings]
@@ -350,7 +364,119 @@ class DeployFilesTest(unittest.TestCase):
                 'Please lock your Pipfile before deploying',
             )
 
-    def poetry_test(self, req_name):
+    @patch("subprocess.check_output")
+    def test_poetry_2_or_higher(self, mock_check_output):
+        if not POETRY_VERSION or POETRY_VERSION < parse("2"):
+            raise self.skipTest("poetry or poetry-core >=2 is not installed")
+
+        from poetry.console.application import Application
+        from poetry_plugin_export.command import ExportCommand
+
+        with patch("poetry.packages.locker.Locker.is_fresh") as mock_is_fresh:
+            with self.runner.isolated_filesystem():
+                with open('./main.egg', 'w') as f:
+                    f.write('main content')
+                with open('./pyproject.toml', 'w') as f:
+                    f.write("""
+                    [project]
+                    name = "test_project"
+                    version = "1.2.0"
+                    [tool.poetry]
+                    [tool.poetry.requires-plugins]
+                    poetry-plugin-export = ">=1.8"
+                    """)
+                with open('./poetry.lock', 'w') as f:
+                    f.write("""
+                    [[package]]
+                    name = "package"
+                    version = "0.0.0"
+                    optional = false
+                    python-versions = "*"
+                    groups = ["main"]
+                    files = []
+                    [[package]]
+                    name = "vcs-package"
+                    version = "0.0.1"
+                    optional = false
+                    python-versions = "*"
+                    groups = ["main"]
+                    files = []
+                    [package.source]
+                    reference = "master"
+                    type = "git"
+                    url = "https://github.com/vcs/package.git"
+                    [[package]]
+                    name = "file-package"
+                    version = "0.0.1"
+                    optional = false
+                    python-versions = "*"
+                    groups = ["main"]
+                    files = []
+                    [package.source]
+                    reference = ""
+                    type = "file"
+                    url = "/path/to/package.tar.gz"
+                    [[package]]
+                    name = "dir-package"
+                    version = "0.0.1"
+                    optional = false
+                    python-versions = "*"
+                    groups = ["main"]
+                    files = []
+                    [package.source]
+                    reference = ""
+                    type = "directory"
+                    url = "/path/to/package"
+                    [metadata.hashes]
+                    package = ["hash"]
+                    vcs-package = ["hash1"]
+                    [metadata]
+                    lock-version = "2.1"
+                    """)
+                with open('./1.egg', 'w') as f:
+                    f.write('1.egg content')
+                with open('./2.egg', 'w') as f:
+                    f.write('2.egg content')
+
+                # Skip check if lockfile is in sync with pyproject.toml
+                mock_is_fresh.return_value = True
+
+                def mock_check_output_side_effect(cmd, *args, **kwargs):
+                    application = Application()
+                    application.add(ExportCommand())
+                    cmd = application.find("export")
+                    cmd_tester = CommandTester(cmd)
+                    cmd_tester.execute("--format requirements.txt")
+                    self.assertIsNot(cmd_tester.status_code, 1, cmd_tester.io.fetch_error())
+                    return cmd_tester.io.fetch_output().encode(STDOUT_ENCODING)
+
+                mock_check_output.side_effect = mock_check_output_side_effect
+
+                files = self._deploy(req="pyproject.toml")
+
+            self.assertTrue(mock_is_fresh.called)
+            self.assertTrue(mock_check_output.called)
+
+            path_prefix = "C:/" if platform.system() == "Windows" else ""
+
+            self.assertEqual(
+                files['requirements'][0],
+                (
+                    f'dir-package @ file:///{path_prefix}path/to/package ; '
+                    'python_version == "2.7" or python_version >= "3.4"\n'
+                    f'file-package @ file:///{path_prefix}path/to/package.tar.gz ; '
+                    'python_version == "2.7" or python_version >= "3.4"\n'
+                    'package==0.0.0 ; '
+                    'python_version == "2.7" or python_version >= "3.4"\n'
+                    'vcs-package @ '
+                    'git+https://github.com/vcs/package.git@master ; '
+                    'python_version == "2.7" or python_version >= "3.4"'
+                ),
+            )
+
+    def test_poetry_fallback(self):
+        """A poetry.lock file should work even if the poetry configuration is
+        invalid, with limitations like no marker support."""
         with self.runner.isolated_filesystem():
             with open('./main.egg', 'w') as f:
                 f.write('main content')
@@ -399,7 +525,7 @@ class DeployFilesTest(unittest.TestCase):
                 f.write('1.egg content')
             with open('./2.egg', 'w') as f:
                 f.write('2.egg content')
-            files = self._deploy(req=req_name)
+            files = self._deploy(req='pyproject.toml')
 
         reqs = set(files['requirements'][0].split('\n'))
         self.assertEqual(reqs, {
@@ -409,9 +535,6 @@ class DeployFilesTest(unittest.TestCase):
             '/path/to/package.tar.gz',
             '',
         })
-
-    def test_poetry_names(self):
-        self.poetry_test('pyproject.toml')
 
     def test_poetry_lock_missing(self):
         with self.runner.isolated_filesystem():
@@ -429,7 +552,21 @@ class DeployFilesTest(unittest.TestCase):
             with self.assertRaises(ShubException) as cm:
                 self._deploy(req='pyproject.toml')
 
-            self.assertEqual(
-                cm.exception.message,
-                'Please make sure the poetry lock file is present',
-            )
+            if sys.version_info < (3, 8):
+                self.assertIn(
+                    "poetry executable not found",
+                    cm.exception.message,
+                )
+            else:
+                try:
+                    version("poetry")
+                except PackageNotFoundError:
+                    self.assertIn(
+                        "poetry executable not found",
+                        cm.exception.message,
+                    )
+                else:
+                    self.assertIn(
+                        "The Poetry configuration is invalid",
+                        cm.exception.message,
+                    )

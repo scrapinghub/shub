@@ -1,5 +1,6 @@
+cleo
+flake8
+pipenv
 python-dateutil
 pytest
 pytest-cov
-flake8
-pipenv
