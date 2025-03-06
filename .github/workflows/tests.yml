@@ -80,11 +80,11 @@ jobs:
           tox-env: min
           os: macos-13
         - python-version: '3.6'
-          tox-env: min-poetry
-          os: macos-13
-        - python-version: '3.6'
           os: macos-13
         - python-version: '3.7'
+          os: macos-13
+        - python-version: '3.7'
+          tox-env: min-poetry
           os: macos-13
         - python-version: '3.8'
           os: macos-13
