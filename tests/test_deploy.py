@@ -551,7 +551,7 @@ class DeployFilesTest(unittest.TestCase):
 
             if sys.version_info < (3, 8):
                 self.assertIn(
-                    "The Poetry configuration is invalid",
+                    "poetry executable not found",
                     cm.exception.message,
                 )
             else:
