@@ -56,11 +56,10 @@ jobs:
         pip install .
         python -c "from shub.image.utils import get_docker_client; get_docker_client(validate=False)"
 
-    - name: Upload coverage report
-      run: |
-        curl -Os https://uploader.codecov.io/latest/linux/codecov
-        chmod +x codecov
-        ./codecov
+    - name: coverage
+      uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
 
   tests-macos:
     name: "Test: py${{ matrix.python-version }}, macOS"
@@ -103,6 +102,11 @@ jobs:
     - name: Run tests
       run: tox -e ${{ matrix.tox-env || 'py' }}
 
+    - name: coverage
+      uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+
   tests-windows:
     name: "Test: py${{ matrix.python-version }}, Windows"
     runs-on: windows-latest
@@ -138,3 +142,8 @@ jobs:
 
     - name: Run tests
       run: tox -e ${{ matrix.tox-env || 'py' }}
+
+    - name: coverage
+      uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
