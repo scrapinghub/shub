@@ -1,7 +1,6 @@
 import os
 import sys
 import unittest
-from importlib.metadata import version, PackageNotFoundError
 from unittest.mock import patch, Mock
 
 from packaging.version import parse
@@ -20,12 +19,17 @@ from shub.utils import create_default_setup_py, _SETUP_PY_TEMPLATE, STDOUT_ENCOD
 from .utils import AssertInvokeRaisesMixin, mock_conf
 
 try:
-    POETRY_VERSION = parse(version("poetry"))
-except PackageNotFoundError:
+    from importlib.metadata import version, PackageNotFoundError
+except ImportError:
+    POETRY_VERSION = None
+else:
     try:
-        POETRY_VERSION = parse(version("poetry-core"))
+        POETRY_VERSION = parse(version("poetry"))
     except PackageNotFoundError:
-        POETRY_VERSION = None
+        try:
+            POETRY_VERSION = parse(version("poetry-core"))
+        except PackageNotFoundError:
+            POETRY_VERSION = None
 
 VALID_SCRAPY_CFG = """
 [settings]
