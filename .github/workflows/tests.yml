@@ -11,7 +11,7 @@ on:
 jobs:
   tests-ubuntu:
     name: "Test: py${{ matrix.python-version }}, Ubuntu"
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.os || 'ubuntu-latest' }}
     strategy:
       fail-fast: false
       matrix:
@@ -21,25 +21,18 @@ jobs:
           tox-env: min
         - python-version: '3.6'
           os: ubuntu-20.04
-          tox-env: py
         - python-version: '3.7'
           os: ubuntu-22.04
-          tox-env: py
+        - python-version: '3.7'
+          tox-env: min-poetry
+          os: ubuntu-22.04
         - python-version: '3.8'
-          os: ubuntu-latest
-          tox-env: py
         - python-version: '3.9'
-          os: ubuntu-latest
-          tox-env: py
         - python-version: '3.10'
-          os: ubuntu-latest
-          tox-env: py
         - python-version: '3.11'
-          os: ubuntu-latest
-          tox-env: py
         - python-version: '3.12'
-          os: ubuntu-latest
-          tox-env: py
+        - python-version: '3.13'
+          tox-env: poetry
 
     steps:
     - uses: actions/checkout@v2
@@ -53,7 +46,7 @@ jobs:
       run: pip install tox
 
     - name: Run tests
-      run: tox -e ${{ matrix.tox-env }}
+      run: tox -e ${{ matrix.tox-env || 'py' }}
 
     - name: Run off-tox tests
       # https://github.com/scrapinghub/shub/issues/441
@@ -120,19 +113,17 @@ jobs:
         - python-version: '3.6'
           tox-env: min
         - python-version: '3.6'
-          tox-env: py
         - python-version: '3.7'
-          tox-env: py
+        - python-version: '3.7'
+          tox-env: min-poetry
         - python-version: '3.8'
-          tox-env: py
         - python-version: '3.9'
-          tox-env: py
         - python-version: '3.10'
-          tox-env: py
         - python-version: '3.11'
-          tox-env: py
         - python-version: '3.12'
-          tox-env: py
+        - python-version: '3.13'
+        - python-version: '3.13'
+          tox-env: poetry
 
     steps:
     - uses: actions/checkout@v2
@@ -146,4 +137,4 @@ jobs:
       run: pip install tox
 
     - name: Run tests
-      run: tox -e ${{ matrix.tox-env }}
+      run: tox -e ${{ matrix.tox-env || 'py' }}
