@@ -1,7 +1,6 @@
 import click
-
 from shub import exceptions as shub_exceptions
-from shub.config import load_shub_config, list_targets_callback
+from shub.config import list_targets_callback, load_shub_config
 from shub.image import utils
 
 SHORT_HELP = "Test a built image with Scrapy Cloud contract"
@@ -19,38 +18,48 @@ the test command is also executed automatically as a part of build command
 in its end (if you do not provide -S/--skip-tests parameter explicitly).
 """
 
-IMAGE_SIZE_LIMIT = 3 * 1024 * 1024 * 1024  # 3GB
+IMAGE_SIZE_LIMIT = 4 * 1024 * 1024 * 1024  # 4GB
 CONTRACT_CMD_NOT_FOUND_WARNING = (
-    'Command %s is not found in the image. '
-    'Please make sure you provided it according to Scrapy Cloud contract '
-    '(https://shub.readthedocs.io/en/stable/custom-images-contract.html) or '
-    'added scrapinghub-entrypoint-scrapy>=0.8.0 to your requirements file '
-    'if you use Scrapy.'
+    "Command %s is not found in the image. "
+    "Please make sure you provided it according to Scrapy Cloud contract "
+    "(https://shub.readthedocs.io/en/stable/custom-images-contract.html) or "
+    "added scrapinghub-entrypoint-scrapy>=0.8.0 to your requirements file "
+    "if you use Scrapy."
 )
 LIST_SPIDERS_DEPRECATED_WARNING = (
-    'list-spiders command is deprecated in favour of shub-image-info command: '
-    'its format is described well in Scrapy Cloud contract '
-    '(https://shub.readthedocs.io/en/stable/custom-images-contract.html), '
-    'please review and update your code.'
+    "list-spiders command is deprecated in favour of shub-image-info command: "
+    "its format is described well in Scrapy Cloud contract "
+    "(https://shub.readthedocs.io/en/stable/custom-images-contract.html), "
+    "please review and update your code."
 )
 IMAGE_TOO_LARGE_WARNING = (
-    'Custom image for the project is too large (more than 3GB), it can lead '
-    'to various performance issues when running it in Scrapy Cloud. '
-    'Please reduce the image size or ask support team for help '
-    '(one of the recommended articles to start with is '
-    'https://www.codacy.com/blog/five-ways-to-slim-your-docker-images/).'
+    "Custom image for the project is too large (more than 3GB), it can lead "
+    "to various performance issues when running it in Scrapy Cloud. "
+    "Please reduce the image size or ask support team for help "
+    "(one of the recommended articles to start with is "
+    "https://www.codacy.com/blog/five-ways-to-slim-your-docker-images/)."
 )
 
 
 @click.command(help=HELP, short_help=SHORT_HELP)
 @click.argument("target", required=False, default="default")
-@click.option("-l", "--list-targets", is_flag=True, is_eager=True,
-              expose_value=False, callback=list_targets_callback,
-              help="List available project names defined in your config")
-@click.option("-d", "--debug", help="debug mode", is_flag=True,
-              callback=utils.deprecate_debug_parameter)
-@click.option("-v", "--verbose", is_flag=True,
-              help="stream test logs to console")
+@click.option(
+    "-l",
+    "--list-targets",
+    is_flag=True,
+    is_eager=True,
+    expose_value=False,
+    callback=list_targets_callback,
+    help="List available project names defined in your config",
+)
+@click.option(
+    "-d",
+    "--debug",
+    help="debug mode",
+    is_flag=True,
+    callback=utils.deprecate_debug_parameter,
+)
+@click.option("-v", "--verbose", is_flag=True, help="stream test logs to console")
 @click.option("-V", "--version", help="release version")
 def cli(target, debug, verbose, version):
     test_cmd(target, version)
@@ -62,9 +71,11 @@ def test_cmd(target, version):
     version = version or config.get_version()
     image_name = utils.format_image_name(image, version)
     docker_client = utils.get_docker_client()
-    for check in [_check_image_size,
-                  _check_start_crawl_entry,
-                  _check_shub_image_info_entry]:
+    for check in [
+        _check_image_size,
+        _check_start_crawl_entry,
+        _check_shub_image_info_entry,
+    ]:
         check(image_name, docker_client)
 
 
@@ -73,31 +84,35 @@ def _check_image_size(image_name, docker_client):
     # if there's no docker lib, the command will fail earlier
     # with an exception when getting a client in get_docker_client()
     from docker.errors import NotFound
+
     try:
-        size = docker_client.inspect_image(image_name).get('Size')
+        size = docker_client.inspect_image(image_name).get("Size")
         if size and isinstance(size, int) and size > IMAGE_SIZE_LIMIT:
-            raise shub_exceptions.CustomImageTooLargeException(
-                IMAGE_TOO_LARGE_WARNING)
+            raise shub_exceptions.CustomImageTooLargeException(IMAGE_TOO_LARGE_WARNING)
     except NotFound as exc:
         utils.debug_log(exc)
         raise shub_exceptions.NotFoundException(
-            "The image doesn't exist yet, please use build command at first.")
+            "The image doesn't exist yet, please use build command at first."
+        )
 
 
 def _check_shub_image_info_entry(image_name, docker_client):
     """Check that the image has shub-image-info entrypoint"""
     status, logs = _run_docker_command(
-        docker_client, image_name, ['which', 'shub-image-info'])
+        docker_client, image_name, ["which", "shub-image-info"]
+    )
     if status != 0 or not logs:
         _check_fallback_to_list_spiders(image_name, docker_client)
 
 
 def _check_fallback_to_list_spiders(image_name, docker_client):
     status, logs = _run_docker_command(
-        docker_client, image_name, ['which', 'list-spiders'])
+        docker_client, image_name, ["which", "list-spiders"]
+    )
     if status != 0 or not logs:
         raise shub_exceptions.NotFoundException(
-            CONTRACT_CMD_NOT_FOUND_WARNING % 'shub-image-info (& list-spiders)')
+            CONTRACT_CMD_NOT_FOUND_WARNING % "shub-image-info (& list-spiders)"
+        )
     else:
         click.echo(LIST_SPIDERS_DEPRECATED_WARNING)
 
@@ -105,10 +120,12 @@ def _check_fallback_to_list_spiders(image_name, docker_client):
 def _check_start_crawl_entry(image_name, docker_client):
     """Check that the image has start-crawl entrypoint"""
     status, logs = _run_docker_command(
-        docker_client, image_name, ['which', 'start-crawl'])
+        docker_client, image_name, ["which", "start-crawl"]
+    )
     if status != 0 or not logs:
         raise shub_exceptions.NotFoundException(
-            CONTRACT_CMD_NOT_FOUND_WARNING % 'start-crawl')
+            CONTRACT_CMD_NOT_FOUND_WARNING % "start-crawl"
+        )
 
 
 def _run_docker_command(client, image_name, command):
@@ -116,10 +133,14 @@ def _run_docker_command(client, image_name, command):
     container = client.create_container(image=image_name, command=command)
     try:
         client.start(container)
-        statuscode = client.wait(container=container['Id'])['StatusCode']
-        logs = client.logs(container=container['Id'], stdout=True,
-                           stderr=True if statuscode else False,
-                           stream=False, timestamps=False)
+        statuscode = client.wait(container=container["Id"])["StatusCode"]
+        logs = client.logs(
+            container=container["Id"],
+            stdout=True,
+            stderr=True if statuscode else False,
+            stream=False,
+            timestamps=False,
+        )
         utils.debug_log(f"{command} results:\n{logs}")
         return statuscode, logs
     finally:
