@@ -39,7 +39,7 @@ def cli():
 def _get_apikey(suggestion='', endpoint=None):
     suggestion_txt = ' (%s)' % suggestion if suggestion else ''
     click.echo(
-        "Enter your API key from https://app.zyte.com/account/apikey"
+        "Enter your API key from https://app.zyte.com/o/settings/apikey"
     )
     while True:
         key = input('API key%s: ' % suggestion_txt) or suggestion
