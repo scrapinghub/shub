@@ -32,6 +32,7 @@ setup(
         'setuptools',
         'tqdm==4.55.1',
         'toml',
+        'dateparser'
     ],
     classifiers=[
         'Development Status :: 5 - Production/Stable',
