@@ -32,6 +32,10 @@ jobs:
         - python-version: '3.11'
         - python-version: '3.12'
         - python-version: '3.13'
+        - python-version: '3.13'
+          tox-env: poetry
+        - python-version: '3.14.0-rc.2'
+        - python-version: '3.14.0-rc.2'
           tox-env: poetry
 
     steps:
@@ -87,6 +91,9 @@ jobs:
         - python-version: '3.13'
         - python-version: '3.13'
           tox-env: poetry
+        - python-version: '3.14.0-rc.2'
+        - python-version: '3.14.0-rc.2'
+          tox-env: poetry
 
     steps:
     - uses: actions/checkout@v2
@@ -127,6 +134,9 @@ jobs:
         - python-version: '3.12'
         - python-version: '3.13'
         - python-version: '3.13'
+          tox-env: poetry
+        - python-version: '3.14.0-rc.2'
+        - python-version: '3.14.0-rc.2'
           tox-env: poetry
 
     steps:
