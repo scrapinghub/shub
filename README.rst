@@ -37,8 +37,9 @@ the Python Package Index::
     pip install shub
 
 Please note:
+
 * if you are using Python < 3.6, you should pin `shub` to `2.13.0` or lower.
-* if you are using Python < 3.9, you should pin `shub` to `2.15.2` or lower.
+* if you are using Python < 3.9, you should pin `shub` to `2.15.4` or lower.
 
 We also supply stand-alone binaries. You can find them in our `latest GitHub
 release`_.
