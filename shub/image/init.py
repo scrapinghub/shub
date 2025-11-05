@@ -17,10 +17,10 @@ RUN mkdir -p {docker_app_dir}
 WORKDIR {docker_app_dir}
 $requirements
 COPY . {docker_app_dir}
-RUN python setup.py install
+RUN python -m pip install .
 """.format(docker_app_dir=DOCKER_APP_DIR)
 
-DEFAULT_BASE_IMAGE = "scrapinghub/scrapinghub-stack-scrapy:1.3"
+DEFAULT_BASE_IMAGE = "scrapinghub/scrapinghub-stack-scrapy:2.13-20250721"
 RECOMMENDED_PYTHON_DEPS = [
     'guppy==0.1.10',
 ]
