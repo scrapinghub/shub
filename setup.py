@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='shub',
-    version='2.15.4',
+    version='2.16.0',
     packages=find_packages(exclude=('tests', 'tests.*')),
     url="https://shub.readthedocs.io/en/stable/",
     description='Scrapinghub Command Line Client',
