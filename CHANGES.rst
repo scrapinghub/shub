@@ -2,6 +2,17 @@
 Changes
 =======
 
+2.16.0 (unreleased)
+===================
+
+-   Drop support for Python 3.6, 3.7 & 3.8.
+-   Add support for Python 3.13 & 3.14.
+-   Fix ``shub image upload`` documentation.
+-   Add support for current Poetry versions.
+-   Fix link to get apikey in ``shub login`` command.
+-   Modernize generated Dockerfile (``shub image init`` command).
+
+
 2.15.4 (2024-02-08)
 ===================
 
