@@ -1,2 +1,2 @@
 sphinx-rtd-theme
-sphinx-scrapy @ git+https://github.com/scrapy/sphinx-scrapy.git@999017c29b8bc213843e86e0e350a85c47493e34
+sphinx-scrapy @ git+https://github.com/scrapy/sphinx-scrapy.git@b85ec480d12c9434a37671dea7729b3602d79f58
