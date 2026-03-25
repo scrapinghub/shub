@@ -594,7 +594,7 @@ def latest_github_release(force_update=False, timeout=1., cache=None):
                                   'last_release.txt')
     today = datetime.date.today().toordinal()
     if not force_update and os.path.isfile(cache):
-        with open(cache) as f:
+        with open(cache, encoding='utf-8') as f:
             try:
                 release_data = json.load(f)
             except Exception:
@@ -613,7 +613,7 @@ def latest_github_release(force_update=False, timeout=1., cache=None):
         except OSError:
             if not os.path.isdir(shubdir):
                 raise
-        with open(cache, 'w') as f:
+        with open(cache, 'w', encoding='utf-8') as f:
             json.dump(release_data, f)
     except Exception:
         pass

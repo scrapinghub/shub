@@ -171,7 +171,7 @@ def _get_pipfile_requirements(tmpdir=None):
         except ImportError:
             raise ImportError('You need pipenv installed to deploy with Pipfile')
     try:
-        with open('Pipfile.lock') as f:
+        with open('Pipfile.lock', encoding='utf-8') as f:
             pipefile = json.load(f)
             deps = pipefile['default']
             sources_list = prepare_pip_source_args(pipefile['_meta']['sources'])
