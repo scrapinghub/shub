@@ -1,5 +1,5 @@
 repos:
 - repo: https://github.com/scrapy/sphinx-scrapy
-  rev: b85ec480d12c9434a37671dea7729b3602d79f58
+  rev: 0.7.0
   hooks:
     - id: sphinx-scrapy
