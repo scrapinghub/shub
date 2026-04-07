@@ -2,6 +2,13 @@
 Changes
 =======
 
+2.17.0 (unreleased)
+===================
+
+-   Drop support for Python 3.9.
+-   Made the documentation more LLM-friendly, with markdown versions of every
+    page and :file:`llms.txt` and :file:`llms-full.txt` files.
+
 2.16.0 (2025-11-05)
 ===================
 
