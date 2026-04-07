@@ -16,13 +16,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-        - python-version: '3.9'
-          os: ubuntu-22.04
+        - python-version: '3.10'
           tox-env: min
-        - python-version: '3.9'
+        - python-version: '3.10'
           tox-env: min-poetry
-          os: ubuntu-22.04
-        - python-version: '3.9'
         - python-version: '3.10'
         - python-version: '3.11'
         - python-version: '3.12'
@@ -65,13 +62,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-        - python-version: '3.9'
+        - python-version: '3.10'
           tox-env: min
-          os: macos-13
-        - python-version: '3.9'
+        - python-version: '3.10'
           tox-env: min-poetry
-          os: macos-13
-        - python-version: '3.9'
         - python-version: '3.10'
         - python-version: '3.11'
         - python-version: '3.12'
@@ -106,11 +100,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-        - python-version: '3.9'
+        - python-version: '3.10'
           tox-env: min
-        - python-version: '3.9'
+        - python-version: '3.10'
           tox-env: min-poetry
-        - python-version: '3.9'
         - python-version: '3.10'
         - python-version: '3.11'
         - python-version: '3.12'
