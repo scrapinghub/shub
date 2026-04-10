@@ -945,3 +945,16 @@ class ConfigHelpersTest(unittest.TestCase):
         mock_lsh.return_value.get_target_conf.assert_called_once_with(
             'mytargetconf', auth_required=False)
         mock_lsh.return_value.get_version.assert_called_once_with()
+
+
+def test_shub_apikey_env_overrides_local(tmp_path, monkeypatch):
+    yml = tmp_path / "scrapinghub.yml"
+    yml.write_text("""
+apikeys:
+  default: FILEKEY
+""")
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv('SHUB_APIKEY', 'ENVKEY')
+
+    conf = load_shub_config(load_global=False, load_local=True, load_env=True)
+    assert conf.apikeys['default'] == 'ENVKEY'
