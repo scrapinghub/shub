@@ -501,14 +501,14 @@ def load_shub_config(load_global=True, load_local=True, load_env=True):
         if not os.path.exists(GLOBAL_SCRAPINGHUB_YML_PATH):
             _migrate_to_global_scrapinghub_yml()
         conf.load_file(GLOBAL_SCRAPINGHUB_YML_PATH)
-    if load_env and 'SHUB_APIKEY' in os.environ:
-        conf.apikeys['default'] = os.environ['SHUB_APIKEY']
     if load_local:
         closest_sh_yml = closest_file('scrapinghub.yml')
         if closest_sh_yml:
             conf.load_file(closest_sh_yml)
         else:
             _migrate_and_load_scrapy_cfg(conf)
+    if load_env and 'SHUB_APIKEY' in os.environ:
+        conf.apikeys['default'] = os.environ['SHUB_APIKEY']
     return conf
 
 
