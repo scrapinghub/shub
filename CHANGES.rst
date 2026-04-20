@@ -2,10 +2,20 @@
 Changes
 =======
 
+2.17.1 (2026-04-20)
+===================
+
+-   Prioritize the `SHUB_APIKEY` environment variable over the local
+    `scrapinghub.yml` configuration.
+
+-   Update references from "Scrapinghub" to "Zyte" in the scheduling
+    documentation.
+
 2.17.0 (2026-04-07)
 ===================
 
 -   Drop support for Python 3.9.
+
 -   Made the documentation more LLM-friendly, with markdown versions of every
     page and :file:`llms.txt` and :file:`llms-full.txt` files.
 
@@ -13,10 +23,15 @@ Changes
 ===================
 
 -   Drop support for Python 3.6, 3.7 & 3.8.
+
 -   Add support for Python 3.13 & 3.14.
+
 -   Fix ``shub image upload`` documentation.
+
 -   Add support for current Poetry versions.
+
 -   Fix link to get apikey in ``shub login`` command.
+
 -   Modernize generated Dockerfile (``shub image init`` command).
 
 
