@@ -2,7 +2,7 @@
 Changes
 =======
 
-2.17.1 (2026-04-20)
+2.17.1 (unreleased)
 ===================
 
 -   Prioritize the `SHUB_APIKEY` environment variable over the local
