@@ -113,7 +113,11 @@ def _check_start_crawl_entry(image_name, docker_client):
 
 def _run_docker_command(client, image_name, command):
     """A helper to execute an arbitrary cmd with given docker image"""
-    container = client.create_container(image=image_name, command=command)
+    container = utils.call_docker_with_platform(
+        client.create_container,
+        image=image_name,
+        command=command,
+    )
     try:
         client.start(container)
         statuscode = client.wait(container=container['Id'])['StatusCode']
