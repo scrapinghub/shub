@@ -1,3 +1,83 @@
+[build-system]
+requires = ["hatchling>=1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "shub"
+version = "2.17.1"
+description = "Scrapinghub Command Line Client"
+readme = "README.rst"
+requires-python = ">=3.10"
+license = "BSD-3-Clause"
+license-files = ["LICENSE"]
+authors = [{ name = "Scrapinghub", email = "info@scrapinghub.com" }]
+maintainers = [{ name = "Scrapinghub", email = "info@scrapinghub.com" }]
+dependencies = [
+	"click",
+	"docker",
+	'importlib-metadata; python_version < "3.10"',
+	"packaging",
+	"pip",
+	"PyYAML",
+	"requests",
+	"retrying",
+	"scrapinghub>=2.3.1",
+	"setuptools",
+	"toml",
+	"tqdm==4.55.1",
+]
+classifiers = [
+	"Development Status :: 5 - Production/Stable",
+	"Environment :: Console",
+	"Intended Audience :: Developers",
+	"License :: OSI Approved :: BSD License",
+	"Natural Language :: English",
+	"Operating System :: OS Independent",
+	"Programming Language :: Python",
+	"Programming Language :: Python :: 3.10",
+	"Programming Language :: Python :: 3.11",
+	"Programming Language :: Python :: 3.12",
+	"Programming Language :: Python :: 3.13",
+	"Programming Language :: Python :: 3.14",
+	"Topic :: Internet :: WWW/HTTP",
+]
+
+[project.urls]
+Documentation = "https://shub.readthedocs.io/en/stable/"
+Source = "https://github.com/scrapinghub/shub"
+Tracker = "https://github.com/scrapinghub/shub/issues"
+
+[project.scripts]
+shub = "shub.tool:cli"
+
+[tool.hatch.build.targets.wheel]
+packages = ["shub"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+	"/docs",
+	"/freeze",
+	"/shub",
+	"/tests",
+	"/CHANGES.rst",
+	"/pyproject.toml",
+	"/setup.cfg",
+	"/tox.ini",
+]
+
+[tool.bumpversion]
+commit = true
+tag = true
+tag_name = "v{new_version}"
+
+[[tool.bumpversion.files]]
+filename = "shub/__init__.py"
+
+[[tool.bumpversion.files]]
+filename = "CHANGES.rst"
+search = "(unreleased)"
+replace = "({now:%Y-%m-%d})"
+
 [tool.sphinx-scrapy]
-# Keep in sync with .github/workflows/test.yml.
+# Keep in sync with .github/workflows/checks.yml.
 python-version = "3.13"
