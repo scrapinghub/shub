@@ -66,7 +66,6 @@ include = [
 ]
 
 [tool.bumpversion]
-current_version = "2.17.1"
 commit = true
 tag = true
 tag_name = "v{new_version}"
