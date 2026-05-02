@@ -6,7 +6,7 @@
 Welcome to shub's documentation!
 ================================
 
-``shub`` is the Scrapinghub command line client. It allows you to deploy
+``shub`` is the Zyte command line client. It allows you to deploy
 projects or dependencies, schedule spiders, and retrieve scraped data or logs
 without leaving the command line.
 
