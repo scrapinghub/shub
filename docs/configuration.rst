@@ -130,7 +130,8 @@ file and let ``shub`` load it:
 
     SHUB_APIKEY=0bbf4f0f691e0d9378ae00ca7bcf7f0c
 
-By default ``shub`` reads the ``.env`` file in the current directory. Use the
+By default ``shub`` reads the nearest ``.env`` file, looking in the current
+directory and then walking up through its parent directories. Use the
 ``--dotenv-path`` option to point it at a different file::
 
     shub --dotenv-path /path/to/myenv deploy

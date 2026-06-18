@@ -29,6 +29,18 @@ def test_load_dotenv_apikey_default_path(tmp_path, monkeypatch):
     assert os.environ['SHUB_APIKEY'] == 'FROMDOTENV'
 
 
+def test_load_dotenv_apikey_parent_dir(tmp_path, monkeypatch):
+    monkeypatch.delenv('SHUB_APIKEY', raising=False)
+    (tmp_path / '.env').write_text('SHUB_APIKEY=FROMPARENT\n')
+    subdir = tmp_path / 'project' / 'subdir'
+    subdir.mkdir(parents=True)
+    monkeypatch.chdir(subdir)
+
+    _load_dotenv_apikey(None)
+
+    assert os.environ['SHUB_APIKEY'] == 'FROMPARENT'
+
+
 def test_load_dotenv_apikey_custom_path(tmp_path, monkeypatch):
     monkeypatch.delenv('SHUB_APIKEY', raising=False)
     env_file = tmp_path / 'custom.env'

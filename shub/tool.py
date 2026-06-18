@@ -2,7 +2,7 @@ import importlib
 import os
 
 import click
-from dotenv import dotenv_values
+from dotenv import dotenv_values, find_dotenv
 
 import shub
 from shub.utils import update_available
@@ -30,12 +30,12 @@ def _load_dotenv_apikey(dotenv_path: str | None) -> None:
 
     Only the SHUB_APIKEY variable is read from the file; any other variables are ignored.
     A SHUB_APIKEY already present in the environment takes precedence over the value in
-    the file. When ``dotenv_path`` is None, the ``.env`` file in the current directory
-    is used.
+    the file. When ``dotenv_path`` is None, the nearest ``.env`` file in the current
+    directory or its parents is used.
     """
     if 'SHUB_APIKEY' in os.environ:
         return
-    apikey = dotenv_values(dotenv_path or ".env").get('SHUB_APIKEY')
+    apikey = dotenv_values(dotenv_path or find_dotenv(usecwd=True)).get('SHUB_APIKEY')
     if apikey:
         os.environ['SHUB_APIKEY'] = apikey
 
