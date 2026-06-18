@@ -123,7 +123,10 @@ On Windows::
     SET SHUB_APIKEY=0bbf4f0f691e0d9378ae00ca7bcf7f0c
 
 Instead of exporting the variable yourself, you can store it in a ``.env``
-file and let ``shub`` load it::
+file and let ``shub`` load it:
+
+.. code-block:: bash
+    :caption: :file:`.env`
 
     SHUB_APIKEY=0bbf4f0f691e0d9378ae00ca7bcf7f0c
 
