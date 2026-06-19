@@ -2,7 +2,7 @@
 Changes
 =======
 
-2.18.0 (unreleased)
+2.18.0 (2026-06-19)
 ===================
 
 -   Load the ``SHUB_APIKEY`` environment variable from a ``.env`` file via
