@@ -42,7 +42,7 @@ jobs:
       run: tar -czvf shub-${{ runner.os }}.tar.gz dist_bin/shub
 
     - name: Upload binary
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: shub-${{ runner.os }}
         path: |
@@ -56,7 +56,7 @@ jobs:
 
     steps:
     - name: Download binaries
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v8
       with:
         path: binaries
 
