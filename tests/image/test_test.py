@@ -10,7 +10,7 @@ from shub.image.test import (
 )
 
 from .utils import FakeProjectDirectory
-from .utils import add_sh_fake_config
+from .utils import add_sh_fake_config, with_docker_platform
 
 
 class MockedNotFound(Exception):
@@ -59,8 +59,10 @@ def test_check_image_size(monkeypatch, docker_client):
 
 def test_start_crawl(docker_client):
     assert _check_start_crawl_entry('image', docker_client) is None
-    docker_client.create_container.assert_called_with(
-        image='image', command=['which', 'start-crawl'])
+    docker_client.create_container.assert_called_with(**with_docker_platform({
+        'image': 'image',
+        'command': ['which', 'start-crawl'],
+    }))
     docker_client.wait.return_value = {'Error': None, 'StatusCode': 1}
     with pytest.raises(shub_exceptions.NotFoundException):
         _check_start_crawl_entry('image', docker_client)
@@ -75,8 +77,10 @@ def test_run_docker_command(docker_client):
     assert _run_docker_command(
         docker_client, 'image-name', ['some', 'cmd']) == \
             (0, 'some-logs')
-    docker_client.create_container.assert_called_with(
-        image='image-name', command=['some', 'cmd'])
+    docker_client.create_container.assert_called_with(**with_docker_platform({
+        'image': 'image-name',
+        'command': ['some', 'cmd'],
+    }))
     docker_client.start.assert_called_with({'Id': '12345'})
     docker_client.wait.assert_called_with(container='12345')
     docker_client.logs.assert_called_with(

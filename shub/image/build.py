@@ -68,7 +68,8 @@ def build_cmd(target, version, skip_tests, no_cache, build_arg, filename='Docker
     else:
         build_progress_cls = _BuildProgress
     click.echo(f"Building {image_name}.")
-    events = client.build(
+    events = utils.call_docker_with_platform(
+        client.build,
         path=project_dir,
         tag=image_name,
         decode=True,
