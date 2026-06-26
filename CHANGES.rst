@@ -2,6 +2,13 @@
 Changes
 =======
 
+2.18.0 (2026-06-19)
+===================
+
+-   Load the ``SHUB_APIKEY`` environment variable from a ``.env`` file via
+    `python-dotenv`. Use the new ``--dotenv-path`` option to point ``shub`` at
+    a file other than the default ``.env``.
+
 2.17.1 (2026-04-21)
 ===================
 

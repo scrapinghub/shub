@@ -122,6 +122,24 @@ On Windows::
 
     SET SHUB_APIKEY=0bbf4f0f691e0d9378ae00ca7bcf7f0c
 
+Instead of exporting the variable yourself, you can store it in a ``.env``
+file and let ``shub`` load it:
+
+.. code-block:: bash
+    :caption: :file:`.env`
+
+    SHUB_APIKEY=0bbf4f0f691e0d9378ae00ca7bcf7f0c
+
+By default ``shub`` reads the nearest ``.env`` file, looking in the current
+directory and then walking up through its parent directories. Use the
+``--dotenv-path`` option to point it at a different file::
+
+    shub --dotenv-path /path/to/myenv deploy
+
+Only the ``SHUB_APIKEY`` variable is read from the file; any other variables
+are ignored. A ``SHUB_APIKEY`` already set in the environment takes precedence
+over the value in the file.
+
 You can also parametrize global ``scrapinghub.yml`` file location with
 ``SHUB_GLOBAL_CONFIG`` environment variable (default ``~/.scrapinghub.yml``).
 
