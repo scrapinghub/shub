@@ -12,11 +12,6 @@ Python Package Index::
 
     pip install shub
 
-We also supply stand-alone binaries. You can find them in our `latest GitHub
-release`_.
-
-.. _`latest Github release`: https://github.com/scrapinghub/shub/releases/latest
-
 
 Getting help
 ------------

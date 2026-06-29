@@ -42,11 +42,6 @@ Please note:
 * if you are using Python < 3.9, you should pin `shub` to `2.15.4` or lower.
 * if you are using Python < 3.10, you should pin `shub` to `2.16.0` or lower.
 
-We also supply stand-alone binaries. You can find them in our `latest GitHub
-release`_.
-
-.. _`latest Github release`: https://github.com/scrapinghub/shub/releases/latest
-
 
 Documentation
 -------------
