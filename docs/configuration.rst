@@ -140,6 +140,12 @@ Only the ``SHUB_APIKEY`` variable is read from the file; any other variables
 are ignored. A ``SHUB_APIKEY`` already set in the environment takes precedence
 over the value in the file.
 
+This ``.env`` lookup is not limited to the ``shub`` command: it is also
+performed by ``shub.config.load_shub_config()``, so code that uses shub as a
+library (instead of invoking the CLI) picks up ``SHUB_APIKEY`` from the
+nearest ``.env`` file too. Pass ``load_env=False`` to ``load_shub_config()``
+to skip both the environment variable and the ``.env`` file lookup.
+
 You can also parametrize global ``scrapinghub.yml`` file location with
 ``SHUB_GLOBAL_CONFIG`` environment variable (default ``~/.scrapinghub.yml``).
 
