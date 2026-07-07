@@ -492,7 +492,7 @@ def _migrate_and_load_scrapy_cfg(conf):
         click.echo(PROJECT_MIGRATION_OK_BANNER, err=True)
 
 
-def _load_dotenv_apikey(dotenv_path=None):
+def _load_dotenv_apikey(dotenv_path: str | None = None) -> None:
     """Load SHUB_APIKEY from a .env file into the environment.
 
     Only the SHUB_APIKEY variable is read from the file; any other variables are ignored.
