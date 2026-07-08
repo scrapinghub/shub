@@ -2,7 +2,7 @@
 Changes
 =======
 
-Unreleased
+2.18.1 (2026-07-08)
 ==========
 
 -   ``shub.config.load_shub_config()`` now also reads ``SHUB_APIKEY`` from the
