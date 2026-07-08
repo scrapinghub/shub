@@ -2,6 +2,13 @@
 Changes
 =======
 
+Unreleased
+==========
+
+-   ``shub.config.load_shub_config()`` now also reads ``SHUB_APIKEY`` from the
+    nearest ``.env`` file, not just the ``shub`` CLI. Previously this only
+    worked when invoking the ``shub`` command.
+
 2.18.0 (2026-06-19)
 ===================
 
