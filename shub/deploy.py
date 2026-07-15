@@ -2,6 +2,8 @@ import glob
 import json
 import os
 import shutil
+import subprocess
+import tarfile
 import tempfile
 from typing import AnyStr, Optional, Union
 
@@ -17,7 +19,8 @@ from shub.config import SH_IMAGES_REGISTRY, list_targets_callback, load_shub_con
 from shub.exceptions import BadParameterException, NotFoundException, ShubException, SubcommandException
 from shub.image.upload import upload_cmd
 from shub.utils import (create_default_setup_py, create_scrapinghub_yml_wizard,
-                        inside_project, make_deploy_request, run_cmd, run_python)
+                        find_exe, inside_project, make_deploy_request,
+                        remember_cwd, run_cmd, run_python, STDOUT_ENCODING)
 
 HELP = """
 Deploy the current folder's Scrapy project to Scrapy Cloud.
@@ -43,6 +46,11 @@ You can also deploy an existing project egg:
 Or build an egg without deploying:
 
     shub deploy --build-egg egg_name
+
+To avoid bundling gitignored or otherwise untracked files, you can build the
+egg from a clean git checkout of HEAD instead of the working directory:
+
+    shub deploy --clean-repo
 """
 
 SHORT_HELP = "Deploy Scrapy project to Scrapy Cloud"
@@ -63,15 +71,21 @@ SHORT_HELP = "Deploy Scrapy project to Scrapy Cloud"
 @click.option("-k", "--keep-log", help="Keep the deploy log", is_flag=True)
 @click.option("--ignore-size", help="Ignore deploy request's egg(s) size check",
               is_flag=True)
+@click.option("--clean-repo", is_flag=True,
+              help="Build the egg from a clean git checkout of HEAD (via "
+                   "`git archive`) instead of the working directory, so that "
+                   "gitignored and other untracked files are not bundled "
+                   "into the deploy. Can also be enabled via the 'clean_repo' "
+                   "scrapinghub.yml option.")
 def cli(target, version, debug, egg, build_egg, verbose, keep_log,
-        ignore_size):
+        ignore_size, clean_repo):
     conf, image = load_shub_config(), None
     if not build_egg:
         create_scrapinghub_yml_wizard(conf, target=target)
     image = conf.get_target_conf(target).image
     if not image:
         deploy_cmd(target, version, debug, egg, build_egg, verbose, keep_log,
-                   conf=conf)
+                   conf=conf, clean_repo=clean_repo)
     elif image.startswith(SH_IMAGES_REGISTRY):
         upload_cmd(target, version)
     else:
@@ -81,15 +95,17 @@ def cli(target, version, debug, egg, build_egg, verbose, keep_log,
 
 
 def deploy_cmd(target, version, debug, egg, build_egg, verbose, keep_log,
-               conf=None):
+               conf=None, clean_repo=False):
     tmpdir = None
+    conf = conf or load_shub_config()
+    clean_repo = clean_repo or conf.get_target_conf(
+        target, auth_required=False).clean_repo
     try:
         if build_egg:
-            egg, tmpdir = _build_egg()
+            egg, tmpdir = _build_egg(clean_repo=clean_repo)
             click.echo("Writing egg to %s" % build_egg)
             shutil.copyfile(egg, build_egg)
         else:
-            conf = conf or load_shub_config()
             targetconf = conf.get_target_conf(target)
             version = version or targetconf.version
             auth = (targetconf.apikey, '')
@@ -99,7 +115,7 @@ def deploy_cmd(target, version, debug, egg, build_egg, verbose, keep_log,
                 egg = egg
             else:
                 click.echo("Packing version %s" % version)
-                egg, tmpdir = _build_egg()
+                egg, tmpdir = _build_egg(clean_repo=clean_repo)
 
             _upload_egg(targetconf.endpoint, egg, targetconf.project_id,
                         version, auth, verbose, keep_log, targetconf.stack,
@@ -259,11 +275,60 @@ def _get_poetry_requirements():
             raise original_exception
 
 
-def _build_egg():
+def _build_egg(clean_repo=False):
     if not inside_project():
         raise NotFoundException("No Scrapy project found in this location.")
+    if clean_repo:
+        return _build_egg_from_clean_repo()
+    return _build_egg_in_cwd()
+
+
+def _build_egg_in_cwd():
     create_default_setup_py()
     d = tempfile.mkdtemp(prefix="shub-deploy-")
     run_python(['setup.py', 'clean', '-a', 'bdist_egg', '-d', d])
     egg = glob.glob(os.path.join(d, '*.egg'))[0]
     return egg, d
+
+
+def _build_egg_from_clean_repo():
+    """
+    Export the current git repository's HEAD commit to a temporary directory
+    via `git archive`, then build the egg from there instead of the working
+    directory.
+
+    This keeps gitignored and other untracked files out of the deploy. Note
+    that only committed changes are included: uncommitted local modifications
+    are not part of the resulting egg.
+    """
+    git = find_exe('git')
+    try:
+        repo_root = run_cmd([git, 'rev-parse', '--show-toplevel'])
+    except SubcommandException:
+        raise NotFoundException(
+            "--clean-repo (or the 'clean_repo' option) was used, but the "
+            "current directory does not look like a git repository.")
+    # Resolve symlinks on both sides (e.g. macOS' /tmp -> /private/tmp) so the
+    # relative path is computed correctly.
+    rel_project_dir = os.path.relpath(os.path.realpath(os.getcwd()),
+                                      os.path.realpath(repo_root))
+    clean_repo_dir = tempfile.mkdtemp(prefix="shub-deploy-clean-repo-")
+    archive_path = os.path.join(clean_repo_dir, 'HEAD.tar')
+    try:
+        with open(archive_path, 'wb') as archive_file:
+            subprocess.run(
+                [git, 'archive', '--format=tar', 'HEAD'], cwd=repo_root,
+                stdout=archive_file, stderr=subprocess.PIPE, check=True,
+            )
+        with tarfile.open(archive_path) as tar:
+            tar.extractall(clean_repo_dir, filter='data')
+        os.remove(archive_path)
+        with remember_cwd():
+            os.chdir(os.path.join(clean_repo_dir, rel_project_dir))
+            return _build_egg_in_cwd()
+    except subprocess.CalledProcessError as e:
+        stderr = (e.stderr or b'').decode(STDOUT_ENCODING, errors='replace')
+        raise SubcommandException(
+            "Error while calling 'git archive': %s\n\n%s" % (e, stderr))
+    finally:
+        shutil.rmtree(clean_repo_dir, ignore_errors=True)

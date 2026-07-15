@@ -50,6 +50,7 @@ class ShubConfig:
         self.requirements_file = None
         self.eggs = []
         self.images = {}
+        self.clean_repo = False
 
     def _check_endpoints(self):
         """Check the endpoints. Send warnings if necessary."""
@@ -111,6 +112,7 @@ class ShubConfig:
             self.requirements_file = yaml_cfg.get('requirements', {}).get(
                 'file', self.requirements_file)
             self.eggs = yaml_cfg.get('requirements', {}).get('eggs', self.eggs)
+            self.clean_repo = yaml_cfg.get('clean_repo', self.clean_repo)
         except (yaml.YAMLError, AttributeError):
             # AttributeError: stream is valid YAML but not dictionary-like
             raise ConfigParseException
@@ -203,6 +205,8 @@ class ShubConfig:
                     yml.pop(shortcut, None)
             if self.version != 'AUTO':
                 yml['version'] = self.version
+            if self.clean_repo:
+                yml['clean_repo'] = self.clean_repo
             if self.eggs:
                 yml.setdefault('requirements', {})['eggs'] = self.eggs
             if self.requirements_file:
@@ -305,6 +309,7 @@ class ShubConfig:
             requirements_file=requirements,
             version=self.get_version(),
             eggs=eggs,
+            clean_repo=proj.get('clean_repo', self.clean_repo),
         )
 
     def _select_image_for_project(self, target, project):
@@ -376,7 +381,7 @@ class ShubConfig:
 
 _Target = namedtuple('Target', ['project_id', 'endpoint', 'apikey', 'stack',
                                 'image', 'requirements_file', 'version',
-                                'eggs'])
+                                'eggs', 'clean_repo'], defaults=[False])
 
 
 class APIkey(str):

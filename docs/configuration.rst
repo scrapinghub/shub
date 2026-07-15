@@ -102,6 +102,11 @@ Option            Description                                   Scope
                   it will be configured inside
                   ``~/.scrapinghub.yml`` in your home
                   directory, via ``shub login``.
+``clean_repo``    Whether to build the egg from a clean git      global default
+                  checkout of ``HEAD`` instead of the working    and project-\
+                  directory, excluding gitignored and other      specific
+                  untracked files. Same as passing ``shub
+                  deploy --clean-repo``. See :ref:`deploying`.
 ================  ============================================  ===============
 
 .. _`Scrapy Cloud stack`: https://helpdesk.scrapinghub.com/support/solutions/articles/22000200402-scrapy-cloud-stacks

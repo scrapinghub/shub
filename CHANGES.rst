@@ -2,6 +2,14 @@
 Changes
 =======
 
+2.19.0 (unreleased)
+===================
+
+-   Add a ``--clean-repo`` flag to ``shub deploy``, and a matching
+    ``clean_repo`` ``scrapinghub.yml`` option, to build the egg from a clean
+    ``git archive`` export of ``HEAD`` instead of the working directory. This
+    keeps gitignored and other untracked files out of the deploy.
+
 2.18.1 (2026-07-08)
 ==========
 
