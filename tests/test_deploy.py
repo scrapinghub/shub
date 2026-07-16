@@ -16,7 +16,7 @@ from click.testing import CliRunner
 from shub import deploy
 from shub.exceptions import (
     NotFoundException, ShubException, BadParameterException,
-    DeployRequestTooLargeException,
+    DeployRequestTooLargeException, SubcommandException,
 )
 from shub.utils import create_default_setup_py, _SETUP_PY_TEMPLATE, STDOUT_ENCODING
 
@@ -90,6 +90,14 @@ class DeployTest(AssertInvokeRaisesMixin, unittest.TestCase):
         self.assertIn(self.conf.endpoints['vagrant'], url)
         self.assertEqual(data, {'project': 456, 'version': 'version'})
         self.assertEqual(auth, (self.conf.apikeys['vagrant'], ''))
+
+    def test_build_egg_flag(self):
+        with self.runner.isolated_filesystem():
+            self._make_project()
+            result = self.runner.invoke(
+                deploy.cli, ('--build-egg', 'built.egg'))
+            self.assertEqual(0, result.exit_code, result.output)
+            self.assertTrue(os.path.exists('built.egg'))
 
     def test_deploy_list_targets(self):
         with self.runner.isolated_filesystem():
@@ -208,6 +216,16 @@ class CleanRepoTest(AssertInvokeRaisesMixin, unittest.TestCase):
             with open('scrapy.cfg', 'w') as f:
                 f.write(VALID_SCRAPY_CFG)
             with self.assertRaises(NotFoundException):
+                deploy._build_egg(clean_repo=True)
+
+    def test_build_egg_git_archive_failure(self):
+        with self.runner.isolated_filesystem():
+            with open('scrapy.cfg', 'w') as f:
+                f.write(VALID_SCRAPY_CFG)
+            self._git('init', '-q')
+            # No commits yet, so HEAD does not exist and `git archive HEAD`
+            # fails.
+            with self.assertRaises(SubcommandException):
                 deploy._build_egg(clean_repo=True)
 
     @patch('shub.deploy.make_deploy_request')
