@@ -2,8 +2,6 @@ import glob
 import json
 import os
 import shutil
-import subprocess
-import tarfile
 import tempfile
 from typing import AnyStr, Optional, Union
 
@@ -19,8 +17,8 @@ from shub.config import SH_IMAGES_REGISTRY, list_targets_callback, load_shub_con
 from shub.exceptions import BadParameterException, NotFoundException, ShubException, SubcommandException
 from shub.image.upload import upload_cmd
 from shub.utils import (create_default_setup_py, create_scrapinghub_yml_wizard,
-                        find_exe, inside_project, make_deploy_request,
-                        remember_cwd, run_cmd, run_python, STDOUT_ENCODING)
+                        inside_project, make_deploy_request, remember_cwd,
+                        run_cmd, run_python)
 
 HELP = """
 Deploy the current folder's Scrapy project to Scrapy Cloud.
@@ -47,10 +45,11 @@ Or build an egg without deploying:
 
     shub deploy --build-egg egg_name
 
-To avoid bundling gitignored or otherwise untracked files, you can build the
-egg from a clean git checkout of HEAD instead of the working directory:
-
-    shub deploy --clean-repo
+If the project is inside a git repository, the egg is built from a copy of
+the working directory that leaves out anything git considers ignored (e.g.
+via .gitignore), so build artifacts, local secrets, and stray virtualenvs
+don't end up in the deploy. Uncommitted changes to tracked files are still
+included.
 """
 
 SHORT_HELP = "Deploy Scrapy project to Scrapy Cloud"
@@ -71,21 +70,15 @@ SHORT_HELP = "Deploy Scrapy project to Scrapy Cloud"
 @click.option("-k", "--keep-log", help="Keep the deploy log", is_flag=True)
 @click.option("--ignore-size", help="Ignore deploy request's egg(s) size check",
               is_flag=True)
-@click.option("--clean-repo", is_flag=True,
-              help="Build the egg from a clean git checkout of HEAD (via "
-                   "`git archive`) instead of the working directory, so that "
-                   "gitignored and other untracked files are not bundled "
-                   "into the deploy. Can also be enabled via the 'clean_repo' "
-                   "scrapinghub.yml option.")
 def cli(target, version, debug, egg, build_egg, verbose, keep_log,
-        ignore_size, clean_repo):
+        ignore_size):
     conf, image = load_shub_config(), None
     if not build_egg:
         create_scrapinghub_yml_wizard(conf, target=target)
     image = conf.get_target_conf(target).image
     if not image:
         deploy_cmd(target, version, debug, egg, build_egg, verbose, keep_log,
-                   conf=conf, clean_repo=clean_repo)
+                   conf=conf)
     elif image.startswith(SH_IMAGES_REGISTRY):
         upload_cmd(target, version)
     else:
@@ -95,17 +88,15 @@ def cli(target, version, debug, egg, build_egg, verbose, keep_log,
 
 
 def deploy_cmd(target, version, debug, egg, build_egg, verbose, keep_log,
-               conf=None, clean_repo=False):
+               conf=None):
     tmpdir = None
-    conf = conf or load_shub_config()
-    clean_repo = clean_repo or conf.get_target_conf(
-        target, auth_required=False).clean_repo
     try:
         if build_egg:
-            egg, tmpdir = _build_egg(clean_repo=clean_repo)
+            egg, tmpdir = _build_egg()
             click.echo("Writing egg to %s" % build_egg)
             shutil.copyfile(egg, build_egg)
         else:
+            conf = conf or load_shub_config()
             targetconf = conf.get_target_conf(target)
             version = version or targetconf.version
             auth = (targetconf.apikey, '')
@@ -115,7 +106,7 @@ def deploy_cmd(target, version, debug, egg, build_egg, verbose, keep_log,
                 egg = egg
             else:
                 click.echo("Packing version %s" % version)
-                egg, tmpdir = _build_egg(clean_repo=clean_repo)
+                egg, tmpdir = _build_egg()
 
             _upload_egg(targetconf.endpoint, egg, targetconf.project_id,
                         version, auth, verbose, keep_log, targetconf.stack,
@@ -275,11 +266,17 @@ def _get_poetry_requirements():
             raise original_exception
 
 
-def _build_egg(clean_repo=False):
+def _build_egg():
     if not inside_project():
         raise NotFoundException("No Scrapy project found in this location.")
-    if clean_repo:
-        return _build_egg_from_clean_repo()
+    git = shutil.which('git')
+    if git:
+        try:
+            return _build_egg_from_git_filtered_files(git)
+        except SubcommandException:
+            # Not a git repository (or `git ls-files` otherwise failed): fall
+            # back to building from the working directory as-is.
+            pass
     return _build_egg_in_cwd()
 
 
@@ -291,49 +288,32 @@ def _build_egg_in_cwd():
     return egg, d
 
 
-def _build_egg_from_clean_repo():
+def _build_egg_from_git_filtered_files(git):
     """
-    Export the current git repository's HEAD commit to a temporary directory
-    via `git archive`, then build the egg from there instead of the working
-    directory.
+    Copy the working directory into a temporary directory, leaving out
+    anything git considers ignored (via `git ls-files`), then build the egg
+    from there.
 
-    This keeps gitignored and other untracked files out of the deploy. Note
-    that only committed changes are included: uncommitted local modifications
-    are not part of the resulting egg.
+    Tracked files are copied with their current, possibly uncommitted,
+    contents, and untracked-but-not-ignored files are included too: this only
+    strips out gitignored cruft (build artifacts, local secrets, stray
+    virtualenvs, etc.), it doesn't require anything to be committed.
     """
-    git = find_exe('git')
+    paths = run_cmd(
+        [git, 'ls-files', '--cached', '--others', '--exclude-standard'],
+    ).splitlines()
+    filtered_dir = tempfile.mkdtemp(prefix="shub-deploy-filtered-")
     try:
-        repo_root = run_cmd([git, 'rev-parse', '--show-toplevel'])
-    except SubcommandException:
-        raise NotFoundException(
-            "--clean-repo (or the 'clean_repo' option) was used, but the "
-            "current directory does not look like a git repository.")
-    # Resolve symlinks on both sides (e.g. macOS' /tmp -> /private/tmp) so the
-    # relative path is computed correctly.
-    rel_project_dir = os.path.relpath(os.path.realpath(os.getcwd()),
-                                      os.path.realpath(repo_root))
-    clean_repo_dir = tempfile.mkdtemp(prefix="shub-deploy-clean-repo-")
-    archive_path = os.path.join(clean_repo_dir, 'HEAD.tar')
-    try:
-        with open(archive_path, 'wb') as archive_file:
-            subprocess.run(
-                [git, 'archive', '--format=tar', 'HEAD'], cwd=repo_root,
-                stdout=archive_file, stderr=subprocess.PIPE, check=True,
-            )
-        with tarfile.open(archive_path) as tar:
-            # No extraction filter: the archive is generated by us from the
-            # user's own repository, not untrusted input. The `filter`
-            # keyword also isn't available on every Python 3.10 patch
-            # release (it was backported to 3.10.12+ via PEP 706), and older
-            # patch releases are still in use on some platforms.
-            tar.extractall(clean_repo_dir)
-        os.remove(archive_path)
+        for path in paths:
+            if not os.path.isfile(path):
+                # e.g. a tracked file staged for deletion but not yet removed
+                # from the index
+                continue
+            dest = os.path.join(filtered_dir, path)
+            os.makedirs(os.path.dirname(dest), exist_ok=True)
+            shutil.copy2(path, dest)
         with remember_cwd():
-            os.chdir(os.path.join(clean_repo_dir, rel_project_dir))
+            os.chdir(filtered_dir)
             return _build_egg_in_cwd()
-    except subprocess.CalledProcessError as e:
-        stderr = (e.stderr or b'').decode(STDOUT_ENCODING, errors='replace')
-        raise SubcommandException(
-            "Error while calling 'git archive': %s\n\n%s" % (e, stderr))
     finally:
-        shutil.rmtree(clean_repo_dir, ignore_errors=True)
+        shutil.rmtree(filtered_dir, ignore_errors=True)

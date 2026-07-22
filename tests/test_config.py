@@ -68,8 +68,7 @@ def _project_dict(proj_id, endpoint='default', extra=None):
 
 
 def _target(id, endpoint=None, apikey=None, stack=None, image=None,
-            requirements_file='requirements.txt', version='1.0', eggs=None,
-            clean_repo=False):
+            requirements_file='requirements.txt', version='1.0', eggs=None):
     if eggs is None:
         eggs = ['./egg1.egg', './egg2.egg']
     return Target(
@@ -80,8 +79,7 @@ def _target(id, endpoint=None, apikey=None, stack=None, image=None,
         image=image,
         requirements_file=requirements_file,
         version=version,
-        eggs=eggs,
-        clean_repo=clean_repo,
+        eggs=eggs
     )
 
 
@@ -99,7 +97,6 @@ class ShubConfigTest(unittest.TestCase):
         conf = ShubConfig()
         self.assertIn('default', conf.endpoints)
         self.assertEqual(conf.version, 'AUTO')
-        self.assertFalse(conf.clean_repo)
 
     def test_load(self):
         projects = {
@@ -359,20 +356,6 @@ class ShubConfigTest(unittest.TestCase):
                            'stacks', 'requirements_file', 'eggs', 'images']:
                 self.assertEqual(
                     getattr(self.conf, option), getattr(loaded_conf, option))
-
-    def test_save_clean_repo(self):
-        with CliRunner().isolated_filesystem():
-            conf = ShubConfig()
-            conf.projects['default'] = 123
-            conf.clean_repo = True
-            conf.save('conf.yml')
-            with open('conf.yml') as f:
-                self.assertEqual(
-                    yaml.load(f, Loader=Loader),
-                    {'project': 123, 'clean_repo': True})
-            loaded_conf = ShubConfig()
-            loaded_conf.load_file('conf.yml')
-            self.assertTrue(loaded_conf.clean_repo)
 
     def test_save_partial(self):
         runner = CliRunner()
@@ -673,36 +656,6 @@ class ShubConfigTest(unittest.TestCase):
             self.conf.get_target_conf('advanced_prod'),
             _target(456, apikey='key', stack='hworker:v1.0.0'),
         )
-
-    def test_get_target_conf_clean_repo_default_false(self):
-        self.assertFalse(
-            self.conf.get_target_conf('shproj').clean_repo)
-
-    def test_get_target_conf_clean_repo(self):
-        self.conf.load("""
-            projects:
-                default: 123
-                clean:
-                    id: 456
-                    clean_repo: true
-                explicit_off:
-                    id: 789
-                    clean_repo: false
-            clean_repo: true
-        """)
-        self.assertTrue(
-            self.conf.get_target_conf('default', auth_required=False)
-            .clean_repo)
-        self.assertTrue(
-            self.conf.get_target_conf('clean', auth_required=False)
-            .clean_repo)
-        self.assertFalse(
-            self.conf.get_target_conf('explicit_off', auth_required=False)
-            .clean_repo)
-        # targets with no explicit clean_repo key inherit the global default
-        self.assertTrue(
-            self.conf.get_target_conf('advanced_dev', auth_required=False)
-            .clean_repo)
 
     def test_get_target_conf_calls_get_project(self):
         t = _target(456, apikey='key', stack='hworker:v1.0.0')

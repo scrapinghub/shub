@@ -16,7 +16,7 @@ from click.testing import CliRunner
 from shub import deploy
 from shub.exceptions import (
     NotFoundException, ShubException, BadParameterException,
-    DeployRequestTooLargeException, SubcommandException,
+    DeployRequestTooLargeException,
 )
 from shub.utils import create_default_setup_py, _SETUP_PY_TEMPLATE, STDOUT_ENCODING
 
@@ -91,14 +91,6 @@ class DeployTest(AssertInvokeRaisesMixin, unittest.TestCase):
         self.assertEqual(data, {'project': 456, 'version': 'version'})
         self.assertEqual(auth, (self.conf.apikeys['vagrant'], ''))
 
-    def test_build_egg_flag(self):
-        with self.runner.isolated_filesystem():
-            self._make_project()
-            result = self.runner.invoke(
-                deploy.cli, ('--build-egg', 'built.egg'))
-            self.assertEqual(0, result.exit_code, result.output)
-            self.assertTrue(os.path.exists('built.egg'))
-
     def test_deploy_list_targets(self):
         with self.runner.isolated_filesystem():
             self._make_project()
@@ -170,7 +162,7 @@ class DeployTest(AssertInvokeRaisesMixin, unittest.TestCase):
                                     deploy.cli)
 
 
-class CleanRepoTest(AssertInvokeRaisesMixin, unittest.TestCase):
+class GitFilteredBuildTest(AssertInvokeRaisesMixin, unittest.TestCase):
 
     def setUp(self):
         self.runner = CliRunner()
@@ -192,54 +184,74 @@ class CleanRepoTest(AssertInvokeRaisesMixin, unittest.TestCase):
         os.mkdir('project')
         open(os.path.join('project', '__init__.py'), 'w').close()
         with open('.gitignore', 'w') as f:
-            f.write('untracked.txt\n')
+            f.write('ignored.txt\n')
         self._git('init', '-q')
         self._git('add', 'scrapy.cfg', 'project', '.gitignore')
         self._git('commit', '-q', '-m', 'initial commit')
-        # Added after the commit: must not end up in the clean-repo build.
-        with open('untracked.txt', 'w') as f:
-            f.write('should not be deployed')
 
-    def test_build_egg_excludes_untracked_files(self):
+    def _egg_names(self, egg, tmpdir):
+        try:
+            with zipfile.ZipFile(egg) as z:
+                return z.namelist()
+        finally:
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_build_egg_excludes_gitignored_files(self):
         with self.runner.isolated_filesystem():
             self._make_git_project()
-            egg, tmpdir = deploy._build_egg(clean_repo=True)
+            with open('ignored.txt', 'w') as f:
+                f.write('should not be deployed')
+            names = self._egg_names(*deploy._build_egg())
+        self.assertFalse(any('ignored' in n for n in names))
+
+    def test_build_egg_includes_uncommitted_tracked_changes(self):
+        # A gitignore-filtered build should still deploy whatever is
+        # currently on disk for tracked files, not just the last commit.
+        with self.runner.isolated_filesystem():
+            self._make_git_project()
+            with open(os.path.join('project', '__init__.py'), 'w') as f:
+                f.write('MARKER = 1\n')
+            egg, tmpdir = deploy._build_egg()
             try:
                 with zipfile.ZipFile(egg) as z:
-                    names = z.namelist()
+                    member = next(
+                        n for n in z.namelist() if n.endswith('__init__.py'))
+                    content = z.read(member)
             finally:
                 shutil.rmtree(tmpdir, ignore_errors=True)
-        self.assertFalse(any('untracked' in n for n in names))
+        self.assertIn(b'MARKER = 1', content)
 
-    def test_build_egg_requires_git_repo(self):
+    def test_build_egg_includes_new_untracked_non_ignored_file(self):
+        with self.runner.isolated_filesystem():
+            self._make_git_project()
+            with open(os.path.join('project', 'extra.py'), 'w') as f:
+                f.write('EXTRA = 1\n')
+            names = self._egg_names(*deploy._build_egg())
+        self.assertTrue(any('extra' in n for n in names))
+
+    def test_build_egg_skips_tracked_file_deleted_on_disk(self):
+        # A file staged for deletion (removed from disk, but the removal not
+        # yet committed) still shows up in `git ls-files --cached`; it should
+        # simply be skipped rather than crash the build.
+        with self.runner.isolated_filesystem():
+            self._make_git_project()
+            os.remove(os.path.join('project', '__init__.py'))
+            egg, tmpdir = deploy._build_egg()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+        self.assertTrue(egg.endswith('.egg'))
+
+    def test_build_egg_falls_back_without_git_repo(self):
         with self.runner.isolated_filesystem():
             with open('scrapy.cfg', 'w') as f:
                 f.write(VALID_SCRAPY_CFG)
-            with self.assertRaises(NotFoundException):
-                deploy._build_egg(clean_repo=True)
-
-    def test_build_egg_git_archive_failure(self):
-        with self.runner.isolated_filesystem():
-            with open('scrapy.cfg', 'w') as f:
-                f.write(VALID_SCRAPY_CFG)
-            self._git('init', '-q')
-            # No commits yet, so HEAD does not exist and `git archive HEAD`
-            # fails.
-            with self.assertRaises(SubcommandException):
-                deploy._build_egg(clean_repo=True)
+            egg, tmpdir = deploy._build_egg()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+        self.assertTrue(egg.endswith('.egg'))
 
     @patch('shub.deploy.make_deploy_request')
-    def test_deploy_with_clean_repo_flag(self, mock_deploy_req):
+    def test_deploy_default_from_git_repo(self, mock_deploy_req):
         with self.runner.isolated_filesystem():
             self._make_git_project()
-            result = self.runner.invoke(deploy.cli, ('--clean-repo',))
-            self.assertEqual(0, result.exit_code, result.output)
-
-    @patch('shub.deploy.make_deploy_request')
-    def test_deploy_with_clean_repo_config_option(self, mock_deploy_req):
-        with self.runner.isolated_filesystem():
-            self._make_git_project()
-            self.conf.clean_repo = True
             result = self.runner.invoke(deploy.cli)
             self.assertEqual(0, result.exit_code, result.output)
 

@@ -36,34 +36,13 @@ deploying::
     $ shub deploy --build-egg egg_name
     Writing egg to egg_name
 
-By default, ``shub`` packs whatever is currently on disk, including any
-gitignored or otherwise untracked files (build artifacts, local secrets,
-virtualenvs left inside the project directory, etc). If your project is a git
-repository, you can instead build the egg from a clean checkout of the
-current ``HEAD`` commit with ``--clean-repo``::
-
-    $ shub deploy --clean-repo
-    Packing version 3af023e-master
-    Deploying to Scrapy Cloud project "12345"
-    {"status": "ok", "project": 12345, "version": "3af023e-master", "spiders": 1}
-    Run your spiders at: https://app.zyte.com/p/12345/
-
-This exports the repository via ``git archive`` before running the build, so
-only committed files are included. Note that uncommitted local changes are
-therefore *not* part of the deploy either -- commit them first if they should
-be included.
-
-To avoid passing ``--clean-repo`` on every deploy, enable it in
-``scrapinghub.yml`` instead, either globally or per project (see
-:ref:`configuration-options`)::
-
-    # project_directory/scrapinghub.yml
-
-    projects:
-      default: 12345
-      prod: 33333
-
-    clean_repo: true
+If your project is inside a git repository, the egg is built from a copy of
+the working directory that leaves out anything git considers ignored (e.g.
+via ``.gitignore``), so build artifacts, local secrets, and stray
+virtualenvs don't end up in the deploy. Uncommitted changes to tracked
+files, and new untracked files that aren't gitignored, are still included.
+Projects that aren't inside a git repository deploy the working directory
+as-is, unchanged from before.
 
 
 .. _deploying-dependencies:
