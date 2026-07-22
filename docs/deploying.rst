@@ -36,6 +36,14 @@ deploying::
     $ shub deploy --build-egg egg_name
     Writing egg to egg_name
 
+If your project is inside a git repository, the egg is built from a copy of
+the working directory that leaves out anything git considers ignored (e.g.
+via ``.gitignore``), so build artifacts, local secrets, and stray
+virtualenvs don't end up in the deploy. Uncommitted changes to tracked
+files, and new untracked files that aren't gitignored, are still included.
+Projects that aren't inside a git repository deploy the working directory
+as-is, unchanged from before.
+
 
 .. _deploying-dependencies:
 

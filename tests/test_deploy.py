@@ -1,7 +1,10 @@
 import os
 import platform
+import shutil
+import subprocess
 import sys
 import unittest
+import zipfile
 from unittest.mock import patch, Mock
 
 from packaging.version import parse
@@ -157,6 +160,100 @@ class DeployTest(AssertInvokeRaisesMixin, unittest.TestCase):
             mock_requests.post.return_value = fake_response
             self.assertInvokeRaises(DeployRequestTooLargeException,
                                     deploy.cli)
+
+
+class GitFilteredBuildTest(AssertInvokeRaisesMixin, unittest.TestCase):
+
+    def setUp(self):
+        self.runner = CliRunner()
+        self.conf = mock_conf(self, 'shub.deploy.load_shub_config')
+        if shutil.which('git') is None:
+            self.skipTest("git executable not found")
+
+    def _git(self, *args):
+        env = dict(os.environ, GIT_AUTHOR_NAME='shub-tests',
+                   GIT_AUTHOR_EMAIL='shub-tests@example.com',
+                   GIT_COMMITTER_NAME='shub-tests',
+                   GIT_COMMITTER_EMAIL='shub-tests@example.com')
+        subprocess.run(('git',) + args, check=True, env=env,
+                       stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    def _make_git_project(self):
+        with open('scrapy.cfg', 'w') as f:
+            f.write(VALID_SCRAPY_CFG)
+        os.mkdir('project')
+        open(os.path.join('project', '__init__.py'), 'w').close()
+        with open('.gitignore', 'w') as f:
+            f.write('ignored.txt\n')
+        self._git('init', '-q')
+        self._git('add', 'scrapy.cfg', 'project', '.gitignore')
+        self._git('commit', '-q', '-m', 'initial commit')
+
+    def _egg_names(self, egg, tmpdir):
+        try:
+            with zipfile.ZipFile(egg) as z:
+                return z.namelist()
+        finally:
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def test_build_egg_excludes_gitignored_files(self):
+        with self.runner.isolated_filesystem():
+            self._make_git_project()
+            with open('ignored.txt', 'w') as f:
+                f.write('should not be deployed')
+            names = self._egg_names(*deploy._build_egg())
+        self.assertFalse(any('ignored' in n for n in names))
+
+    def test_build_egg_includes_uncommitted_tracked_changes(self):
+        # A gitignore-filtered build should still deploy whatever is
+        # currently on disk for tracked files, not just the last commit.
+        with self.runner.isolated_filesystem():
+            self._make_git_project()
+            with open(os.path.join('project', '__init__.py'), 'w') as f:
+                f.write('MARKER = 1\n')
+            egg, tmpdir = deploy._build_egg()
+            try:
+                with zipfile.ZipFile(egg) as z:
+                    member = next(
+                        n for n in z.namelist() if n.endswith('__init__.py'))
+                    content = z.read(member)
+            finally:
+                shutil.rmtree(tmpdir, ignore_errors=True)
+        self.assertIn(b'MARKER = 1', content)
+
+    def test_build_egg_includes_new_untracked_non_ignored_file(self):
+        with self.runner.isolated_filesystem():
+            self._make_git_project()
+            with open(os.path.join('project', 'extra.py'), 'w') as f:
+                f.write('EXTRA = 1\n')
+            names = self._egg_names(*deploy._build_egg())
+        self.assertTrue(any('extra' in n for n in names))
+
+    def test_build_egg_skips_tracked_file_deleted_on_disk(self):
+        # A file staged for deletion (removed from disk, but the removal not
+        # yet committed) still shows up in `git ls-files --cached`; it should
+        # simply be skipped rather than crash the build.
+        with self.runner.isolated_filesystem():
+            self._make_git_project()
+            os.remove(os.path.join('project', '__init__.py'))
+            egg, tmpdir = deploy._build_egg()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+        self.assertTrue(egg.endswith('.egg'))
+
+    def test_build_egg_falls_back_without_git_repo(self):
+        with self.runner.isolated_filesystem():
+            with open('scrapy.cfg', 'w') as f:
+                f.write(VALID_SCRAPY_CFG)
+            egg, tmpdir = deploy._build_egg()
+            shutil.rmtree(tmpdir, ignore_errors=True)
+        self.assertTrue(egg.endswith('.egg'))
+
+    @patch('shub.deploy.make_deploy_request')
+    def test_deploy_default_from_git_repo(self, mock_deploy_req):
+        with self.runner.isolated_filesystem():
+            self._make_git_project()
+            result = self.runner.invoke(deploy.cli)
+            self.assertEqual(0, result.exit_code, result.output)
 
 
 class DeployFilesTest(unittest.TestCase):

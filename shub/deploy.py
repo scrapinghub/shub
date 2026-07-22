@@ -17,7 +17,8 @@ from shub.config import SH_IMAGES_REGISTRY, list_targets_callback, load_shub_con
 from shub.exceptions import BadParameterException, NotFoundException, ShubException, SubcommandException
 from shub.image.upload import upload_cmd
 from shub.utils import (create_default_setup_py, create_scrapinghub_yml_wizard,
-                        inside_project, make_deploy_request, run_cmd, run_python)
+                        inside_project, make_deploy_request, remember_cwd,
+                        run_cmd, run_python)
 
 HELP = """
 Deploy the current folder's Scrapy project to Scrapy Cloud.
@@ -43,6 +44,12 @@ You can also deploy an existing project egg:
 Or build an egg without deploying:
 
     shub deploy --build-egg egg_name
+
+If the project is inside a git repository, the egg is built from a copy of
+the working directory that leaves out anything git considers ignored (e.g.
+via .gitignore), so build artifacts, local secrets, and stray virtualenvs
+don't end up in the deploy. Uncommitted changes to tracked files are still
+included.
 """
 
 SHORT_HELP = "Deploy Scrapy project to Scrapy Cloud"
@@ -262,8 +269,51 @@ def _get_poetry_requirements():
 def _build_egg():
     if not inside_project():
         raise NotFoundException("No Scrapy project found in this location.")
+    git = shutil.which('git')
+    if git:
+        try:
+            return _build_egg_from_git_filtered_files(git)
+        except SubcommandException:
+            # Not a git repository (or `git ls-files` otherwise failed): fall
+            # back to building from the working directory as-is.
+            pass
+    return _build_egg_in_cwd()
+
+
+def _build_egg_in_cwd():
     create_default_setup_py()
     d = tempfile.mkdtemp(prefix="shub-deploy-")
     run_python(['setup.py', 'clean', '-a', 'bdist_egg', '-d', d])
     egg = glob.glob(os.path.join(d, '*.egg'))[0]
     return egg, d
+
+
+def _build_egg_from_git_filtered_files(git):
+    """
+    Copy the working directory into a temporary directory, leaving out
+    anything git considers ignored (via `git ls-files`), then build the egg
+    from there.
+
+    Tracked files are copied with their current, possibly uncommitted,
+    contents, and untracked-but-not-ignored files are included too: this only
+    strips out gitignored cruft (build artifacts, local secrets, stray
+    virtualenvs, etc.), it doesn't require anything to be committed.
+    """
+    paths = run_cmd(
+        [git, 'ls-files', '--cached', '--others', '--exclude-standard'],
+    ).splitlines()
+    filtered_dir = tempfile.mkdtemp(prefix="shub-deploy-filtered-")
+    try:
+        for path in paths:
+            if not os.path.isfile(path):
+                # e.g. a tracked file staged for deletion but not yet removed
+                # from the index
+                continue
+            dest = os.path.join(filtered_dir, path)
+            os.makedirs(os.path.dirname(dest), exist_ok=True)
+            shutil.copy2(path, dest)
+        with remember_cwd():
+            os.chdir(filtered_dir)
+            return _build_egg_in_cwd()
+    finally:
+        shutil.rmtree(filtered_dir, ignore_errors=True)

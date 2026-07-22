@@ -2,6 +2,18 @@
 Changes
 =======
 
+(unreleased)
+============
+
+-   ``shub deploy`` now builds the egg from a copy of the working directory
+    that leaves out anything git considers ignored (e.g. via
+    ``.gitignore``), when run inside a git repository. This keeps build
+    artifacts, local secrets, and stray virtualenvs out of the deploy by
+    default. Uncommitted changes to tracked files, and new untracked files
+    that aren't gitignored, are still included. Projects that aren't inside
+    a git repository, or where ``git`` isn't available, keep the previous
+    behavior of deploying the working directory as-is.
+
 2.18.1 (2026-07-08)
 ==========
 
