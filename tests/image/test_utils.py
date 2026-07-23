@@ -7,8 +7,11 @@ import pytest
 
 from shub.exceptions import BadConfigException, BadParameterException, NotFoundException
 from shub.image.utils import (
+    DOCKER_PLATFORM,
+    call_docker_with_platform,
     get_credentials,
     get_docker_client,
+    get_docker_platform,
     get_image_registry,
     get_project_dir,
     format_image_name,
@@ -42,29 +45,52 @@ class ReleaseUtilsTest(TestCase):
                 return {}
 
         mocked_docker.APIClient = DockerClientMock
-        assert get_docker_client()
-        client_mock.assert_called_with(base_url=None, tls=None, version='auto')
-        # set basic test environment
-        os.environ['DOCKER_HOST'] = 'http://127.0.0.1'
-        os.environ['DOCKER_API_VERSION'] = '1.40'
-        assert get_docker_client()
-        client_mock.assert_called_with(
-            base_url='http://127.0.0.1', tls=None, version='1.40')
-        # test for tls
-        os.environ['DOCKER_TLS_VERIFY'] = '1'
-        os.environ['DOCKER_CERT_PATH'] = 'some-path'
-        mocked_tls = mock.Mock()
-        mocked_docker.tls.TLSConfig.return_value = mocked_tls
-        assert get_docker_client()
-        client_mock.assert_called_with(
-            base_url='http://127.0.0.1',
-            tls=mocked_tls,
-            version='1.40')
-        mocked_docker.tls.TLSConfig.assert_called_with(
-            client_cert=(os.path.join('some-path', 'cert.pem'),
-                         os.path.join('some-path', 'key.pem')),
-            verify=os.path.join('some-path', 'ca.pem'),
-            assert_hostname=False)
+        with mock.patch.dict(os.environ, {}, clear=True):
+            assert get_docker_client()
+            client_mock.assert_called_with(base_url=None, tls=None, version='auto')
+            # set basic test environment
+            os.environ['DOCKER_HOST'] = 'http://127.0.0.1'
+            os.environ['DOCKER_API_VERSION'] = '1.40'
+            assert get_docker_client()
+            client_mock.assert_called_with(
+                base_url='http://127.0.0.1', tls=None, version='1.40')
+            # test for tls
+            os.environ['DOCKER_TLS_VERIFY'] = '1'
+            os.environ['DOCKER_CERT_PATH'] = 'some-path'
+            mocked_tls = mock.Mock()
+            mocked_docker.tls.TLSConfig.return_value = mocked_tls
+            assert get_docker_client()
+            client_mock.assert_called_with(
+                base_url='http://127.0.0.1',
+                tls=mocked_tls,
+                version='1.40')
+            mocked_docker.tls.TLSConfig.assert_called_with(
+                client_cert=(os.path.join('some-path', 'cert.pem'),
+                             os.path.join('some-path', 'key.pem')),
+                verify=os.path.join('some-path', 'ca.pem'),
+                assert_hostname=False)
+
+    def test_get_docker_platform(self):
+        with mock.patch('shub.image.utils.platform.machine', return_value='arm64'):
+            assert get_docker_platform() == DOCKER_PLATFORM
+
+        with mock.patch('shub.image.utils.platform.machine', return_value='aarch64'):
+            assert get_docker_platform() == DOCKER_PLATFORM
+
+        with mock.patch('shub.image.utils.platform.machine', return_value='x86_64'):
+            assert get_docker_platform() is None
+
+    def test_call_docker_with_platform(self):
+        callback = mock.Mock(return_value='ok')
+        with mock.patch('shub.image.utils.get_docker_platform', return_value='linux/amd64'):
+            assert call_docker_with_platform(callback, image='name') == 'ok'
+        callback.assert_called_with(platform='linux/amd64', image='name')
+
+    def test_call_docker_with_platform_does_not_hide_unrelated_errors(self):
+        callback = mock.Mock(side_effect=TypeError('some other error'))
+        with mock.patch('shub.image.utils.get_docker_platform', return_value='linux/amd64'):
+            with pytest.raises(TypeError):
+                call_docker_with_platform(callback, image='name')
 
     def test_format_image_name(self):
         assert format_image_name('simple', 'tag') == 'simple:tag'
