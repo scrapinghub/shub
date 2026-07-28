@@ -25,7 +25,7 @@ dependencies = [
 	"scrapinghub>=2.3.1",
 	"setuptools",
 	"toml",
-	"tqdm==4.55.1",
+	"tqdm>=4.55.1",
 ]
 classifiers = [
 	"Development Status :: 5 - Production/Stable",
