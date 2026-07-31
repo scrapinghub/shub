@@ -28,7 +28,8 @@ def test_cli_with_apikey_login(docker_client_mock, test_mock):
     result = runner.invoke(cli, ["dev", "--version", "test"])
     assert result.exit_code == 0
     docker_client_mock.push.assert_called_with(
-        'registry.io/user/project:test', decode=True, stream=True)
+        'registry.io/user/project:test', decode=True, stream=True,
+        auth_config={'username': 'abcdef', 'password': ' '})
     test_mock.assert_called_with("dev", "test")
 
 
@@ -141,7 +142,8 @@ def test_cli_with_custom_login(docker_client_mock, test_mock):
         email='mail', password='pass',
         reauth=False, registry='registry.io', username='user')
     docker_client_mock.push.assert_called_with(
-        'registry.io/user/project:test', decode=True, stream=True)
+        'registry.io/user/project:test', decode=True, stream=True,
+        auth_config={'username': 'user', 'password': 'pass'})
     test_mock.assert_called_with("dev", "test")
 
 
@@ -158,7 +160,8 @@ def test_cli_with_insecure_registry(docker_client_mock, test_mock):
     assert result.exit_code == 0
     assert not docker_client_mock.login.called
     docker_client_mock.push.assert_called_with(
-        'registry.io/user/project:test', decode=True, stream=True)
+        'registry.io/user/project:test', decode=True, stream=True,
+        auth_config=None)
     test_mock.assert_called_with("dev", "test")
 
 
@@ -177,7 +180,8 @@ def test_cli_with_login_username_only(docker_client_mock, test_mock):
         email=None, password=' ',
         reauth=False, registry='registry.io', username='apikey')
     docker_client_mock.push.assert_called_with(
-        'registry.io/user/project:test', decode=True, stream=True)
+        'registry.io/user/project:test', decode=True, stream=True,
+        auth_config={'username': 'apikey', 'password': ' '})
     test_mock.assert_called_with("dev", "test")
 
 
@@ -229,5 +233,6 @@ def test_cli_skip_tests(docker_client_mock, test_mock, skip_tests_flag):
     result = runner.invoke(cli, ["dev", "--version", "test", skip_tests_flag])
     assert result.exit_code == 0
     docker_client_mock.push.assert_called_with(
-        'registry.io/user/project:test', decode=True, stream=True)
+        'registry.io/user/project:test', decode=True, stream=True,
+        auth_config={'username': 'abcdef', 'password': ' '})
     assert test_mock.call_count == 0
