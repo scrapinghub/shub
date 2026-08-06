@@ -5,7 +5,7 @@ from unittest import mock
 
 from click.testing import CliRunner
 
-from shub import items, log, requests
+from shub import items, log, requests, jobmeta, stats
 
 
 class JobResourceTest(unittest.TestCase):
@@ -34,6 +34,15 @@ class JobResourceTest(unittest.TestCase):
             self.runner.invoke(cmd_mod.cli, ('1/2/3', '-f'))
             self.assertTrue(mock_jri.call_args[1]['follow'])
 
+    def _test_mock_jobmeta(self, cmd_mod, mocked_value, expected_result):
+        jobid = '1/2/3'
+        with mock.patch.object(cmd_mod, 'get_job', autospec=True) as mock_gj:
+            mock_gj.return_value._metadata_updated = time.time()
+            mock_gj.return_value = mock.PropertyMock(metadata=mocked_value)
+            result = self.runner.invoke(cmd_mod.cli, (jobid,))
+            mock_gj.assert_called_once_with(jobid)
+            self.assertEqual(expected_result, json.loads(result.output))
+
     def test_items(self):
         self._test_prints_objects(items, 'items')
         self._test_forwards_follow(items)
@@ -41,6 +50,19 @@ class JobResourceTest(unittest.TestCase):
     def test_requests(self):
         self._test_prints_objects(requests, 'requests')
         self._test_forwards_follow(requests)
+
+    def test_jobmeta(self):
+        mocked_jobmeta = {'foo': 'bar'}
+        self._test_mock_jobmeta(jobmeta, mocked_jobmeta, mocked_jobmeta)
+
+    def test_stats(self):
+        # For jobs without metadata, e.g. those are pending or cancelled
+        # before running
+        mocked_jobmeta = {'foo': 'bar'}
+        self._test_mock_jobmeta(stats, mocked_jobmeta, {})
+        # For jobs with metadata
+        mocked_jobmeta['scrapystats'] = {'bar': 'baz'}
+        self._test_mock_jobmeta(stats, mocked_jobmeta, mocked_jobmeta['scrapystats'])
 
     def test_log(self):
         objects = [
