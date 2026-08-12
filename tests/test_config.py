@@ -662,6 +662,7 @@ LOCAL_SCRAPINGHUB_YML = """
         external: key_ext
 """
 
+
 class LoadShubConfigTest(unittest.TestCase):
 
     def setUp(self):
