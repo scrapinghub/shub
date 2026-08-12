@@ -48,7 +48,6 @@ from shub.exceptions import (
     print_warning,
 )
 
-SCRAPY_CFG_FILE = os.path.expanduser("~/.scrapy.cfg")
 FALLBACK_ENCODING = 'utf-8'
 STDOUT_ENCODING = sys.stdout.encoding or FALLBACK_ENCODING
 LAST_N_LOGS = 30
@@ -504,32 +503,6 @@ def get_sources(use_closest=True):
         if closest_scrapy_cfg_path:
             sources.append(closest_scrapy_cfg_path)
     return sources
-
-
-def get_scrapycfg_targets(cfgfiles=None):
-    cfg = ConfigParser()
-    cfg.read(cfgfiles or [])
-    baset = dict(cfg.items('deploy')) if cfg.has_section('deploy') else {}
-    targets = {}
-    targets['default'] = baset
-    for x in cfg.sections():
-        if x.startswith('deploy:'):
-            t = baset.copy()
-            t.update(cfg.items(x))
-            targets[x[7:]] = t
-    for tname, t in list(targets.items()):
-        try:
-            int(t.get('project', 0))
-        except ValueError:
-            # Don't import non-numeric project IDs, and also throw away the
-            # URL and credentials associated with these projects (since the
-            # project ID does not belong to SH, neither do the endpoint or the
-            # auth information)
-            del targets[tname]
-        if t.get('url', "").endswith('scrapyd/'):
-            t['url'] = t['url'][:-8]
-    targets.setdefault('default', {})
-    return targets
 
 
 def job_live(job, refresh_meta_after=60):

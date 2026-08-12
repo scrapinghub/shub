@@ -1,6 +1,6 @@
 import unittest
 import textwrap
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import yaml
 from click.testing import CliRunner
@@ -17,8 +17,6 @@ VALID_KEY = 32 * '1'
 
 @patch('shub.login.GLOBAL_SCRAPINGHUB_YML_PATH', new='.scrapinghub.yml')
 @patch('shub.config.GLOBAL_SCRAPINGHUB_YML_PATH', new='.scrapinghub.yml')
-@patch('shub.config.NETRC_PATH', new='.netrc')
-@patch('shub.config.get_sources', new=MagicMock(return_value=[]))
 class LoginTest(AssertInvokeRaisesMixin, unittest.TestCase):
 
     def setUp(self):
