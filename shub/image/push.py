@@ -60,7 +60,7 @@ def push_cmd(target, version, username, password, email, apikey, insecure,
     image = config.get_image(target)
     username, password = utils.get_credentials(
         username=username, password=password, insecure=insecure,
-        apikey=apikey, target_apikey=config.get_apikey(target))
+        apikey=apikey, target_apikey=config.get_apikey(target, required=not apikey))
 
     if username:
         _execute_push_login(

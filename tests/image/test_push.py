@@ -231,3 +231,17 @@ def test_cli_skip_tests(docker_client_mock, test_mock, skip_tests_flag):
     docker_client_mock.push.assert_called_with(
         'registry.io/user/project:test', decode=True, stream=True)
     assert test_mock.call_count == 0
+
+
+@pytest.mark.usefixtures('logged_out')
+def test_cli_with_apikey_logged_out(docker_client_mock, test_mock):
+    docker_client_mock.login.return_value = {"Status": "Login Succeeded"}
+    docker_client_mock.push.return_value = [
+        {"status": "Successfully pushed"}
+    ]
+    result = CliRunner().invoke(
+        cli, ["dev", "--version", "test", "--apikey", "apikey"])
+    assert result.exit_code == 0, result.output
+    docker_client_mock.login.assert_called_with(
+        email=None, password=' ',
+        reauth=False, registry='registry.io', username='apikey')
