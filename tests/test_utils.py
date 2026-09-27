@@ -72,6 +72,16 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
         with patch('shub.utils.which', return_value=None):
             self.assertIsNone(utils.pwd_git_version())
 
+    @patch('shub.utils.which', return_value='vcs')
+    @patch('shub.utils.run_cmd', side_effect=['1a2b3c', 'user/feature'])
+    def test_pwd_git_version_clean(self, mock_run_cmd, mock_which):
+        self.assertEqual(utils.pwd_git_version(), '1a2b3c-userfeature')
+
+    @patch('shub.utils.which', return_value='vcs')
+    @patch('shub.utils.run_cmd', side_effect=['42', 'user/feature'])
+    def test_pwd_hg_version_clean(self, mock_run_cmd, mock_which):
+        self.assertEqual(utils.pwd_hg_version(), 'r42-userfeature')
+
     @patch('shub.utils.pwd_git_version', return_value='ver_GIT')
     @patch('shub.utils.pwd_hg_version', return_value='ver_HG')
     @patch('shub.utils.pwd_bzr_version', return_value='ver_BZR')

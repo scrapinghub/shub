@@ -271,8 +271,11 @@ def pwd_version():
                 ver = _last_line_of(run_python([setuppy, '--version']))
     if not ver:
         ver = str(int(time.time()))
-    ver = re.sub(r'[^\w.-]+', '', ver)
-    return ver
+    return _clean_version(ver)
+
+
+def _clean_version(ver):
+    return re.sub(r'[^\w.-]+', '', ver)
 
 
 def pwd_git_version():
@@ -287,7 +290,7 @@ def pwd_git_version():
         except SubcommandException:
             return None
     branch = run_cmd([git, 'rev-parse', '--abbrev-ref', 'HEAD'])
-    return f'{commit_id}-{branch}'
+    return _clean_version(f'{commit_id}-{branch}')
 
 
 def pwd_hg_version():
@@ -299,7 +302,7 @@ def pwd_hg_version():
     except SubcommandException:
         return None
     branch = run_cmd([hg, 'branch'])
-    return f'r{commit_id}-{branch}'
+    return _clean_version(f'r{commit_id}-{branch}')
 
 
 def pwd_bzr_version():
