@@ -69,20 +69,8 @@ def test_wrap():
 
 
 def test_format_system_deps():
-    # no deps at all
-    assert _format_system_deps('-', None) is None
-    # base deps only
-    assert _format_system_deps('a,b,cd', None) == (
-        "RUN apt-get update -qq && \\\n"
-        "    apt-get install -qy a b cd && \\\n"
-        "    rm -rf /var/lib/apt/lists/*")
-    # base & additional deps only
-    assert _format_system_deps('a,b,cd', 'ef,hk,b') == (
-        "RUN apt-get update -qq && \\\n"
-        "    apt-get install -qy a b cd ef hk && \\\n"
-        "    rm -rf /var/lib/apt/lists/*")
-    # additional deps only
-    assert _format_system_deps('-', 'ef,hk,b') == (
+    assert _format_system_deps(None) is None
+    assert _format_system_deps('ef,hk,b,ef') == (
         "RUN apt-get update -qq && \\\n"
         "    apt-get install -qy b ef hk && \\\n"
         "    rm -rf /var/lib/apt/lists/*")

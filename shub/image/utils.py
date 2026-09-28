@@ -13,7 +13,7 @@ from shub import config as shub_config
 from shub import utils as shub_utils
 from shub.exceptions import (
     ShubException, NotFoundException, BadConfigException, RemoteErrorException,
-    ShubDeprecationWarning, print_warning, BadParameterException,
+    BadParameterException,
 )
 
 if sys.version_info < (3, 10):
@@ -46,26 +46,12 @@ You can learn about Docker at https://www.docker.com/.
 
 def is_verbose():
     ctx = click.get_current_context(True)
-    return ctx and (ctx.params.get('verbose') or ctx.params.get('debug'))
+    return ctx and ctx.params.get('verbose')
 
 
 def debug_log(msg):
     if is_verbose():
         click.echo(msg)
-
-
-def deprecate_debug_parameter(ctx, param, value):
-    if value:
-        print_warning("-d/--debug parameter is deprecated. "
-                      "Please use -v/--verbose parameter instead.",
-                      ShubDeprecationWarning)
-    return value
-
-
-def deprecate_async_parameter(ctx, param, value):
-    if value:
-        print_warning("--async parameter is deprecated.", ShubDeprecationWarning)
-    return value
 
 
 def get_project_dir():

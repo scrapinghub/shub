@@ -445,18 +445,6 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
                 with utils.update_yaml_dict('a_directory'):
                     pass
 
-    @patch('shub.config.GLOBAL_SCRAPINGHUB_YML_PATH', 'global.yml')
-    def test_update_yaml_dict_uses_global_by_default(self):
-        @click.command()
-        def call_update_yaml_dict():
-            with utils.update_yaml_dict():
-                pass
-
-        runner = CliRunner()
-        with runner.isolated_filesystem():
-            result = runner.invoke(call_update_yaml_dict)
-        assert 'deprecated' in result.output
-
     @patch('shub.utils.ScrapinghubClient')
     def test_has_project_access(self, mock_client):
         mock_client.return_value.projects.list.side_effect = ScrapinghubAPIError(

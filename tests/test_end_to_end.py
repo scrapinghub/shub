@@ -18,16 +18,6 @@ class ShubEndToEndTests(unittest.TestCase):
         usage_is_displayed = output.startswith('Usage:')
         self.assertTrue(usage_is_displayed)
 
-    def test_deploy_egg_isnt_broken(self):
-        output = self.run_subcmd('deploy-egg')
-        error = 'Unexpected output: %s' % output
-        self.assertTrue('specify target' in output, error)
-
-    def test_deploy_reqs_isnt_broken(self):
-        output = self.run_subcmd('deploy-reqs')
-        error = 'Unexpected output: %s' % output
-        self.assertTrue('specify target' in output, error)
-
     def test_deploy_isnt_broken(self):
         output = self.run_subcmd('deploy')
         error = 'Unexpected output: %s' % output

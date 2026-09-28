@@ -1,6 +1,5 @@
 import netrc
 import os
-import warnings
 from collections import namedtuple
 from urllib.parse import urlparse, urlunparse
 
@@ -75,26 +74,16 @@ class ShubConfig:
 
     def load(self, stream):
         """Load Scrapinghub configuration from stream."""
-        # flag to mark if images/default was used in the config file
-        check_default_image_scope = False
         try:
             yaml_cfg = yaml.safe_load(stream)
             if not yaml_cfg:
                 return
             for option, shortcut in self.SHORTCUTS.items():
                 option_conf = getattr(self, option)
-                yaml_option_conf = yaml_cfg.get(option, {})
+                # self.images only holds the image shortcut, as 'default'
+                yaml_option_conf = (
+                    {} if option == 'images' else yaml_cfg.get(option, {}))
                 option_conf.update(yaml_option_conf)
-                if option == 'images' and yaml_option_conf:
-                    print_warning(
-                        "Images section is deprecated, please replace it with "
-                        "global `image` setting or define `image` setting for "
-                        "the project.\n  Check for additional details in {}."
-                        .format(CONFIG_DOCS_LINK),
-                        category=ShubDeprecationWarning
-                    )
-                    if 'default' in yaml_option_conf:
-                        check_default_image_scope = True
                 if shortcut in yaml_cfg:
                     # We explicitly check yaml_option_conf and not option_conf.
                     # It is okay to set conflicting defaults if they are in
@@ -114,16 +103,6 @@ class ShubConfig:
         except (yaml.YAMLError, AttributeError):
             # AttributeError: stream is valid YAML but not dictionary-like
             raise ConfigParseException
-        # fail if `projects` section has keys not found in `images`
-        if (check_default_image_scope and
-                not set(self.projects).issubset(set(self.images))):
-            raise BadConfigException(
-                    "Found ambigious configuration: default image has global "
-                    "scope now, but some projects were not using custom "
-                    "images and can be broken now. Please fix your config by "
-                    "replacing `images` section with `image` settings. Check "
-                    "for additional details in {}".format(CONFIG_DOCS_LINK)
-                )
         self._check_endpoints()
 
     def load_file(self, filename):
@@ -168,6 +147,15 @@ class ShubConfig:
         self._check_endpoints()
 
     def save(self, path=None, options=None):
+        if path is None:
+            print_warning(
+                "Calling ShubConfig.save() without a path is deprecated, "
+                "pass GLOBAL_SCRAPINGHUB_YML_PATH from shub.config to save "
+                "to the global configuration file.",
+                ShubDeprecationWarning,
+            )
+            path = GLOBAL_SCRAPINGHUB_YML_PATH
+
         def _project_id_as_int(project):
             """Copy project and return it with the ID casted to int to make
             sure it is exported as "123" and not "'123'"
@@ -301,41 +289,24 @@ class ShubConfig:
             apikey=apikey,
             stack=(self.stacks.get(proj['stack'], proj['stack'])
                    if 'stack' in proj else self.stacks.get('default')),
-            image=self._select_image_for_project(target, proj),
+            image=self._select_image_for_project(proj),
             requirements_file=requirements,
             version=self.get_version(),
             eggs=eggs,
         )
 
-    def _select_image_for_project(self, target, project):
-        """Helper to select image for a project (or its target).
-
-        The select logic is the following:
-        - image defined per project has highest priority,
-        - images section is marked as deprecated, but still in force:
-          if target is defined in images - use a corresponding image,
-        - if image is not defined, but there's a default image set by
-          image or images/default settings - use it.
+    def _select_image_for_project(self, project):
+        """Helper to select image for a project: the image defined for the
+        project, or else the default image set by the image setting.
 
         The function responds with a custom image name string
         (or None/False meaning regular stack-based deploy).
         """
-        image = project.get('image', self.images.get(
-            target, self.images.get('default')))
+        image = project.get('image', self.images.get('default'))
         # aliases to use internal scrapinghub registry as image storage
         if image is True or image == 'scrapinghub':
             image = SH_IMAGES_REPOSITORY.format(project=project['id'])
         return image
-
-    def get_target(self, target, auth_required=True):
-        """Return (project_id, endpoint, apikey) for given target."""
-        warnings.warn("get_target is deprecated, use get_target_conf instead")
-        targetconf = self.get_target_conf(target, auth_required=auth_required)
-        return (
-            targetconf.project_id,
-            targetconf.endpoint,
-            targetconf.apikey
-        )
 
     def get_project_id(self, target):
         return self.get_target_conf(target, auth_required=False).project_id
@@ -528,12 +499,6 @@ def load_shub_config(load_global=True, load_local=True, load_env=True):
         if 'SHUB_APIKEY' in os.environ:
             conf.apikeys['default'] = os.environ['SHUB_APIKEY']
     return conf
-
-
-def get_target(target, auth_required=True):
-    """Load shub configuration and return target."""
-    conf = load_shub_config()
-    return conf.get_target(target, auth_required=auth_required)
 
 
 def get_target_conf(target, auth_required=True):

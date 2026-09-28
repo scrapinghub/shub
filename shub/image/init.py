@@ -59,14 +59,6 @@ def list_recommended_python_reqs(ctx, param, value):
     ctx.exit()
 
 
-def _deprecate_base_deps_parameter(ctx, param, value):
-    if value:
-        click.echo("WARNING: --base-deps parameter is deprecated. "
-                   "Please use --add-deps parameter instead.",
-                   err=True)
-    return value
-
-
 @click.command(help=HELP, short_help=SHORT_HELP)
 @click.option("--list-recommended-reqs", is_flag=True, is_eager=True,
               expose_value=False, callback=list_recommended_python_reqs,
@@ -75,14 +67,11 @@ def _deprecate_base_deps_parameter(ctx, param, value):
               help="project name to get settings module from scrapy.cfg")
 @click.option("--base-image", default=DEFAULT_BASE_IMAGE,
               help="base docker image name")
-@click.option("--base-deps", default='',
-              help="[DEPRECATED] a comma-separated list with base system dependencies",
-              callback=_deprecate_base_deps_parameter)
 @click.option("--add-deps",
               help="a comma-separated list with additional system dependencies")
 @click.option("--requirements", default="requirements.txt",
               help="path to requirements.txt")
-def cli(project, base_image, base_deps, add_deps, requirements):
+def cli(project, base_image, add_deps, requirements):
     closest_scrapy_cfg = shub_utils.closest_file('scrapy.cfg')
     scrapy_config = shub_utils.get_config()
     if not closest_scrapy_cfg or not scrapy_config.has_option('settings', project):
@@ -98,7 +87,7 @@ def cli(project, base_image, base_deps, add_deps, requirements):
     shub_utils.create_default_setup_py(settings=settings_module)
     values = {
         'base_image':   base_image,
-        'system_deps':  _format_system_deps(base_deps, add_deps),
+        'system_deps':  _format_system_deps(add_deps),
         'system_env':   _format_system_env(settings_module),
         'requirements': _format_requirements(project_dir, requirements),
     }
@@ -111,13 +100,9 @@ def cli(project, base_image, base_deps, add_deps, requirements):
     click.echo(f"Dockerfile is saved to {dockefile_path}")
 
 
-def _format_system_deps(base_deps, add_deps):
+def _format_system_deps(add_deps):
     """Prepare a list with system dependencies install cmds"""
-    system_deps = base_deps.split(',') if base_deps != '-' else []
-    if add_deps:
-        system_add_deps = add_deps.split(',')
-        system_deps = list(set(system_deps + system_add_deps))
-    system_deps = sorted(filter(None, system_deps))
+    system_deps = sorted(set(filter(None, (add_deps or '').split(','))))
     if not system_deps:
         return
     commands = ["apt-get update -qq",

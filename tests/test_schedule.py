@@ -18,7 +18,7 @@ class ScheduleTest(unittest.TestCase):
 
     @mock.patch('shub.schedule.schedule_spider', autospec=True)
     def test_schedules_job_if_input_is_ok(self, mock_schedule):
-        proj, endpoint, apikey = self.conf.get_target('default')
+        proj, endpoint, apikey = self.conf.get_target_conf('default')[:3]
         # Default
         self.runner.invoke(schedule.cli, ['spider'])
         mock_schedule.assert_called_with(
@@ -28,7 +28,7 @@ class ScheduleTest(unittest.TestCase):
         mock_schedule.assert_called_with(
             123, endpoint, apikey, 'spider', (), (), 2, None, (), ())
         # Other endpoint
-        proj, endpoint, apikey = self.conf.get_target('vagrant')
+        proj, endpoint, apikey = self.conf.get_target_conf('vagrant')[:3]
         self.runner.invoke(schedule.cli, ['vagrant/spider'])
         mock_schedule.assert_called_with(
             proj, endpoint, apikey, 'spider', (), (), 2, None, (), ())
