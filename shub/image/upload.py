@@ -1,6 +1,6 @@
 import click
 
-from shub.config import list_targets_callback
+from shub.config import get_version, list_targets_callback
 from shub.image import build
 from shub.image import push
 from shub.image import deploy
@@ -51,6 +51,7 @@ def cli(target, debug, verbose, version, username, password, email,
 def upload_cmd(target, version, username=None, password=None, email=None,
                apikey=None, insecure=False, async_=False, skip_tests=False,
                reauth=False, no_cache=False, build_arg=(), filename='Dockerfile'):
+    version = version or get_version()
     build.build_cmd(target, version, skip_tests, no_cache, build_arg, filename=filename)
     # skip tests for push command anyway because they run in build command if not skipped
     push.push_cmd(target, version, username, password, email, apikey,
