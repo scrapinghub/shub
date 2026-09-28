@@ -39,8 +39,25 @@ SHORT_HELP = "Schedule a spider to run on Scrapy Cloud"
 DEFAULT_PRIORITY = 2
 
 
+def _complete_spider(ctx, param, incomplete):
+    target, _, prefix = incomplete.rpartition('/')
+    try:
+        targetconf = get_target_conf(target or 'default')
+        client = ScrapinghubClient(targetconf.apikey,
+                                   dash_endpoint=targetconf.endpoint)
+        spiders = client.get_project(targetconf.project_id).spiders.list()
+    except Exception:
+        return []
+    return [
+        f"{target}/{spider['id']}" if target else spider['id']
+        for spider in spiders
+        if spider['id'].startswith(prefix)
+    ]
+
+
 @click.command(help=HELP, short_help=SHORT_HELP)
-@click.argument('spider', type=click.STRING)
+@click.argument('spider', type=click.STRING,
+                shell_complete=_complete_spider)
 @click.option('-a', '--argument',
               help='Spider argument (-a name=value)', multiple=True)
 @click.option('-s', '--set',
