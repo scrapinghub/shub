@@ -91,6 +91,9 @@ Option            Description                                   Scope
 ``image``         Whether to use a custom Docker image on       global default
                   deploy. See :ref:`deploy-custom-image`.       and project-\
                                                                 specific
+``dockerfile``    Path to the Dockerfile to build the custom    project-\
+                  Docker image from. Defaults to                specific
+                  :file:`Dockerfile`.
 ``version``       Version tag to use when deploying. This can   global only
                   be an arbitrary string or one of the magic
                   keywords ``AUTO`` (default), ``GIT``, or
