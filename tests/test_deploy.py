@@ -118,6 +118,25 @@ class DeployTest(AssertInvokeRaisesMixin, unittest.TestCase):
             self.runner.invoke(deploy.cli, ('5',))
         mock_upload_cmd.assert_called_once_with('5', None)
 
+    @patch('shub.deploy.upload_cmd')
+    def test_custom_deploy_build_egg(self, mock_upload_cmd):
+        with self.runner.isolated_filesystem():
+            self._make_project()
+            result = self.runner.invoke(
+                deploy.cli, ('custom2', '--build-egg', 'out.egg'))
+            self.assertEqual(0, result.exit_code, result.output)
+            self.assertTrue(zipfile.is_zipfile('out.egg'))
+        mock_upload_cmd.assert_not_called()
+
+    @patch('shub.deploy.upload_cmd')
+    def test_custom_deploy_egg(self, mock_upload_cmd):
+        with self.runner.isolated_filesystem():
+            self._make_project()
+            self.assertInvokeRaises(
+                BadParameterException, deploy.cli,
+                ('custom2', '--egg', 'some.egg'))
+        mock_upload_cmd.assert_not_called()
+
     def test_custom_deploy_bad_registry(self):
         with self.runner.isolated_filesystem():
             self._make_project()

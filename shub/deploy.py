@@ -72,13 +72,20 @@ SHORT_HELP = "Deploy Scrapy project to Scrapy Cloud"
               is_flag=True)
 def cli(target, version, debug, egg, build_egg, verbose, keep_log,
         ignore_size):
-    conf, image = load_shub_config(), None
-    if not build_egg:
-        create_scrapinghub_yml_wizard(conf, target=target)
+    conf = load_shub_config()
+    if build_egg:
+        deploy_cmd(target, version, debug, egg, build_egg, verbose, keep_log,
+                   conf=conf)
+        return
+    create_scrapinghub_yml_wizard(conf, target=target)
     image = conf.get_target_conf(target).image
     if not image:
         deploy_cmd(target, version, debug, egg, build_egg, verbose, keep_log,
                    conf=conf)
+    elif egg:
+        raise BadParameterException(
+            "--egg cannot be used to deploy to a project that uses a custom "
+            "Docker image.")
     elif image.startswith(SH_IMAGES_REGISTRY):
         upload_cmd(target, version)
     else:
