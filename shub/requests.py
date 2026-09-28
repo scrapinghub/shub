@@ -1,7 +1,6 @@
 import click
 
-from shub.utils import job_resource_iter, get_job
-
+from shub.utils import get_job, job_resource_iter
 
 HELP = """
 Given a job ID, fetch requests made for that job from Scrapy Cloud and output
@@ -35,12 +34,14 @@ SHORT_HELP = "Fetch requests from Scrapy Cloud"
 
 
 @click.command(help=HELP, short_help=SHORT_HELP)
-@click.argument('job_id')
-@click.option('-f', '--follow', help='output new requests as they are made',
-              is_flag=True)
-@click.option('-n', '--tail', help='output last N requests only', type=int)
+@click.argument("job_id")
+@click.option(
+    "-f", "--follow", help="output new requests as they are made", is_flag=True
+)
+@click.option("-n", "--tail", help="output last N requests only", type=int)
 def cli(job_id, follow, tail):
     job = get_job(job_id)
-    for item in job_resource_iter(job, job.requests, output_json=True,
-                                  follow=follow, tail=tail):
+    for item in job_resource_iter(
+        job, job.requests, output_json=True, follow=follow, tail=tail
+    ):
         click.echo(item)

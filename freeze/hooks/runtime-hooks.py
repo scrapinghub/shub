@@ -1,5 +1,5 @@
 import os
 import sys
+from pathlib import Path
 
-os.environ['REQUESTS_CA_BUNDLE'] = os.path.join(
-    sys._MEIPASS, 'requests', 'cacert.pem')
+os.environ["REQUESTS_CA_BUNDLE"] = str(Path(sys._MEIPASS, "requests", "cacert.pem"))

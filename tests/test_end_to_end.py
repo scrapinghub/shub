@@ -1,11 +1,12 @@
-import unittest
-from click.testing import CliRunner
-from shub import tool
 import os
+import unittest
+
+from click.testing import CliRunner
+
+from shub import tool
 
 
-@unittest.skipUnless(os.getenv('USING_TOX'),
-                     'End to end tests only run via TOX')
+@unittest.skipUnless(os.getenv("USING_TOX"), "End to end tests only run via TOX")
 class ShubEndToEndTests(unittest.TestCase):
     def setUp(self):
         self.runner = CliRunner()
@@ -14,26 +15,26 @@ class ShubEndToEndTests(unittest.TestCase):
         return self.runner.invoke(tool.cli, [subcmd]).output
 
     def test_usage_is_displayed_if_no_arg_is_provided(self):
-        output = self.run_subcmd('')
-        usage_is_displayed = output.startswith('Usage:')
-        self.assertTrue(usage_is_displayed)
+        output = self.run_subcmd("")
+        usage_is_displayed = output.startswith("Usage:")
+        assert usage_is_displayed
 
     def test_deploy_egg_isnt_broken(self):
-        output = self.run_subcmd('deploy-egg')
-        error = 'Unexpected output: %s' % output
-        self.assertTrue('specify target' in output, error)
+        output = self.run_subcmd("deploy-egg")
+        error = f"Unexpected output: {output}"
+        assert "specify target" in output, error
 
     def test_deploy_reqs_isnt_broken(self):
-        output = self.run_subcmd('deploy-reqs')
-        error = 'Unexpected output: %s' % output
-        self.assertTrue('specify target' in output, error)
+        output = self.run_subcmd("deploy-reqs")
+        error = f"Unexpected output: {output}"
+        assert "specify target" in output, error
 
     def test_deploy_isnt_broken(self):
-        output = self.run_subcmd('deploy')
-        error = 'Unexpected output: %s' % output
-        self.assertTrue('Cannot find project' in output, error)
+        output = self.run_subcmd("deploy")
+        error = f"Unexpected output: {output}"
+        assert "Cannot find project" in output, error
 
     def test_fetch_eggs_isnt_broken(self):
-        output = self.run_subcmd('fetch-eggs')
-        error = 'Unexpected output: %s' % output
-        self.assertTrue('specify target' in output, error)
+        output = self.run_subcmd("fetch-eggs")
+        error = f"Unexpected output: {output}"
+        assert "specify target" in output, error

@@ -1,10 +1,9 @@
 import logging
-from datetime import datetime
-
-from shub.utils import job_resource_iter, get_job
+from datetime import datetime, timezone
 
 import click
 
+from shub.utils import get_job, job_resource_iter
 
 HELP = """
 Given a job ID, fetch the log of that job from Scrapy Cloud and print it.
@@ -37,21 +36,28 @@ SHORT_HELP = "Fetch log from Scrapy Cloud"
 
 
 @click.command(help=HELP, short_help=SHORT_HELP)
-@click.argument('job_id')
-@click.option('-f', '--follow', help='output new log entries as they are '
-              'produced', is_flag=True)
-@click.option('-n', '--tail', help='output last N log entries only', type=int)
-@click.option('--json', 'json_', help='output log entries in JSON', is_flag=True, default=False)
+@click.argument("job_id")
+@click.option(
+    "-f", "--follow", help="output new log entries as they are produced", is_flag=True
+)
+@click.option("-n", "--tail", help="output last N log entries only", type=int)
+@click.option(
+    "--json", "json_", help="output log entries in JSON", is_flag=True, default=False
+)
 def cli(job_id, follow, tail, json_):
     job = get_job(job_id)
-    for item in job_resource_iter(job, job.logs, follow=follow, tail=tail, output_json=json_):
+    for item in job_resource_iter(
+        job, job.logs, follow=follow, tail=tail, output_json=json_
+    ):
         if json_:
             click.echo(item)
         else:
             click.echo(
                 "{} {} {}".format(
-                    datetime.utcfromtimestamp(item['time']/1000),
-                    logging.getLevelName(int(item['level'])),
-                    item['message']
+                    datetime.fromtimestamp(item["time"] / 1000, timezone.utc).replace(
+                        tzinfo=None
+                    ),
+                    logging.getLevelName(int(item["level"])),
+                    item["message"],
                 )
             )

@@ -1,31 +1,35 @@
 import json
 import multiprocessing
-from threading import Thread
-from socketserver import TCPServer
-from http.server import SimpleHTTPRequestHandler
 import urllib.parse
+from http.server import SimpleHTTPRequestHandler
+from socketserver import TCPServer
+from threading import Thread
+
 
 class Handler(SimpleHTTPRequestHandler):
-
     def _do_any(self):
-        method = self.command
-        path, _, querystr = self.path.partition('?')
+        path, _, querystr = self.path.partition("?")
         query = urllib.parse.parse_qs(querystr)
-        content_len = int(self.headers.get('content-length', 0))
+        content_len = int(self.headers.get("content-length", 0))
         body = self.rfile.read(content_len)
         headers = self.headers.get_params()
         print(self)
 
-        self.server.pipe.send({
-            'path': path, 'query': query, 'body': body,
-            'method': self.command, 'headers': headers,
-        })
+        self.server.pipe.send(
+            {
+                "path": path,
+                "query": query,
+                "body": body,
+                "method": self.command,
+                "headers": headers,
+            }
+        )
         if not self.server.pipe.poll(10):
-            self.send_error(500, 'Pipe hung')
+            self.send_error(500, "Pipe hung")
 
         status, headers, body = self.server.pipe.recv()
         if not isinstance(body, bytes):
-            body = json.dumps(body).encode('utf8') + b'\n'
+            body = json.dumps(body).encode("utf8") + b"\n"
 
         self.send_response(status)
         for hn, hv in headers or ():
@@ -57,5 +61,3 @@ def run(bind_at):
     httpd = MyTCPServer(bind_at, Handler)
     threadit(httpd.serve_forever)
     return p1
-
-

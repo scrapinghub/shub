@@ -1,9 +1,11 @@
+import contextlib
 import os
 import re
-import sys
 import shutil
+import sys
 import tempfile
-import contextlib
+from importlib import metadata
+from pathlib import Path
 
 import click
 import yaml
@@ -12,18 +14,17 @@ from tqdm import tqdm
 from shub import config as shub_config
 from shub import utils as shub_utils
 from shub.exceptions import (
-    ShubException, NotFoundException, BadConfigException, RemoteErrorException,
-    ShubDeprecationWarning, print_warning, BadParameterException,
+    BadConfigException,
+    BadParameterException,
+    NotFoundException,
+    RemoteErrorException,
+    ShubDeprecationWarning,
+    ShubException,
+    print_warning,
 )
 
-if sys.version_info < (3, 10):
-    import importlib_metadata as metadata
-else:
-    from importlib import metadata
-
-
-STATUS_FILE_LOCATION = '.releases'
-_VALIDSPIDERNAME = re.compile('^[a-z0-9][-._a-z0-9]+$', re.I)
+STATUS_FILE_LOCATION = ".releases"
+_VALIDSPIDERNAME = re.compile("^[a-z0-9][-._a-z0-9]+$", re.IGNORECASE)
 
 DOCKER_PY_UNAVAILABLE_MSG = """\
 You need docker>=2.0.0 python package installed to run the command.
@@ -46,7 +47,7 @@ You can learn about Docker at https://www.docker.com/.
 
 def is_verbose():
     ctx = click.get_current_context(True)
-    return ctx and (ctx.params.get('verbose') or ctx.params.get('debug'))
+    return ctx and (ctx.params.get("verbose") or ctx.params.get("debug"))
 
 
 def debug_log(msg):
@@ -56,9 +57,11 @@ def debug_log(msg):
 
 def deprecate_debug_parameter(ctx, param, value):
     if value:
-        print_warning("-d/--debug parameter is deprecated. "
-                      "Please use -v/--verbose parameter instead.",
-                      ShubDeprecationWarning)
+        print_warning(
+            "-d/--debug parameter is deprecated. "
+            "Please use -v/--verbose parameter instead.",
+            ShubDeprecationWarning,
+        )
     return value
 
 
@@ -69,46 +72,45 @@ def deprecate_async_parameter(ctx, param, value):
 
 
 def get_project_dir():
-    """ A helper to get project root dir.
-        Used by init/build command to locate Dockerfile.
+    """A helper to get project root dir.
+    Used by init/build command to locate Dockerfile.
     """
-    closest = shub_utils.closest_file('scrapinghub.yml')
+    closest = shub_utils.closest_file("scrapinghub.yml")
     if not closest:
-        raise BadConfigException(
-            "Not inside a project: scrapinghub.yml not found.")
-    return os.path.dirname(closest)
+        raise BadConfigException("Not inside a project: scrapinghub.yml not found.")
+    return str(Path(closest).parent)
 
 
 def get_docker_client(validate=True):
     """A helper to initiate Docker client"""
     try:
-        import docker
-    except ImportError:
-        raise ImportError(DOCKER_PY_UNAVAILABLE_MSG)
+        import docker  # noqa: PLC0415
+    except ImportError as e:
+        raise ImportError(DOCKER_PY_UNAVAILABLE_MSG) from e
     for dep in metadata.distributions():
-        if dep.name == 'docker-py':
+        if dep.name == "docker-py":
             raise ImportError(DOCKER_PY_UNAVAILABLE_MSG)
 
-    docker_host = os.environ.get('DOCKER_HOST')
+    docker_host = os.environ.get("DOCKER_HOST")
     tls_config = None
-    if os.environ.get('DOCKER_TLS_VERIFY', False):
-        tls_cert_path = os.environ.get('DOCKER_CERT_PATH')
-        if not tls_cert_path:
-            tls_cert_path = os.path.join(os.path.expanduser('~'), '.docker')
-        apply_path_fun = lambda name: os.path.join(tls_cert_path, name)  # noqa
+    if os.environ.get("DOCKER_TLS_VERIFY"):
+        tls_cert_path = Path(
+            os.environ.get("DOCKER_CERT_PATH") or Path("~/.docker").expanduser()
+        )
         tls_config = docker.tls.TLSConfig(
-            client_cert=(apply_path_fun('cert.pem'),
-                         apply_path_fun('key.pem')),
-            verify=apply_path_fun('ca.pem'),
-            assert_hostname=False)
-        docker_host = docker_host.replace('tcp://', 'https://')
-    version = os.environ.get('DOCKER_API_VERSION', 'auto')
+            client_cert=(
+                str(tls_cert_path / "cert.pem"),
+                str(tls_cert_path / "key.pem"),
+            ),
+            verify=str(tls_cert_path / "ca.pem"),
+            assert_hostname=False,
+        )
+        docker_host = docker_host.replace("tcp://", "https://")
+    version = os.environ.get("DOCKER_API_VERSION", "auto")
 
     # If it returns an error, check if you have the old docker-py installed
     # together with the new docker lib, and uninstall docker-py.
-    client = docker.APIClient(base_url=docker_host,
-                              version=version,
-                              tls=tls_config)
+    client = docker.APIClient(base_url=docker_host, version=version, tls=tls_config)
     if validate:
         validate_connection_with_docker_daemon(client)
     return client
@@ -117,22 +119,22 @@ def get_docker_client(validate=True):
 def validate_connection_with_docker_daemon(client):
     try:
         client.version()
-    except:  # noqa
-        raise ShubException(DOCKER_UNAVAILABLE_MSG)
+    except Exception as e:
+        raise ShubException(DOCKER_UNAVAILABLE_MSG) from e
 
 
 def format_image_name(image_name, image_tag):
     """Format image name using image tag"""
-    parts = image_name.rsplit('/', 1)
+    parts = image_name.rsplit("/", 1)
     # check if tag is already here
-    if ':' in parts[-1]:
+    if ":" in parts[-1]:
         # change name to shorter version w/o existing tag
-        click.echo('Please use --version param to specify tag')
-        image_name = image_name.rsplit(':', 1)[0]
+        click.echo("Please use --version param to specify tag")
+        image_name = image_name.rsplit(":", 1)[0]
     if not image_tag:
         config = shub_config.load_shub_config()
         image_tag = config.get_version()
-    return f'{image_name}:{image_tag}'
+    return f"{image_name}:{image_tag}"
 
 
 def get_image_registry(image_name):
@@ -147,14 +149,16 @@ def get_image_registry(image_name):
      - hostcomponent := /([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9])/
     https://github.com/docker/distribution/blob/master/reference/reference.go
     """
-    components = image_name.split('/')
-    if len(components) > 1 and any(sym in components[0] for sym in '.:'):
+    components = image_name.split("/")
+    if len(components) > 1 and any(sym in components[0] for sym in ".:"):
         return components[0]
+    return None
 
 
-def get_credentials(username=None, password=None, insecure=False,
-                    apikey=None, target_apikey=None):
-    """ A helper function to get credentials based on cmdline options.
+def get_credentials(
+    username=None, password=None, insecure=False, apikey=None, target_apikey=None
+):
+    """A helper function to get credentials based on cmdline options.
 
     Returns a tuple with 2 strings: (username, password).
 
@@ -165,19 +169,18 @@ def get_credentials(username=None, password=None, insecure=False,
     if insecure:
         if username or password:
             raise BadParameterException(
-                'Insecure credentials not compatible with username/password')
+                "Insecure credentials not compatible with username/password"
+            )
         return None, None
-    elif apikey:
-        return apikey, ' '
-    elif username:
+    if apikey:
+        return apikey, " "
+    if username:
         if password is None:
-            raise BadParameterException(
-                'Password is required when passing username.')
+            raise BadParameterException("Password is required when passing username.")
         return username, password
-    elif password:
-        raise BadParameterException(
-            'Username is required when passing password.')
-    return target_apikey, ' '
+    if password:
+        raise BadParameterException("Username is required when passing password.")
+    return target_apikey, " "
 
 
 def store_status_url(status_url, limit):
@@ -200,43 +203,38 @@ def store_status_url(status_url, limit):
 
 
 def load_status_url(status_id):
-    """ Load status url from file by status_id"""
-    if not os.path.isfile(STATUS_FILE_LOCATION):
-        raise NotFoundException(
-            f'Status file is not found at {STATUS_FILE_LOCATION}')
+    """Load status url from file by status_id"""
+    if not Path(STATUS_FILE_LOCATION).is_file():
+        raise NotFoundException(f"Status file is not found at {STATUS_FILE_LOCATION}")
     data = _load_status_file(STATUS_FILE_LOCATION)
     # return latest status url if status id is not provided
     if not isinstance(status_id, int) and data:
         max_status_id = max(data.keys())
-        click.echo('Getting results for latest status id {}.'
-                   .format(max_status_id))
+        click.echo(f"Getting results for latest status id {max_status_id}.")
         return data[max_status_id]
     if status_id not in data:
-        raise NotFoundException(
-            f"Status url with id {status_id} is not found")
+        raise NotFoundException(f"Status url with id {status_id} is not found")
     return data[status_id]
 
 
 def _load_status_file(path):
-    """ Open status file and parse it """
+    """Open status file and parse it"""
     data = {}
-    if not os.path.isfile(path):
+    if not Path(path).is_file():
         return data
-    with open(path) as f:
+    with Path(path).open() as f:
         try:
             data = yaml.safe_load(f)
         except yaml.YAMLError as exc:
-            raise BadConfigException(
-                f"Error reading releases file:\n{exc}")
+            raise BadConfigException(f"Error reading releases file:\n{exc}") from exc
     if not isinstance(data, dict):
-        raise BadConfigException(
-            f"Releases file has wrong format ({data}).")
+        raise BadConfigException(f"Releases file has wrong format ({data}).")
     return data
 
 
 def _update_status_file(data, path):
-    """ Save status file with updated data """
-    with open(path, 'w') as status_file:
+    """Save status file with updated data"""
+    with Path(path).open("w") as status_file:
         yaml.dump(data, status_file, default_flow_style=False)
 
 
@@ -250,7 +248,7 @@ def valid_spiders(entries):
     return sorted(filter(_VALIDSPIDERNAME.match, entries))
 
 
-def ensure_unicode(s, encoding='utf-8'):
+def ensure_unicode(s, encoding="utf-8"):
     return s.decode(encoding) if isinstance(s, bytes) else s
 
 
@@ -260,6 +258,7 @@ class BaseProgress:
     Base implementation stores events iterator and walks through it with
     show() method, handle_event() logic mostly depends on operation.
     """
+
     def __init__(self, events):
         self.events = events
 
@@ -268,9 +267,8 @@ class BaseProgress:
             self.handle_event(event)
 
     def handle_event(self, event):
-        if 'error' in event:
-            tqdm.write("Error {}: {}".format(event['error'],
-                                             event['errorDetail']))
+        if "error" in event:
+            tqdm.write("Error {}: {}".format(event["error"], event["errorDetail"]))
             raise RemoteErrorException("Docker operation failed")
 
 
@@ -279,7 +277,7 @@ class ProgressBar(tqdm):
 
     def moveto(self, *args, **kwargs):
         super().moveto(*args, **kwargs)
-        if hasattr(self.fp, 'flush'):
+        if hasattr(self.fp, "flush"):
             self.fp.flush()
 
 
@@ -298,7 +296,7 @@ def create_progress_bar(total, desc, **kwargs):
         dynamic_ncols=True,
         # miniters improves progress on erratic updates caused by network
         miniters=1,
-        **kwargs
+        **kwargs,
     )
 
 

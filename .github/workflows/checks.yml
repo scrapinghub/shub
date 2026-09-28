@@ -16,7 +16,7 @@ jobs:
         include:
         - python-version: 3
           env:
-            TOXENV: flake8
+            TOXENV: pre-commit
         # Keep in sync with pyproject.toml’s tool.sphinx-scrapy.python-version.
         - python-version: "3.13"
           env:

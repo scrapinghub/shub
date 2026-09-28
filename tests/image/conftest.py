@@ -12,8 +12,11 @@ except ImportError:
     from inspect import getargspec as get_args
 
 from .utils import (
-    FakeProjectDirectory, add_scrapy_fake_config, add_sh_fake_config,
-    add_fake_dockerfile, add_fake_setup_py,
+    FakeProjectDirectory,
+    add_fake_dockerfile,
+    add_fake_setup_py,
+    add_scrapy_fake_config,
+    add_sh_fake_config,
 )
 
 
@@ -21,7 +24,7 @@ from .utils import (
 def docker_client_mock():
     """Docker client mock"""
     client_mock = mock.Mock()
-    with mock.patch('shub.image.utils.get_docker_client') as m:
+    with mock.patch("shub.image.utils.get_docker_client") as m:
         m.return_value = client_mock
         yield client_mock
 
@@ -41,21 +44,23 @@ def project_dir():
 def monkeypatch_bar_rate(monkeypatch):
     # Converting to List instead to unpacking the Tuple
     # because get_args returns different tuple sizes between py versions.
-    args = list(get_args(ProgressBar.format_meter))[0]
-    rate_arg_idx = args.index('rate')
+    args = next(iter(get_args(ProgressBar.format_meter)))
+    rate_arg_idx = args.index("rate")
 
     def override_rate(func):
 
         @wraps(func)
         def wrapper(*args, **kwargs):
             args = list(args)
-            if 'rate' in args:
-                args[rate_arg_idx] = 10 ** 6
-            elif 'rate' in kwargs:
-                kwargs['rate'] = 10 ** 6
+            if "rate" in args:
+                args[rate_arg_idx] = 10**6
+            elif "rate" in kwargs:
+                kwargs["rate"] = 10**6
             return func(*args, **kwargs)
 
         return wrapper
 
-    monkeypatch.setattr('shub.image.utils.ProgressBar.format_meter',
-                        staticmethod(override_rate(ProgressBar.format_meter)))
+    monkeypatch.setattr(
+        "shub.image.utils.ProgressBar.format_meter",
+        staticmethod(override_rate(ProgressBar.format_meter)),
+    )
