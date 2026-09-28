@@ -476,7 +476,7 @@ def closest_file(filename, path=".", prevpath=None):
     """
     if path == prevpath:
         return None
-    path = Path(path).resolve()
+    path = Path(path).absolute()
     thisfile = path / filename
     if thisfile.exists():
         return str(thisfile)
