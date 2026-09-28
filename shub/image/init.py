@@ -195,7 +195,7 @@ def _format_eggs(project_dir, eggs):
         return
     commands, unpacked = [], []
     for path in paths:
-        rel_path = os.path.relpath(path, project_dir)
+        rel_path = os.path.relpath(path, project_dir).replace(os.sep, '/')
         if rel_path.startswith('..'):
             raise shub_exceptions.BadParameterException(
                 f"Egg {path} must be inside your project directory, "
