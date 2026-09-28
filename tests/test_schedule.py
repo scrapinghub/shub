@@ -22,20 +22,20 @@ class ScheduleTest(unittest.TestCase):
         # Default
         self.runner.invoke(schedule.cli, ['spider'])
         mock_schedule.assert_called_with(
-            proj, endpoint, apikey, 'spider', (), (), 2, None, (), ())
+            proj, endpoint, apikey, 'spider', (), (), 2, None, (), (), inherited=None)
         # Other project
         self.runner.invoke(schedule.cli, ['123/spider'])
         mock_schedule.assert_called_with(
-            123, endpoint, apikey, 'spider', (), (), 2, None, (), ())
+            123, endpoint, apikey, 'spider', (), (), 2, None, (), (), inherited=None)
         # Other endpoint
         proj, endpoint, apikey = self.conf.get_target('vagrant')
         self.runner.invoke(schedule.cli, ['vagrant/spider'])
         mock_schedule.assert_called_with(
-            proj, endpoint, apikey, 'spider', (), (), 2, None, (), ())
+            proj, endpoint, apikey, 'spider', (), (), 2, None, (), (), inherited=None)
         # Other project at other endpoint
         self.runner.invoke(schedule.cli, ['vagrant/456/spider'])
         mock_schedule.assert_called_with(
-            456, endpoint, apikey, 'spider', (), (), 2, None, (), ())
+            456, endpoint, apikey, 'spider', (), (), 2, None, (), (), inherited=None)
 
     @mock.patch('shub.schedule.ScrapinghubClient', autospec=True)
     def test_schedule_invalid_spider(self, mock_client):
@@ -70,6 +70,45 @@ class ScheduleTest(unittest.TestCase):
             {'SETT': '99', 'SETTWITHEQUAL': '10=10'},
             job_settings,
         )
+
+    @mock.patch('shub.schedule.get_job', autospec=True)
+    @mock.patch('shub.schedule.ScrapinghubClient', autospec=True)
+    def test_inherits(self, mock_client, mock_get_job):
+        mock_proj = mock_client.return_value.get_project.return_value
+        mock_get_job.return_value.metadata = {
+            'spider_args': {'A': '1', 'B': '2'},
+            'job_settings': {'S': 3},
+            'environment': {'E': '4'},
+            'tags': ['t1', 't2'],
+        }
+
+        self.runner.invoke(
+            schedule.cli,
+            'testspider -i 2/15 -a B=5 -t t2 -t t3'.split(),
+        )
+        mock_get_job.assert_called_with('2/15')
+        kwargs = mock_proj.jobs.run.call_args[1]
+        self.assertEqual(kwargs['job_args'], {'A': '1', 'B': '5'})
+        self.assertEqual(kwargs['job_settings'], {'S': 3})
+        self.assertEqual(kwargs['environment'], {'E': '4'})
+        self.assertEqual(kwargs['add_tag'], ('t1', 't2', 't3'))
+
+        self.runner.invoke(
+            schedule.cli,
+            'testspider -i 2/15 --inherit-settings --inherit-tags'.split(),
+        )
+        kwargs = mock_proj.jobs.run.call_args[1]
+        self.assertEqual(kwargs['job_args'], {})
+        self.assertEqual(kwargs['job_settings'], {'S': 3})
+        self.assertEqual(kwargs['environment'], {})
+        self.assertEqual(kwargs['add_tag'], ('t1', 't2'))
+
+    @mock.patch('shub.schedule.schedule_spider', autospec=True)
+    def test_inherit_flag_requires_inherit_from(self, mock_schedule):
+        result = self.runner.invoke(schedule.cli, 'testspider --inherit-args'.split())
+        self.assertEqual(result.exit_code, 64)
+        self.assertIn('--inherit-from', result.output)
+        mock_schedule.assert_not_called()
 
     @mock.patch('shub.schedule.ScrapinghubClient', autospec=True)
     def test_forwards_tags(self, mock_client):
