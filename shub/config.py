@@ -286,9 +286,7 @@ class ShubConfig:
             return pwd_git_version()
         if self.version == "HG":
             return pwd_hg_version()
-        if self.version:
-            return str(self.version)
-        return None
+        return str(self.version)
 
     def get_target_conf(self, target, auth_required=True):
         proj = self.get_project(target)
