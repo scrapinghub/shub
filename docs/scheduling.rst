@@ -69,3 +69,12 @@ to receive live updates::
     $ shub requests 1/1/1
     {"status": 200, "fp": "1ff11f1543809f1dbd714e3501d8f460b92a7a95", "rs": 138137, "_key": "1/1/1/0", "url": "http://blog.scrapinghub.com", "time": 1449834387621, "duration": 238, "method": "GET"}
     {"status": 200, "fp": "418a0964a93e139166dbf9b33575f10f31f17a1", "rs": 138137, "_key": "1/1/1/0", "url": "http://blog.scrapinghub.com", "time": 1449834390881, "duration": 163, "method": "GET"}
+
+To find which of the latest jobs requested, scraped or logged something, use
+``shub find-jobs`` with a filter::
+
+    $ shub find-jobs --spider amazon --filter '["url", "contains", ["/dp/B0"]]'
+    12345/1/42
+    12345/1/37
+
+Run ``shub find-jobs --help`` for all options.
