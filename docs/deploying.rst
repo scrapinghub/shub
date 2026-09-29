@@ -160,4 +160,12 @@ It is also possible to define the stack per project for advanced use cases::
         stack: scrapy:1.3-py3
       prod: 33333  # will use Scrapinghub's default stack
 
+Projects without a configured stack use Scrapy Cloud's default stack, which
+can be much older than the latest one. That is why, when ``shub deploy``
+creates a new ``scrapinghub.yml`` for a project that does not use a
+:ref:`custom Docker image <deploy-custom-image>`, it sets ``stack`` to the
+latest Scrapy stack available when your version of shub was released, unless
+a default stack is already configured, e.g. in ``~/.scrapinghub.yml``. shub
+never adds a stack to an existing ``scrapinghub.yml``.
+
 .. _`Scrapy Cloud stack`: https://helpdesk.scrapinghub.com/support/solutions/articles/22000200402-scrapy-cloud-stacks
