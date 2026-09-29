@@ -5,6 +5,12 @@ Changes
 (unreleased)
 ============
 
+-   ``shub deploy-egg`` accepts a new ``--from-directory`` option to build the
+    egg from a local library directory, while still resolving the target
+    (project ID, endpoint and API key) from the current directory's
+    ``scrapinghub.yml``. This allows deploying a shared library to several
+    projects without changing directories (#166).
+
 -   ``shub deploy`` now builds the egg from a copy of the working directory
     that leaves out anything git considers ignored (e.g. via
     ``.gitignore``), when run inside a git repository. This keeps build
