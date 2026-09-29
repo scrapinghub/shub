@@ -85,34 +85,39 @@ class TestDeployEgg(unittest.TestCase):
         shutil.rmtree(path)
         shutil.copytree('tests/samples/deploy_egg_sample_project', path)
 
+    def _chdir_to_new_tempdir(self):
+        # Removed via addCleanup, which runs after tearDown has chdir'ed
+        # back: Windows cannot delete the current working directory
+        path = tempfile.mkdtemp(prefix="shub-test-deploy-eggs-cwd")
+        self.addCleanup(shutil.rmtree, path)
+        os.chdir(path)
+        return path
+
     def test_can_deploy_egg_from_directory(self):
         self._copy_sample_project_to(self.tmp_dir)
-        with tempfile.TemporaryDirectory() as cwd:
-            os.chdir(cwd)
-            data = self.call_main_and_check_request_data(
-                from_directory=self.tmp_dir)
+        self._chdir_to_new_tempdir()
+        data = self.call_main_and_check_request_data(
+            from_directory=self.tmp_dir)
         self.assertEqual('1.2.0', data['version'])
 
     def test_from_directory_resolves_target_from_cwd(self):
         self._copy_sample_project_to(self.tmp_dir)
-        with tempfile.TemporaryDirectory() as cwd:
-            with open(os.path.join(cwd, 'scrapinghub.yml'), 'w') as f:
-                f.write('projects:\n  default: 12345\n  prod: 67890\n')
-            os.chdir(cwd)
-            missing_global = os.path.join(cwd, 'missing-global.yml')
-            with mock.patch('shub.config.GLOBAL_SCRAPINGHUB_YML_PATH',
-                            missing_global):
-                deploy_egg.main('prod', from_directory=self.tmp_dir)
+        cwd = self._chdir_to_new_tempdir()
+        with open('scrapinghub.yml', 'w') as f:
+            f.write('projects:\n  default: 12345\n  prod: 67890\n')
+        missing_global = os.path.join(cwd, 'missing-global.yml')
+        with mock.patch('shub.config.GLOBAL_SCRAPINGHUB_YML_PATH',
+                        missing_global):
+            deploy_egg.main('prod', from_directory=self.tmp_dir)
         self.assertEqual(67890, self.fake_requester.data['project'])
         self.assertEqual('test_project', self.fake_requester.data['name'])
 
     def test_from_directory_restores_cwd(self):
         self._copy_sample_project_to(self.tmp_dir)
-        with tempfile.TemporaryDirectory() as cwd:
-            os.chdir(cwd)
-            expected = os.getcwd()
-            deploy_egg.main(0, from_directory=self.tmp_dir)
-            self.assertEqual(expected, os.getcwd())
+        self._chdir_to_new_tempdir()
+        expected = os.getcwd()
+        deploy_egg.main(0, from_directory=self.tmp_dir)
+        self.assertEqual(expected, os.getcwd())
 
     def test_from_directory_without_setup_py(self):
         with self.assertRaises(NotFoundException):
