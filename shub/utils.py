@@ -43,7 +43,7 @@ from scrapinghub import ScrapinghubClient, ScrapinghubAPIError, HubstorageClient
 import shub
 from shub.compat import to_native_str
 from shub.exceptions import (
-    BadParameterException, InvalidAuthException, NotFoundException,
+    BadConfigException, BadParameterException, InvalidAuthException, NotFoundException,
     RemoteErrorException, SubcommandException, DeployRequestTooLargeException,
     print_warning,
 )
@@ -85,13 +85,25 @@ def get_scrapinghub_client_from_config(conf):
     )
 
 
+SETTINGS_MODULE_NOT_FOUND_MSG = (
+    "Cannot find the Scrapy settings module of your project. Set the "
+    "SCRAPY_SETTINGS_MODULE environment variable, or add a [settings] section "
+    "to scrapy.cfg (the entry used is 'default', or the one named by the "
+    "SCRAPY_PROJECT environment variable), see "
+    "https://docs.scrapy.org/en/latest/topics/commands.html#default-structure-of-scrapy-projects"
+)
+
+
 def create_default_setup_py(**kwargs):
     closest = closest_file('scrapy.cfg')
     with remember_cwd():
-        os.chdir(os.path.dirname(closest))
+        if closest:
+            os.chdir(os.path.dirname(closest))
         if not os.path.exists('setup.py'):
             if 'settings' not in kwargs:
-                kwargs['settings'] = get_config().get('settings', 'default')
+                kwargs['settings'] = get_project_settings_module()
+                if not kwargs['settings']:
+                    raise BadConfigException(SETTINGS_MODULE_NOT_FOUND_MSG)
             with open('setup.py', 'w') as f:
                 f.write(_SETUP_PY_TEMPLATE % kwargs)
             click.echo(f"Created setup.py at {os.getcwd()}")
@@ -482,7 +494,28 @@ def inside_project():
                           "" % (scrapy_module, exc))
         else:
             return True
-    return bool(closest_file('scrapy.cfg'))
+    return bool(get_project_settings_module() or closest_file('scrapy.cfg'))
+
+
+def get_project_settings_module(project=None):
+    """Return the Scrapy settings module path of the current project, or
+    ``None`` if it cannot be determined.
+
+    Mirrors Scrapy's own resolution: the ``SCRAPY_SETTINGS_MODULE``
+    environment variable takes precedence; otherwise the settings module is
+    read from the ``[settings]`` section of scrapy.cfg, using the entry named
+    by ``project``, the ``SCRAPY_PROJECT`` environment variable, or
+    ``default`` (in this priority).
+    """
+    env_module = os.environ.get('SCRAPY_SETTINGS_MODULE')
+    if env_module:
+        return env_module
+    if project is None:
+        project = os.environ.get('SCRAPY_PROJECT', 'default')
+    cfg = get_config()
+    if cfg.has_option('settings', project):
+        return cfg.get('settings', project)
+    return None
 
 
 def get_config(use_closest=True):

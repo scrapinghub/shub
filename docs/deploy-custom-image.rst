@@ -499,7 +499,10 @@ Options for init
 
 Define the Scrapy project where the settings are going to be read from.
 
-**Default value**: ``default`` from current folder's ``scrapy.cfg``.
+**Default value**: the ``SCRAPY_PROJECT`` environment variable, or ``default``,
+looked up in the ``[settings]`` section of the closest ``scrapy.cfg``. If the
+``SCRAPY_SETTINGS_MODULE`` environment variable is set, it takes precedence
+and this option is ignored, matching Scrapy's behaviour.
 
 .. function:: --base-image <text>
 

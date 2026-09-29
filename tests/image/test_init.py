@@ -120,10 +120,5 @@ def test_no_scrapy_cfg(project_dir):
     runner = CliRunner()
     result = runner.invoke(cli, [])
     assert result.exit_code == BadConfigException.exit_code
-    error_msg = (
-        'Error: Cannot find Scrapy project settings. Please ensure that current '
-        'directory contains scrapy.cfg with settings section, see example at '
-        'https://doc.scrapy.org/en/latest/topics/commands.html#default-structure-of-scrapy-projects'
-    )
-    assert error_msg in result.output
+    assert 'Error: Cannot find the Scrapy settings module' in result.output
     assert not os.path.exists(os.path.join(project_dir, 'Dockerfile'))
