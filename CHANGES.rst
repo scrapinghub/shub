@@ -16,9 +16,10 @@ Changes
 
 -   When ``shub deploy`` creates a new ``scrapinghub.yml`` for a project that
     does not use a custom Docker image, it now sets ``stack`` to the latest
-    Scrapy stack, as released in the `scrapinghub-stack-scrapy
+    Scrapy stack released in the `scrapinghub-stack-scrapy
     <https://github.com/scrapinghub/scrapinghub-stack-scrapy/tags>`__
-    repository (or to ``scrapy:2.18`` if that cannot be fetched, e.g. while
+    repository, frozen to its release date (e.g. ``scrapy:2.18-20260824``,
+    which is also used if that repository cannot be reached, e.g. while
     offline). Previously, no stack was set, so Scrapy Cloud used its default
     stack, which can be much older. Existing ``scrapinghub.yml`` files are not
     modified, and a default stack already configured elsewhere (e.g. in

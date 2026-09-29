@@ -41,6 +41,9 @@ VALID_SCRAPY_CFG = """
 default = project.settings
 """
 
+# What the (mocked) stack lookup returns
+LATEST_STACK = 'scrapy:2.99-20990101'
+
 
 class DeployTest(AssertInvokeRaisesMixin, unittest.TestCase):
 
@@ -92,7 +95,7 @@ class DeployTest(AssertInvokeRaisesMixin, unittest.TestCase):
         self.assertEqual(data, {'project': 456, 'version': 'version'})
         self.assertEqual(auth, (self.conf.apikeys['vagrant'], ''))
 
-    @patch('shub.utils.get_latest_scrapy_stack', return_value='scrapy:2.99')
+    @patch('shub.utils.get_latest_scrapy_stack', return_value=LATEST_STACK)
     @patch('shub.utils.has_project_access', return_value=True)
     @patch('shub.deploy.make_deploy_request')
     def test_new_config_uses_latest_stack(self, mock_deploy_req, mock_access,
@@ -104,13 +107,13 @@ class DeployTest(AssertInvokeRaisesMixin, unittest.TestCase):
             with open('scrapinghub.yml') as f:
                 sh_yml = yaml.safe_load(f)
         self.assertEqual(result.exit_code, 0)
-        self.assertEqual(sh_yml, {'project': 12345, 'stack': 'scrapy:2.99'})
+        self.assertEqual(sh_yml, {'project': 12345, 'stack': LATEST_STACK})
         # The deploy that generated the config already uses the stack
         _, data, _, _, _, _ = mock_deploy_req.call_args[0]
         self.assertEqual(data, {
             'project': 12345,
             'version': 'version',
-            'stack': 'scrapy:2.99',
+            'stack': LATEST_STACK,
         })
 
     @patch('shub.utils.get_latest_scrapy_stack')

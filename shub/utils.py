@@ -59,7 +59,7 @@ REQUEST_FILES_SIZE_LIMIT = 50 * 1024 * 1024 - 5 * 1024
 # Stack set in newly generated scrapinghub.yml files if the latest one cannot
 # be fetched, e.g. while offline. Bump it when a new Scrapy stack is released,
 # see https://github.com/scrapinghub/scrapinghub-stack-scrapy/tags
-FALLBACK_SCRAPY_STACK = 'scrapy:2.18'
+FALLBACK_SCRAPY_STACK = 'scrapy:2.18-20260824'
 
 _SETUP_PY_TEMPLATE = """\
 # Automatically created by: shub deploy
@@ -647,15 +647,16 @@ def update_available(silent_fail=True):
 
 def get_latest_scrapy_stack(timeout=5.):
     """
-    Return the latest Scrapy Cloud stack, e.g. ``'scrapy:2.18'``, based on the
-    release tags of https://github.com/scrapinghub/scrapinghub-stack-scrapy.
+    Return the latest release of the latest Scrapy Cloud stack, frozen to its
+    release date, e.g. ``'scrapy:2.18-20260824'``, based on the release tags of
+    https://github.com/scrapinghub/scrapinghub-stack-scrapy.
 
     If the tags cannot be fetched, e.g. while offline, return
     ``FALLBACK_SCRAPY_STACK`` instead.
     """
     url = ("https://api.github.com/repos/scrapinghub/scrapinghub-stack-scrapy"
            "/tags?per_page=100")
-    versions = []
+    releases = []
     try:
         while url:
             response = requests.get(url, timeout=timeout)
@@ -663,15 +664,16 @@ def get_latest_scrapy_stack(timeout=5.):
             for tag in response.json():
                 # Released stacks, e.g. 2.18-20260824, as opposed to release
                 # candidates and test builds, e.g. 2.18-rc1
-                match = re.fullmatch(r'(\d+)\.(\d+)-\d{8}', tag['name'])
+                match = re.fullmatch(r'(\d+)\.(\d+)-(\d{8})', tag['name'])
                 if match:
-                    versions.append((int(match[1]), int(match[2])))
+                    releases.append(
+                        (int(match[1]), int(match[2]), match[3]))
             url = response.links.get('next', {}).get('url')
     except (requests.RequestException, ValueError, KeyError, TypeError):
         return FALLBACK_SCRAPY_STACK
-    if not versions:
+    if not releases:
         return FALLBACK_SCRAPY_STACK
-    return 'scrapy:%d.%d' % max(versions)
+    return 'scrapy:%d.%d-%s' % max(releases)
 
 
 def download_from_pypi(dest, pkg=None, reqfile=None, extra_args=None):

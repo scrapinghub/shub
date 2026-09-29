@@ -167,8 +167,9 @@ creates a new ``scrapinghub.yml`` for a project that does not use a
 latest Scrapy stack released in the `scrapinghub-stack-scrapy
 <https://github.com/scrapinghub/scrapinghub-stack-scrapy/tags>`__ repository,
 unless a default stack is already configured, e.g. in ``~/.scrapinghub.yml``.
-If the list of stacks cannot be fetched, e.g. while offline, a recent stack
-known to shub is used instead. shub never adds a stack to an existing
-``scrapinghub.yml``.
+The stack is frozen to its release date, e.g. |latest-scrapy-stack|, so that
+your deploys keep using the same environment until you change it. If the list
+of stacks cannot be fetched, e.g. while offline, a recent stack known to shub
+is used instead. shub never adds a stack to an existing ``scrapinghub.yml``.
 
 .. _`Scrapy Cloud stack`: https://helpdesk.scrapinghub.com/support/solutions/articles/22000200402-scrapy-cloud-stacks

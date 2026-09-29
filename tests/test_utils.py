@@ -25,7 +25,7 @@ from shub.exceptions import (
 from .utils import AssertInvokeRaisesMixin, mock_conf
 
 # What the (mocked) stack lookup returns in the wizard tests
-LATEST_STACK = 'scrapy:2.99'
+LATEST_STACK = 'scrapy:2.99-20990101'
 
 
 def _tags_response(names, next_url=None):
@@ -353,13 +353,16 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
     def test_get_latest_scrapy_stack(self, mock_get):
         mock_get.side_effect = [
             _tags_response(
-                ['2.19-rc1', '2.10-20230901', '2.9-20230720', '2.14'],
+                ['2.19-rc1', '2.18-20260801', '2.10-20230901', '2.9-20230720',
+                 '2.14'],
                 next_url='https://api.github.com/page2',
             ),
             _tags_response(['2.18-20260824', '1.8-py3-20191203']),
         ]
-        # 2.18 > 2.10 > 2.9, and 2.19 has no release yet
-        self.assertEqual(utils.get_latest_scrapy_stack(), 'scrapy:2.18')
+        # 2.18 > 2.10 > 2.9, the newest 2.18 release wins, and 2.19 has no
+        # release yet
+        self.assertEqual(utils.get_latest_scrapy_stack(),
+                         'scrapy:2.18-20260824')
         self.assertEqual(mock_get.call_count, 2)
         self.assertEqual(mock_get.call_args[0][0],
                          'https://api.github.com/page2')
