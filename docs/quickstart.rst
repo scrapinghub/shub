@@ -47,9 +47,8 @@ can deploy it to Scrapy Cloud via::
 
 On the first call, this will guide you through a wizard to save your project ID
 into a YAML file named ``scrapinghub.yml``, living next to your ``scrapy.cfg``.
-The wizard also sets your project to use the latest
-:ref:`Scrapy Cloud stack <choose-custom-stack>`. From anywhere within the
-project directory tree, you can now deploy via ``shub deploy``.
+From anywhere within the project directory tree, you can now deploy via ``shub
+deploy``.
 
 Next, schedule one of your spiders to run on Scrapy Cloud::
 

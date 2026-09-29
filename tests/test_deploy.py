@@ -19,10 +19,7 @@ from shub.exceptions import (
     NotFoundException, ShubException, BadParameterException,
     DeployRequestTooLargeException,
 )
-from shub.utils import (
-    create_default_setup_py, _SETUP_PY_TEMPLATE, STDOUT_ENCODING,
-    LATEST_SCRAPY_STACK,
-)
+from shub.utils import create_default_setup_py, _SETUP_PY_TEMPLATE, STDOUT_ENCODING
 
 from .utils import AssertInvokeRaisesMixin, mock_conf
 
@@ -95,9 +92,11 @@ class DeployTest(AssertInvokeRaisesMixin, unittest.TestCase):
         self.assertEqual(data, {'project': 456, 'version': 'version'})
         self.assertEqual(auth, (self.conf.apikeys['vagrant'], ''))
 
+    @patch('shub.utils.get_latest_scrapy_stack', return_value='scrapy:2.99')
     @patch('shub.utils.has_project_access', return_value=True)
     @patch('shub.deploy.make_deploy_request')
-    def test_new_config_uses_latest_stack(self, mock_deploy_req, _):
+    def test_new_config_uses_latest_stack(self, mock_deploy_req, mock_access,
+                                          mock_latest_stack):
         self.conf.projects.clear()
         with self.runner.isolated_filesystem():
             self._make_project()
@@ -105,19 +104,20 @@ class DeployTest(AssertInvokeRaisesMixin, unittest.TestCase):
             with open('scrapinghub.yml') as f:
                 sh_yml = yaml.safe_load(f)
         self.assertEqual(result.exit_code, 0)
-        self.assertEqual(
-            sh_yml, {'project': 12345, 'stack': LATEST_SCRAPY_STACK})
+        self.assertEqual(sh_yml, {'project': 12345, 'stack': 'scrapy:2.99'})
         # The deploy that generated the config already uses the stack
         _, data, _, _, _, _ = mock_deploy_req.call_args[0]
         self.assertEqual(data, {
             'project': 12345,
             'version': 'version',
-            'stack': LATEST_SCRAPY_STACK,
+            'stack': 'scrapy:2.99',
         })
 
+    @patch('shub.utils.get_latest_scrapy_stack')
     @patch('shub.deploy.make_deploy_request')
     def test_existing_config_without_stack_is_untouched(self,
-                                                        mock_deploy_req):
+                                                        mock_deploy_req,
+                                                        mock_latest_stack):
         original_sh_yml = 'project: 1\n'
         with self.runner.isolated_filesystem():
             self._make_project()
@@ -129,6 +129,7 @@ class DeployTest(AssertInvokeRaisesMixin, unittest.TestCase):
         self.assertEqual(result.exit_code, 0)
         _, data, _, _, _, _ = mock_deploy_req.call_args[0]
         self.assertEqual(data, {'project': 1, 'version': 'version'})
+        mock_latest_stack.assert_not_called()
 
     def test_deploy_list_targets(self):
         with self.runner.isolated_filesystem():

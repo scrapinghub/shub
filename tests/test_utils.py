@@ -9,6 +9,7 @@ from io import StringIO
 from unittest.mock import Mock, MagicMock, patch
 
 import click
+import requests
 import yaml
 from click.testing import CliRunner
 from collections import deque
@@ -22,6 +23,17 @@ from shub.exceptions import (
 )
 
 from .utils import AssertInvokeRaisesMixin, mock_conf
+
+# What the (mocked) stack lookup returns in the wizard tests
+LATEST_STACK = 'scrapy:2.99'
+
+
+def _tags_response(names, next_url=None):
+    """Mock a page of GitHub's list of repository tags."""
+    response = Mock()
+    response.json.return_value = [{'name': name} for name in names]
+    response.links = {'next': {'url': next_url}} if next_url else {}
+    return response
 
 
 class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
@@ -337,6 +349,38 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
         with self.assertRaises(MockException):
             utils.update_available(silent_fail=False)
 
+    @patch('shub.utils.requests.get', autospec=True)
+    def test_get_latest_scrapy_stack(self, mock_get):
+        mock_get.side_effect = [
+            _tags_response(
+                ['2.19-rc1', '2.10-20230901', '2.9-20230720', '2.14'],
+                next_url='https://api.github.com/page2',
+            ),
+            _tags_response(['2.18-20260824', '1.8-py3-20191203']),
+        ]
+        # 2.18 > 2.10 > 2.9, and 2.19 has no release yet
+        self.assertEqual(utils.get_latest_scrapy_stack(), 'scrapy:2.18')
+        self.assertEqual(mock_get.call_count, 2)
+        self.assertEqual(mock_get.call_args[0][0],
+                         'https://api.github.com/page2')
+
+    @patch('shub.utils.requests.get', autospec=True)
+    def test_get_latest_scrapy_stack_fallback(self, mock_get):
+        http_error = _tags_response([])
+        http_error.raise_for_status.side_effect = requests.HTTPError
+        unexpected_json = _tags_response([])
+        unexpected_json.json.return_value = {'message': 'Not Found'}
+        for name, side_effect in (
+            ('offline', requests.ConnectionError),
+            ('HTTP error, e.g. rate limit', [http_error]),
+            ('unexpected JSON', [unexpected_json]),
+            ('no released stacks', [_tags_response(['2.19-rc1'])]),
+        ):
+            with self.subTest(name):
+                mock_get.side_effect = side_effect
+                self.assertEqual(utils.get_latest_scrapy_stack(),
+                                 utils.FALLBACK_SCRAPY_STACK)
+
     @patch('shub.utils.pip_main', autospec=True)
     @patch('shub.utils.pip', autospec=True)
     def test_download_from_pypi(self, mock_pip, mock_pip_main):
@@ -504,6 +548,10 @@ class OnboardingWizardTestCase(unittest.TestCase):
     def setUp(self):
         self.runner = CliRunner()
         self.has_project_access = True
+        patcher = patch('shub.utils.get_latest_scrapy_stack',
+                        return_value=LATEST_STACK)
+        self.get_latest_scrapy_stack = patcher.start()
+        self.addCleanup(patcher.stop)
 
     @patch('shub.utils.has_project_access')
     def _test_wizard(self, mock_project_access, conf=None, target='default',
@@ -551,12 +599,13 @@ class OnboardingWizardTestCase(unittest.TestCase):
         result, conf, sh_yml = self._test_wizard(input='12345\n')
         assert result.exit_code == 0
         assert conf.projects == {'default': 12345}
-        assert conf.stacks == {'default': utils.LATEST_SCRAPY_STACK}
+        assert conf.stacks == {'default': LATEST_STACK}
         assert sh_yml == {
             'project': 12345,
-            'stack': utils.LATEST_SCRAPY_STACK,
+            'stack': LATEST_STACK,
         }
-        assert utils.LATEST_SCRAPY_STACK in result.output
+        assert LATEST_STACK in result.output
+        self.get_latest_scrapy_stack.assert_called_once_with()
 
     def test_custom_project(self):
         result, conf, sh_yml = self._test_wizard(
@@ -565,6 +614,7 @@ class OnboardingWizardTestCase(unittest.TestCase):
         assert conf.projects == {'default': 12345}
         assert conf.images == {'default': True}
         assert sh_yml == {'project': 12345, 'image': True}
+        self.get_latest_scrapy_stack.assert_not_called()
 
     def test_custom_repository(self):
         result, conf, sh_yml = self._test_wizard(
@@ -581,7 +631,7 @@ class OnboardingWizardTestCase(unittest.TestCase):
         assert not conf.images
         assert sh_yml == {
             'project': 12345,
-            'stack': utils.LATEST_SCRAPY_STACK,
+            'stack': LATEST_STACK,
         }
 
     def test_ambiguous_project_custom(self):
@@ -614,6 +664,7 @@ class OnboardingWizardTestCase(unittest.TestCase):
         assert not conf.images
         assert not conf.stacks
         assert sh_yml == {'project': 12345}
+        self.get_latest_scrapy_stack.assert_not_called()
 
     def test_add_image_for_existing_default_target(self):
         original_sh_yml = 'projects:\n  default: 12345\n  prod: 33333\n'
@@ -668,7 +719,7 @@ class OnboardingWizardTestCase(unittest.TestCase):
         assert conf.projects == {'default': 12345}
         assert sh_yml == {
             'project': 12345,
-            'stack': utils.LATEST_SCRAPY_STACK,
+            'stack': LATEST_STACK,
         }
 
     def test_custom_project_with_numeric_target(self):
@@ -689,7 +740,7 @@ class OnboardingWizardTestCase(unittest.TestCase):
         assert conf.apikeys == {'default': 'abc'}
         assert sh_yml == {
             'project': 12345,
-            'stack': utils.LATEST_SCRAPY_STACK,
+            'stack': LATEST_STACK,
         }
 
     def test_dont_leak_global_config_on_image(self):
@@ -713,6 +764,7 @@ class OnboardingWizardTestCase(unittest.TestCase):
         assert result.exit_code == 0
         assert not conf.stacks
         assert not sh_yml
+        self.get_latest_scrapy_stack.assert_not_called()
 
     def test_dont_override_global_default_stack(self):
         conf = ShubConfig()
@@ -722,6 +774,7 @@ class OnboardingWizardTestCase(unittest.TestCase):
         assert result.exit_code == 0
         assert conf.stacks == {'default': 'scrapy:2.11'}
         assert sh_yml == {'project': 12345}
+        self.get_latest_scrapy_stack.assert_not_called()
 
     def test_dont_set_stack_with_global_default_image(self):
         conf = ShubConfig()
@@ -731,3 +784,4 @@ class OnboardingWizardTestCase(unittest.TestCase):
         assert result.exit_code == 0
         assert not conf.stacks
         assert sh_yml == {'project': 12345}
+        self.get_latest_scrapy_stack.assert_not_called()

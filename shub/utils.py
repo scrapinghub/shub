@@ -56,11 +56,10 @@ LAST_N_LOGS = 30
 # 50MB for a whole request, reserve 5KB for meta info (e.g. headers)
 REQUEST_FILES_SIZE_LIMIT = 50 * 1024 * 1024 - 5 * 1024
 
-# Stack set in newly generated scrapinghub.yml files. Bump it when a new
-# Scrapy stack is released, see
-# https://github.com/scrapinghub/scrapinghub-stack-scrapy/tags, and keep the
-# example in docs/configuration.rst in sync.
-LATEST_SCRAPY_STACK = 'scrapy:2.18'
+# Stack set in newly generated scrapinghub.yml files if the latest one cannot
+# be fetched, e.g. while offline. Bump it when a new Scrapy stack is released,
+# see https://github.com/scrapinghub/scrapinghub-stack-scrapy/tags
+FALLBACK_SCRAPY_STACK = 'scrapy:2.18'
 
 _SETUP_PY_TEMPLATE = """\
 # Automatically created by: shub deploy
@@ -646,6 +645,35 @@ def update_available(silent_fail=True):
         return None
 
 
+def get_latest_scrapy_stack(timeout=5.):
+    """
+    Return the latest Scrapy Cloud stack, e.g. ``'scrapy:2.18'``, based on the
+    release tags of https://github.com/scrapinghub/scrapinghub-stack-scrapy.
+
+    If the tags cannot be fetched, e.g. while offline, return
+    ``FALLBACK_SCRAPY_STACK`` instead.
+    """
+    url = ("https://api.github.com/repos/scrapinghub/scrapinghub-stack-scrapy"
+           "/tags?per_page=100")
+    versions = []
+    try:
+        while url:
+            response = requests.get(url, timeout=timeout)
+            response.raise_for_status()
+            for tag in response.json():
+                # Released stacks, e.g. 2.18-20260824, as opposed to release
+                # candidates and test builds, e.g. 2.18-rc1
+                match = re.fullmatch(r'(\d+)\.(\d+)-\d{8}', tag['name'])
+                if match:
+                    versions.append((int(match[1]), int(match[2])))
+            url = response.links.get('next', {}).get('url')
+    except (requests.RequestException, ValueError, KeyError, TypeError):
+        return FALLBACK_SCRAPY_STACK
+    if not versions:
+        return FALLBACK_SCRAPY_STACK
+    return 'scrapy:%d.%d' % max(versions)
+
+
 def download_from_pypi(dest, pkg=None, reqfile=None, extra_args=None):
     if (not pkg and not reqfile) or (pkg and reqfile):
         raise ValueError('Call with either pkg or reqfile')
@@ -813,9 +841,10 @@ def create_scrapinghub_yml_wizard(conf, target='default', image=None):
     repository if ``Dockerfile`` exists.
 
     When a new ``scrapinghub.yml`` is created for a new project that does not
-    use a custom image, the project is also set to use ``LATEST_SCRAPY_STACK``
-    instead of Scrapy Cloud's default stack, unless a default stack or image
-    is already configured, e.g. in ``~/.scrapinghub.yml``.
+    use a custom image, the project is also set to use the latest Scrapy stack
+    (see ``get_latest_scrapy_stack()``) instead of Scrapy Cloud's default
+    stack, unless a default stack or image is already configured, e.g. in
+    ``~/.scrapinghub.yml``.
 
     The wizard will only ever ask questions and touch the configuration if at
     least one of these two conditions is met:
@@ -863,7 +892,7 @@ def create_scrapinghub_yml_wizard(conf, target='default', image=None):
     if (new_sh_yml and project and not repository
             and not conf.stacks.get('default')
             and not conf.images.get(target, conf.images.get('default'))):
-        stack = LATEST_SCRAPY_STACK
+        stack = get_latest_scrapy_stack()
         click.echo(
             "Using Scrapy Cloud stack %s. You can change it via the 'stack' "
             "option in scrapinghub.yml." % stack)

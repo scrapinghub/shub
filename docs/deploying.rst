@@ -164,8 +164,11 @@ Projects without a configured stack use Scrapy Cloud's default stack, which
 can be much older than the latest one. That is why, when ``shub deploy``
 creates a new ``scrapinghub.yml`` for a project that does not use a
 :ref:`custom Docker image <deploy-custom-image>`, it sets ``stack`` to the
-latest Scrapy stack available when your version of shub was released, unless
-a default stack is already configured, e.g. in ``~/.scrapinghub.yml``. shub
-never adds a stack to an existing ``scrapinghub.yml``.
+latest Scrapy stack released in the `scrapinghub-stack-scrapy
+<https://github.com/scrapinghub/scrapinghub-stack-scrapy/tags>`__ repository,
+unless a default stack is already configured, e.g. in ``~/.scrapinghub.yml``.
+If the list of stacks cannot be fetched, e.g. while offline, a recent stack
+known to shub is used instead. shub never adds a stack to an existing
+``scrapinghub.yml``.
 
 .. _`Scrapy Cloud stack`: https://helpdesk.scrapinghub.com/support/solutions/articles/22000200402-scrapy-cloud-stacks
