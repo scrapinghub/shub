@@ -7,7 +7,7 @@ from zipfile import ZipFile
 
 from click.testing import CliRunner
 
-from shub import deploy_egg
+from shub import deploy_egg, tool
 from shub.exceptions import BadParameterException, NotFoundException
 
 
@@ -57,6 +57,20 @@ class TestDeployEgg(unittest.TestCase):
         basepath = os.path.abspath('tests/samples/')
         pkg = os.path.join(basepath, 'deploy_egg_sample_project.zip')
         self.call_main_and_check_request_data(from_pypi=pkg)
+
+    @mock.patch('shub.deploy_egg.utils.build_and_deploy_eggs')
+    @mock.patch('shub.deploy_egg.decompress_egg_files')
+    @mock.patch('shub.deploy_egg._fetch_from_pypi')
+    def test_from_pypi_deploys_fetched_eggs_and_restores_cwd(
+            self, mock_fetch, mock_decompress, mock_deploy):
+        mock_fetch.side_effect = lambda pkg: os.chdir(self.tmp_dir)
+        expected = os.getcwd()
+        deploy_egg.main(0, from_pypi='some-package')
+        mock_fetch.assert_called_once_with('some-package')
+        mock_decompress.assert_called_once_with()
+        mock_deploy.assert_called_once_with(
+            0, 'https://app.zyte.com/api/', '1234')
+        self.assertEqual(expected, os.getcwd())
 
     def test_can_clone_checkout_and_deploy_the_egg(self):
         self._unzip_git_repo_to(self.tmp_dir)
@@ -127,6 +141,26 @@ class TestDeployEgg(unittest.TestCase):
         with self.assertRaises(BadParameterException):
             deploy_egg.main(0, from_url='https://example.com/repo.git',
                             from_directory=self.tmp_dir)
+
+    def test_cli_deploy_egg_from_relative_directory(self):
+        shutil.copytree('tests/samples/deploy_egg_sample_project',
+                        os.path.join(self.tmp_dir, 'lib'))
+        project_dir = os.path.join(self.tmp_dir, 'project')
+        os.mkdir(project_dir)
+        with open(os.path.join(project_dir, 'scrapinghub.yml'), 'w') as f:
+            f.write('projects:\n  prod: 67890\n')
+        os.chdir(project_dir)
+        missing_global = os.path.join(self.tmp_dir, 'missing-global.yml')
+        with mock.patch('shub.config.GLOBAL_SCRAPINGHUB_YML_PATH',
+                        missing_global):
+            result = CliRunner().invoke(tool.cli, [
+                'deploy-egg', 'prod',
+                '--from-directory', os.path.join('..', 'lib'),
+            ])
+        self.assertEqual(0, result.exit_code, result.output)
+        self.assertEqual(67890, self.fake_requester.data['project'])
+        self.assertEqual('test_project', self.fake_requester.data['name'])
+        self.assertEqual('1.2.0', self.fake_requester.data['version'])
 
     def test_from_directory_must_exist(self):
         missing = os.path.join(self.tmp_dir, 'does-not-exist')
