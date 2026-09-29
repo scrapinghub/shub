@@ -551,7 +551,12 @@ class OnboardingWizardTestCase(unittest.TestCase):
         result, conf, sh_yml = self._test_wizard(input='12345\n')
         assert result.exit_code == 0
         assert conf.projects == {'default': 12345}
-        assert sh_yml == {'project': 12345}
+        assert conf.stacks == {'default': utils.LATEST_SCRAPY_STACK}
+        assert sh_yml == {
+            'project': 12345,
+            'stack': utils.LATEST_SCRAPY_STACK,
+        }
+        assert utils.LATEST_SCRAPY_STACK in result.output
 
     def test_custom_project(self):
         result, conf, sh_yml = self._test_wizard(
@@ -574,7 +579,10 @@ class OnboardingWizardTestCase(unittest.TestCase):
         assert result.exit_code == 0
         assert conf.projects == {'default': 12345}
         assert not conf.images
-        assert sh_yml == {'project': 12345}
+        assert sh_yml == {
+            'project': 12345,
+            'stack': utils.LATEST_SCRAPY_STACK,
+        }
 
     def test_ambiguous_project_custom(self):
         result, conf, sh_yml = self._test_wizard(
@@ -604,6 +612,7 @@ class OnboardingWizardTestCase(unittest.TestCase):
         assert result.exit_code == 0
         assert not result.output
         assert not conf.images
+        assert not conf.stacks
         assert sh_yml == {'project': 12345}
 
     def test_add_image_for_existing_default_target(self):
@@ -657,7 +666,10 @@ class OnboardingWizardTestCase(unittest.TestCase):
         result, conf, sh_yml = self._test_wizard(target='12345')
         assert result.exit_code == 0
         assert conf.projects == {'default': 12345}
-        assert sh_yml == {'project': 12345}
+        assert sh_yml == {
+            'project': 12345,
+            'stack': utils.LATEST_SCRAPY_STACK,
+        }
 
     def test_custom_project_with_numeric_target(self):
         result, conf, sh_yml = self._test_wizard(
@@ -675,7 +687,10 @@ class OnboardingWizardTestCase(unittest.TestCase):
         assert result.exit_code == 0
         assert conf.projects == {'default': 12345, 'prod': 33333}
         assert conf.apikeys == {'default': 'abc'}
-        assert sh_yml == {'project': 12345}
+        assert sh_yml == {
+            'project': 12345,
+            'stack': utils.LATEST_SCRAPY_STACK,
+        }
 
     def test_dont_leak_global_config_on_image(self):
         conf = ShubConfig()
@@ -689,3 +704,30 @@ class OnboardingWizardTestCase(unittest.TestCase):
         assert conf.apikeys == {'default': 'abc'}
         assert conf.images == {'default': 'repo'}
         assert sh_yml == {'project': 12345, 'image': 'repo'}
+
+    def test_dont_set_stack_for_globally_defined_project(self):
+        conf = ShubConfig()
+        conf.projects = {'default': 12345}
+        conf.apikeys = {'default': 'abc'}
+        result, conf, sh_yml = self._test_wizard(conf=conf)
+        assert result.exit_code == 0
+        assert not conf.stacks
+        assert not sh_yml
+
+    def test_dont_override_global_default_stack(self):
+        conf = ShubConfig()
+        conf.apikeys = {'default': 'abc'}
+        conf.stacks = {'default': 'scrapy:2.11'}
+        result, conf, sh_yml = self._test_wizard(conf=conf, input='12345\n')
+        assert result.exit_code == 0
+        assert conf.stacks == {'default': 'scrapy:2.11'}
+        assert sh_yml == {'project': 12345}
+
+    def test_dont_set_stack_with_global_default_image(self):
+        conf = ShubConfig()
+        conf.apikeys = {'default': 'abc'}
+        conf.images = {'default': True}
+        result, conf, sh_yml = self._test_wizard(conf=conf, input='12345\n')
+        assert result.exit_code == 0
+        assert not conf.stacks
+        assert sh_yml == {'project': 12345}

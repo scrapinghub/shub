@@ -10,6 +10,7 @@ from unittest.mock import patch, Mock
 from packaging.version import parse
 from pipenv import __version__ as pipenv_version
 import requests
+import yaml
 from cleo.testers.command_tester import CommandTester
 from click.testing import CliRunner
 
@@ -18,7 +19,10 @@ from shub.exceptions import (
     NotFoundException, ShubException, BadParameterException,
     DeployRequestTooLargeException,
 )
-from shub.utils import create_default_setup_py, _SETUP_PY_TEMPLATE, STDOUT_ENCODING
+from shub.utils import (
+    create_default_setup_py, _SETUP_PY_TEMPLATE, STDOUT_ENCODING,
+    LATEST_SCRAPY_STACK,
+)
 
 from .utils import AssertInvokeRaisesMixin, mock_conf
 
@@ -90,6 +94,41 @@ class DeployTest(AssertInvokeRaisesMixin, unittest.TestCase):
         self.assertIn(self.conf.endpoints['vagrant'], url)
         self.assertEqual(data, {'project': 456, 'version': 'version'})
         self.assertEqual(auth, (self.conf.apikeys['vagrant'], ''))
+
+    @patch('shub.utils.has_project_access', return_value=True)
+    @patch('shub.deploy.make_deploy_request')
+    def test_new_config_uses_latest_stack(self, mock_deploy_req, _):
+        self.conf.projects.clear()
+        with self.runner.isolated_filesystem():
+            self._make_project()
+            result = self.runner.invoke(deploy.cli, input='12345\n')
+            with open('scrapinghub.yml') as f:
+                sh_yml = yaml.safe_load(f)
+        self.assertEqual(result.exit_code, 0)
+        self.assertEqual(
+            sh_yml, {'project': 12345, 'stack': LATEST_SCRAPY_STACK})
+        # The deploy that generated the config already uses the stack
+        _, data, _, _, _, _ = mock_deploy_req.call_args[0]
+        self.assertEqual(data, {
+            'project': 12345,
+            'version': 'version',
+            'stack': LATEST_SCRAPY_STACK,
+        })
+
+    @patch('shub.deploy.make_deploy_request')
+    def test_existing_config_without_stack_is_untouched(self,
+                                                        mock_deploy_req):
+        original_sh_yml = 'project: 1\n'
+        with self.runner.isolated_filesystem():
+            self._make_project()
+            with open('scrapinghub.yml', 'w') as f:
+                f.write(original_sh_yml)
+            result = self.runner.invoke(deploy.cli)
+            with open('scrapinghub.yml') as f:
+                self.assertEqual(f.read(), original_sh_yml)
+        self.assertEqual(result.exit_code, 0)
+        _, data, _, _, _, _ = mock_deploy_req.call_args[0]
+        self.assertEqual(data, {'project': 1, 'version': 'version'})
 
     def test_deploy_list_targets(self):
         with self.runner.isolated_filesystem():
