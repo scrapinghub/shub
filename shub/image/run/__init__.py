@@ -132,7 +132,8 @@ def _create_container(client, image_name, environment, volume_dir):
     # directory in the host /tmp/ to have access to the files in needed
     binds = {volume_dir: {'bind': SCRAPINGHUB_VOLUME, 'mode': 'rw'}}
     host_config = client.create_host_config(binds=binds)
-    return client.create_container(
+    return utils.call_docker_with_platform(
+        client.create_container,
         image=image_name,
         command=[WRAPPER_IMAGE_PATH],
         environment=environment,
