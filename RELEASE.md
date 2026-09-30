@@ -28,9 +28,6 @@ The steps to do a release are:
 4. Once the build finishes, run `pip install shub` in a temporary virtualenv
    and make sure it's installing the latest version.
 
-5. Update the release information at:
+5. Create a release for the new tag at:
 
        https://github.com/scrapinghub/shub/releases
-
-   The GitHub action will automatically create a release draft and attach the
-   platform-specific binaries (built with the `freeze` tox environment) to it.

@@ -1,4 +1,3 @@
-import setuptools  # noqa: F401
 import contextlib
 import datetime
 import errno
@@ -19,24 +18,9 @@ from tempfile import NamedTemporaryFile, TemporaryFile
 from urllib.parse import urljoin
 
 import click
-import pip
 import requests
 import yaml
 from click import ParamType
-
-# https://github.com/scrapinghub/shub/pull/309#pullrequestreview-113977920
-try:
-    from pip import main as pip_main
-except:  # noqa
-    try:
-        # For pip v20: https://tinyurl.com/pip20-error
-        from pip._internal.cli.main import pip_main
-    except ImportError:
-        try:
-            # For pip v9 and v10: https://tinyurl.com/y8mvl8rb
-            from pip._internal.main import main as pip_main
-        except ImportError:
-            from pip._internal import main as pip_main
 
 from scrapinghub import ScrapinghubClient, ScrapinghubAPIError, HubstorageClient
 
@@ -190,40 +174,6 @@ def _is_deploy_successful(last_logs):
         pass
 
 
-@contextlib.contextmanager
-def patch_sys_executable():
-    """
-    Context manager that monkey-patches sys.executable to point to the Python
-    interpreter.
-
-    Some scripts, in particular pip, depend on sys.executable pointing to the
-    Python interpreter. When frozen, however, sys.executable points to the
-    stand-alone file (i.e. the frozen script).
-    """
-    if getattr(sys, 'frozen', False):
-        orig_exe = sys.executable
-        py_exe = find_exe('python')
-        # PyInstaller sets this environment variable in its bootloader. Remove
-        # it so the system-wide Python installation uses its own library path
-        # (this is particularly important if the system Python version differs
-        # from the Python version that the binary was compiled with)
-        orig_lib_path = os.environ.pop('LD_LIBRARY_PATH', None)
-        sys.executable = py_exe
-        yield
-        sys.executable = orig_exe
-        if orig_lib_path:
-            os.environ['LD_LIBRARY_PATH'] = orig_lib_path
-    else:
-        yield
-
-
-def find_exe(exe_name):
-    exe = which(exe_name)
-    if not exe:
-        raise NotFoundException(f"Please install {exe_name}")
-    return exe
-
-
 def run_cmd(*args, **kwargs):
     """Run a command and return its output, decoded by the stdout encoding and
     stripped of trailing newlines. `args` and `kwargs` are forwarded to
@@ -322,11 +272,11 @@ def run_python(cmd, *args, **kwargs):
     Call Python interpreter with supplied list of arguments and return its
     output. `args` and `kwargs` are forwarded to `subprocess.check_output`.
     """
-    with patch_sys_executable():
-        return run_cmd([sys.executable] + cmd, *args, **kwargs)
+    return run_cmd([sys.executable] + cmd, *args, **kwargs)
 
 
 def decompress_egg_files(directory=None):
+    import pip
     try:
         EXTS = pip.utils.ARCHIVE_EXTENSIONS
     except AttributeError:
@@ -690,6 +640,7 @@ def get_latest_scrapy_stack(timeout=5.):
 def download_from_pypi(dest, pkg=None, reqfile=None, extra_args=None):
     if (not pkg and not reqfile) or (pkg and reqfile):
         raise ValueError('Call with either pkg or reqfile')
+    import pip
     extra_args = extra_args or []
     pip_version = Version(getattr(pip, '__version__', '1.0'))
     cmd = 'install'
@@ -701,9 +652,8 @@ def download_from_pypi(dest, pkg=None, reqfile=None, extra_args=None):
         no_wheel = ['--no-binary=:all:']
     if pip_version >= Version('8'):
         cmd = 'download'
-    with patch_sys_executable():
-        pip_main([cmd, '-d', dest, '--no-deps'] + no_wheel + extra_args +
-                 target)
+    subprocess.call([sys.executable, '-m', 'pip', cmd, '-d', dest, '--no-deps']
+                    + no_wheel + extra_args + target)
 
 
 @contextlib.contextmanager

@@ -6,6 +6,7 @@ import sys
 import unittest
 import textwrap
 import time
+import zipfile
 from io import StringIO
 from unittest.mock import Mock, MagicMock, patch
 
@@ -49,30 +50,6 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
 
     def setUp(self):
         self.runner = CliRunner()
-
-    @patch('shub.utils.sys.frozen', new=True, create=True)
-    @patch('shub.utils.find_exe', return_value='/my/python')
-    def test_patch_sys_executable(self, mock_find_exe):
-        original_exe = sys.executable
-        with patch('shub.utils.sys.frozen', new=False):
-            with utils.patch_sys_executable():
-                self.assertEqual(sys.executable, original_exe)
-        with utils.patch_sys_executable():
-            self.assertEqual(sys.executable, '/my/python')
-        # Make sure we properly cleaned up after ourselves
-        self.assertEqual(sys.executable, original_exe)
-        mock_find_exe.side_effect = NotFoundException
-        with self.assertRaises(NotFoundException):
-            with utils.patch_sys_executable():
-                pass
-
-    @patch('shub.utils.which')
-    def test_find_exe(self, mock_fe):
-        mock_fe.return_value = '/usr/bin/python'
-        self.assertEqual(utils.find_exe('python'), '/usr/bin/python')
-        mock_fe.return_value = None
-        with self.assertRaises(NotFoundException):
-            utils.find_exe('python')
 
     def test_run_cmd_captures_stderr(self):
         cmd = [
@@ -412,21 +389,32 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
         self.assertGreaterEqual(_stack_release(stack),
                                 _stack_release(utils.FALLBACK_SCRAPY_STACK))
 
-    @patch('shub.utils.pip_main', autospec=True)
-    @patch('shub.utils.pip', autospec=True)
-    def test_download_from_pypi(self, mock_pip, mock_pip_main):
+    def test_decompress_egg_files(self):
+        with self.runner.isolated_filesystem():
+            with zipfile.ZipFile('pkg.zip', 'w') as zf:
+                zf.writestr('pkg-1.0/setup.py', 'foo')
+            utils.decompress_egg_files()
+            with open(os.path.join('pkg', 'setup.py')) as f:
+                self.assertEqual(f.read(), 'foo')
+
+    @patch.dict(sys.modules, pip=Mock(spec=[]))
+    @patch('shub.utils.subprocess.call', autospec=True)
+    def test_download_from_pypi(self, mock_call):
+        mock_pip = sys.modules['pip']
+
         def _call(*args, **kwargs):
             utils.download_from_pypi(*args, **kwargs)
-            return mock_pip_main.call_args[0][0]
+            cmd = mock_call.call_args[0][0]
+            self.assertEqual(cmd[:3], [sys.executable, '-m', 'pip'])
+            return cmd[3:]
 
         with self.assertRaises(ValueError):
             utils.download_from_pypi('tmpdir')
         with self.assertRaises(ValueError):
             utils.download_from_pypi('tmpdir', pkg='shub', reqfile='req.txt')
-        self.assertFalse(mock_pip_main.called)
+        self.assertFalse(mock_call.called)
 
         # 1.0 (Ubuntu Precise)
-        del mock_pip.__version__
         pipargs = _call('tmpdir', pkg='shub')
         self.assertNotIn('--no-use-wheel', pipargs)
 
