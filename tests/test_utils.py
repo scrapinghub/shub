@@ -10,6 +10,7 @@ from io import StringIO
 from unittest.mock import Mock, MagicMock, patch
 
 import click
+import pytest
 import requests
 import yaml
 from click.testing import CliRunner
@@ -816,3 +817,36 @@ class OnboardingWizardTestCase(unittest.TestCase):
         assert not conf.stacks
         assert sh_yml == {'project': 12345}
         self.get_latest_scrapy_stack.assert_not_called()
+
+
+@pytest.mark.parametrize(("payload", "expected"), [
+    (
+        {'status': 'error', 'message': 'project: non_field_errors',
+         'project': {'non_field_errors': ['Project does not exist']}},
+        "project: Project does not exist\nHint: Check the project ID, and "
+        "that your API key has access to that project.",
+    ),
+    (
+        {'status': 'error', 'message': 'version: invalid',
+         'version': ['Too long.', 'Invalid.']},
+        "version: Too long.\nversion: Invalid.",
+    ),
+    (
+        {'status': 'error', 'message': 'Something failed'},
+        "Something failed",
+    ),
+    (
+        {'status': 'error', 'message': 'Traceback: foo'},
+        "\n---------- REMOTE TRACEBACK ----------\nTraceback: foo"
+        "\n---------- END OF REMOTE TRACEBACK ----------",
+    ),
+    (['unexpected'], "Status 400"),
+])
+def test_make_deploy_request_error(payload, expected):
+    rsp = Mock(status_code=400, text='')
+    rsp.json.return_value = payload
+    rsp.raise_for_status.side_effect = requests.HTTPError(response=rsp)
+    with patch('shub.utils.requests.post', return_value=rsp):
+        with pytest.raises(RemoteErrorException) as exc_info:
+            utils.make_deploy_request('url', {}, None, None, False, False)
+    assert exc_info.value.message == f"Deploy failed (400):\n{expected}"

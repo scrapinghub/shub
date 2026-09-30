@@ -24,7 +24,11 @@ class TestDeployEgg(unittest.TestCase):
     def setUp(self):
         self.curdir = os.getcwd()
         self.fake_requester = FakeRequester()
-        deploy_egg.utils.make_deploy_request = self.fake_requester.fake_request
+        patcher = mock.patch.object(
+            deploy_egg.utils, 'make_deploy_request',
+            self.fake_requester.fake_request)
+        patcher.start()
+        self.addCleanup(patcher.stop)
         self.tmp_dir = tempfile.mkdtemp(prefix="shub-test-deploy-eggs")
 
     def tearDown(self):

@@ -118,16 +118,41 @@ def make_deploy_request(url, data, files, auth, verbose, keep_log):
             raise InvalidAuthException
 
         try:
-            error = rsp.json()['message']
-            if 'Traceback' in error:
-                error = ('\n---------- REMOTE TRACEBACK ----------\n' + error +
-                         '\n---------- END OF REMOTE TRACEBACK ----------')
-        except (ValueError, TypeError, KeyError):
+            error = _get_deploy_error(rsp.json())
+        except (ValueError, TypeError, KeyError, AttributeError):
             error = rsp.text or "Status %d" % rsp.status_code
         msg = f"Deploy failed ({rsp.status_code}):\n{error}"
         raise RemoteErrorException(msg)
     except requests.RequestException as exc:
         raise RemoteErrorException(f"Deploy failed: {exc}")
+
+
+def _get_deploy_error(payload):
+    details = {k: v for k, v in payload.items()
+               if k not in ('status', 'message')}
+    if not details:
+        error = payload['message']
+        if 'Traceback' in error:
+            error = ('\n---------- REMOTE TRACEBACK ----------\n' + error +
+                     '\n---------- END OF REMOTE TRACEBACK ----------')
+        return error
+    error = '\n'.join(_iter_field_errors(details))
+    if 'project' in details:
+        error += ('\nHint: Check the project ID, and that your API key has '
+                  'access to that project.')
+    return error
+
+
+def _iter_field_errors(errors, prefix=''):
+    if isinstance(errors, dict):
+        for key, value in errors.items():
+            key_prefix = prefix if key == 'non_field_errors' else f"{prefix}{key}: "
+            yield from _iter_field_errors(value, key_prefix)
+    elif isinstance(errors, list):
+        for error in errors:
+            yield from _iter_field_errors(error, prefix)
+    else:
+        yield f"{prefix}{errors}"
 
 
 def _check_deploy_files_size(files):
