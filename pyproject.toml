@@ -13,7 +13,7 @@ license-files = ["LICENSE"]
 authors = [{ name = "Scrapinghub", email = "info@scrapinghub.com" }]
 maintainers = [{ name = "Scrapinghub", email = "info@scrapinghub.com" }]
 dependencies = [
-	"click",
+	"click>=8.0",
 	"docker",
 	'importlib-metadata; python_version < "3.10"',
 	"packaging",

@@ -118,3 +118,17 @@ class ScheduleTest(unittest.TestCase):
             {'VAR1': 'VAL1', 'VAR2': 'VAL2'}.items(),
             call_kwargs['environment'].items(),
         )
+
+
+@mock.patch('shub.schedule.ScrapinghubClient', autospec=True)
+def test_complete_spider(mock_client):
+    mock_proj = mock_client.return_value.get_project.return_value
+    mock_proj.spiders.list.return_value = [{'id': 'hotels'}, {'id': 'news'}]
+    with mock.patch('shub.schedule.get_target_conf', autospec=True) as conf:
+        assert schedule._complete_spider(None, None, 'ho') == ['hotels']
+        conf.assert_called_with('default')
+        assert schedule._complete_spider(None, None, 'prod/') == [
+            'prod/hotels', 'prod/news']
+        conf.assert_called_with('prod')
+        conf.side_effect = Exception
+        assert schedule._complete_spider(None, None, '') == []
