@@ -1,3 +1,4 @@
+import glob
 import os
 import textwrap
 from string import Template
@@ -6,6 +7,7 @@ import click
 
 from shub import exceptions as shub_exceptions
 from shub import utils as shub_utils
+from shub.config import load_shub_config
 
 
 DOCKER_APP_DIR = '/app'
@@ -17,9 +19,11 @@ RUN mkdir -p {docker_app_dir}
 WORKDIR {docker_app_dir}
 $requirements
 COPY . {docker_app_dir}
+$eggs
 RUN python -m pip install .
 """.format(docker_app_dir=DOCKER_APP_DIR)
 
+EGGS_DIR = '/eggs'
 DEFAULT_BASE_IMAGE = "scrapinghub/scrapinghub-stack-scrapy:2.13-20250721"
 RECOMMENDED_PYTHON_DEPS = [
     'guppy==0.1.10',
@@ -34,10 +38,11 @@ Dockerfile doesn't fit your project feel free to edit it.
 
 Python packages
 
-If there's a requirements.txt file in the project directory - it will be added to the
-Dockerfile. Also it's possible to provide a path to requirements file via --requirements
-option. Otherwise new requirements.txt file will be created in the project directory
-with the recommended Python packages. Use --list-recommended-reqs to list them.
+If there's a requirements file in the project directory - requirements.txt, or the one
+defined in scrapinghub.yml - it will be added to the Dockerfile. Also it's possible to
+provide a path to requirements file via --requirements option. Otherwise new
+requirements.txt file will be created in the project directory with the recommended
+Python packages. Use --list-recommended-reqs to list them.
 
 It's recommended to include scrapinghub-entrypoint-scrapy package - it is a
 support layer that passes data from the job to Scrapinghub storage. Otherwise
@@ -80,7 +85,7 @@ def _deprecate_base_deps_parameter(ctx, param, value):
               callback=_deprecate_base_deps_parameter)
 @click.option("--add-deps",
               help="a comma-separated list with additional system dependencies")
-@click.option("--requirements", default="requirements.txt",
+@click.option("--requirements",
               help="path to requirements.txt")
 def cli(project, base_image, base_deps, add_deps, requirements):
     closest_scrapy_cfg = shub_utils.closest_file('scrapy.cfg')
@@ -95,12 +100,21 @@ def cli(project, base_image, base_deps, add_deps, requirements):
     if os.path.exists(dockefile_path):
         raise shub_exceptions.ShubException('Found a Dockerfile in the project directory, aborting')
     settings_module = scrapy_config.get('settings', 'default')
+    requirements_file, eggs = _get_shub_requirements()
+    if eggs:
+        click.echo(
+            "WARNING: Python eggs are a deprecated packaging format. Please "
+            "consider replacing the eggs in scrapinghub.yml with packages in "
+            "your requirements file.",
+            err=True)
+    requirements = requirements or requirements_file or 'requirements.txt'
     shub_utils.create_default_setup_py(settings=settings_module)
     values = {
         'base_image':   base_image,
         'system_deps':  _format_system_deps(base_deps, add_deps),
         'system_env':   _format_system_env(settings_module),
         'requirements': _format_requirements(project_dir, requirements),
+        'eggs':         _format_eggs(project_dir, eggs),
     }
     values = {key: value if value else '' for key, value in values.items()}
     source = Template(DOCKERFILE_TEMPLATE)
@@ -109,6 +123,15 @@ def cli(project, base_image, base_deps, add_deps, requirements):
     with open(dockefile_path, 'w') as dockerfile:
         dockerfile.write(results)
     click.echo(f"Dockerfile is saved to {dockefile_path}")
+
+
+def _get_shub_requirements():
+    config = load_shub_config()
+    try:
+        target_conf = config.get_target_conf('default', auth_required=False)
+    except shub_exceptions.BadParameterException:
+        return config.requirements_file, config.eggs
+    return target_conf.requirements_file, target_conf.eggs
 
 
 def _format_system_deps(base_deps, add_deps):
@@ -161,3 +184,26 @@ def _format_requirements(project_dir, requirements):
         'RUN pip install --no-cache-dir -r requirements.txt',
     ]
     return '\n'.join(rows)
+
+
+def _format_eggs(project_dir, eggs):
+    """Prepare cmds to unpack eggs and add them to PYTHONPATH"""
+    paths = []
+    for egg in eggs:
+        paths.extend(sorted(glob.glob(egg)) if glob.has_magic(egg) else [egg])
+    if not paths:
+        return
+    commands, unpacked = [], []
+    for path in paths:
+        rel_path = os.path.relpath(path, project_dir).replace(os.sep, '/')
+        if rel_path.startswith('..'):
+            raise shub_exceptions.BadParameterException(
+                f"Egg {path} must be inside your project directory, "
+                "otherwise it will not be included in the Docker build context.")
+        target = f'{EGGS_DIR}/{os.path.basename(path)}'
+        commands.append(f'python -m zipfile -e {DOCKER_APP_DIR}/{rel_path} {target}')
+        unpacked.append(target)
+    return '\n'.join([
+        'RUN ' + ' && \\\n    '.join(commands),
+        'ENV PYTHONPATH ' + ':'.join(unpacked),
+    ])
