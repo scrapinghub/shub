@@ -27,14 +27,18 @@ Defining target projects
 ------------------------
 
 A very basic ``scrapinghub.yml``, as generated when you first run ``shub
-deploy``, could look like this::
+deploy``, could look like this:
+
+.. parsed-literal::
 
     project: 12345
+    stack: |latest-scrapy-stack|
 
 This tells shub to deploy to the Scrapy Cloud project ``12345`` when you run
-``shub deploy``.  Often, you will have multiple projects on Scrapy Cloud, e.g.
-one for development and one for production. For these cases, you can replace
-the ``project`` option with a ``projects`` dictionary::
+``shub deploy``, using the latest `Scrapy Cloud stack`_ (see
+:ref:`choose-custom-stack`).  Often, you will have multiple projects on Scrapy
+Cloud, e.g. one for development and one for production. For these cases, you
+can replace the ``project`` option with a ``projects`` dictionary::
 
     projects:
       default: 12345
