@@ -16,7 +16,8 @@ from urllib.parse import urljoin
 from shub.config import SH_IMAGES_REGISTRY, list_targets_callback, load_shub_config
 from shub.exceptions import BadParameterException, NotFoundException, ShubException, SubcommandException
 from shub.image.upload import upload_cmd
-from shub.utils import (create_default_setup_py, create_scrapinghub_yml_wizard,
+from shub.utils import (closest_file, create_default_setup_py,
+                        create_scrapinghub_yml_wizard,
                         inside_project, make_deploy_request, remember_cwd,
                         run_cmd, run_python)
 
@@ -89,6 +90,18 @@ def cli(target, version, debug, egg, build_egg, verbose, keep_log,
 
 def deploy_cmd(target, version, debug, egg, build_egg, verbose, keep_log,
                conf=None):
+    egg = egg and os.path.abspath(egg)
+    build_egg = build_egg and os.path.abspath(build_egg)
+    scrapy_cfg = closest_file('scrapy.cfg')
+    with remember_cwd():
+        if scrapy_cfg:
+            os.chdir(os.path.dirname(scrapy_cfg))
+        _deploy_cmd(target, version, debug, egg, build_egg, verbose,
+                    keep_log, conf)
+
+
+def _deploy_cmd(target, version, debug, egg, build_egg, verbose, keep_log,
+                conf):
     tmpdir = None
     try:
         if build_egg:

@@ -291,6 +291,28 @@ class GitFilteredBuildTest(AssertInvokeRaisesMixin, unittest.TestCase):
             shutil.rmtree(tmpdir, ignore_errors=True)
         self.assertTrue(egg.endswith('.egg'))
 
+    def _build_egg_from_subdir(self):
+        os.chdir('project')
+        result = self.runner.invoke(deploy.cli, ('--build-egg', 'out.egg'))
+        self.assertEqual(0, result.exit_code, result.output)
+        with zipfile.ZipFile('out.egg') as z:
+            return z.namelist()
+
+    def test_build_egg_from_subdir(self):
+        with self.runner.isolated_filesystem():
+            self._make_git_project()
+            names = self._build_egg_from_subdir()
+        self.assertIn('project/__init__.py', names)
+
+    def test_build_egg_from_subdir_without_git_repo(self):
+        with self.runner.isolated_filesystem():
+            with open('scrapy.cfg', 'w') as f:
+                f.write(VALID_SCRAPY_CFG)
+            os.mkdir('project')
+            open(os.path.join('project', '__init__.py'), 'w').close()
+            names = self._build_egg_from_subdir()
+        self.assertIn('project/__init__.py', names)
+
     @patch('shub.deploy.make_deploy_request')
     def test_deploy_default_from_git_repo(self, mock_deploy_req):
         with self.runner.isolated_filesystem():
