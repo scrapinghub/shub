@@ -56,6 +56,11 @@ LAST_N_LOGS = 30
 # 50MB for a whole request, reserve 5KB for meta info (e.g. headers)
 REQUEST_FILES_SIZE_LIMIT = 50 * 1024 * 1024 - 5 * 1024
 
+# Stack set in newly generated scrapinghub.yml files if the latest one cannot
+# be fetched, e.g. while offline. Every release sets it to the latest stack,
+# see utils/update_fallback_stack.py.
+FALLBACK_SCRAPY_STACK = 'scrapy:2.18-20260824'
+
 _SETUP_PY_TEMPLATE = """\
 # Automatically created by: shub deploy
 
@@ -673,6 +678,48 @@ def update_available(silent_fail=True):
         return None
 
 
+def _fetch_latest_scrapy_stack(timeout=5.):
+    """
+    Return the latest release of the latest Scrapy Cloud stack, frozen to its
+    release date, e.g. ``'scrapy:2.18-20260824'``, based on the release tags of
+    https://github.com/scrapinghub/scrapinghub-stack-scrapy.
+
+    Raise an exception if the tags cannot be fetched or contain no release.
+    """
+    url = ("https://api.github.com/repos/scrapinghub/scrapinghub-stack-scrapy"
+           "/tags?per_page=100")
+    releases = []
+    while url:
+        response = requests.get(url, timeout=timeout)
+        response.raise_for_status()
+        for tag in response.json():
+            # Released stacks, e.g. 2.18-20260824, as opposed to release
+            # candidates and test builds, e.g. 2.18-rc1
+            match = re.fullmatch(r'(\d+)\.(\d+)-(\d{8})', tag['name'])
+            if match:
+                releases.append((int(match[1]), int(match[2]), match[3]))
+        url = response.links.get('next', {}).get('url')
+    if not releases:
+        raise ValueError("No Scrapy stack release found in the tags of "
+                         "scrapinghub/scrapinghub-stack-scrapy")
+    return 'scrapy:%d.%d-%s' % max(releases)
+
+
+def get_latest_scrapy_stack(timeout=5.):
+    """
+    Return the latest release of the latest Scrapy Cloud stack, frozen to its
+    release date, e.g. ``'scrapy:2.18-20260824'``, based on the release tags of
+    https://github.com/scrapinghub/scrapinghub-stack-scrapy.
+
+    If the tags cannot be fetched, e.g. while offline, return
+    ``FALLBACK_SCRAPY_STACK`` instead.
+    """
+    try:
+        return _fetch_latest_scrapy_stack(timeout)
+    except (requests.RequestException, ValueError, KeyError, TypeError):
+        return FALLBACK_SCRAPY_STACK
+
+
 def download_from_pypi(dest, pkg=None, reqfile=None, extra_args=None):
     if (not pkg and not reqfile) or (pkg and reqfile):
         raise ValueError('Call with either pkg or reqfile')
@@ -784,8 +831,9 @@ def _detect_custom_image_project():
     return False
 
 
-def _update_conf(conf, target, project, repository):
-    """Update configuration target with given ``project`` and ``repository``"""
+def _update_conf(conf, target, project, repository, stack=None):
+    """Update configuration target with given ``project`` and ``repository``,
+    and set ``stack`` as the default stack"""
     if project:
         # XXX: Save {'id': project} once we normalize project config on loading
         conf.projects[target] = project
@@ -797,19 +845,21 @@ def _update_conf(conf, target, project, repository):
             if not isinstance(conf.projects[target], dict):
                 conf.projects[target] = {'id': conf.projects[target]}
             conf.projects[target]['image'] = repository
+    if stack:
+        conf.stacks['default'] = stack
 
 
-def _update_conf_file(filename, target, project, repository):
+def _update_conf_file(filename, target, project, repository, stack=None):
     """Load the given config file, update ``target`` with the given ``project``
-    and ``repository``, then save it. If the file does not exist, it will be
-    created."""
+    and ``repository``, set ``stack`` as the default stack, then save it. If
+    the file does not exist, it will be created."""
     try:
         # XXX: Runtime import to avoid circular dependency
         from shub.config import ShubConfig
         conf = ShubConfig()
         if os.path.exists(filename):
             conf.load_file(filename)
-        _update_conf(conf, target, project, repository)
+        _update_conf(conf, target, project, repository, stack)
         conf.save(filename)
     except Exception as e:
         click.echo(
@@ -836,6 +886,12 @@ def create_scrapinghub_yml_wizard(conf, target='default', image=None):
     repository to use. If ``image`` is ``None``, the wizard will ask for a
     repository if ``Dockerfile`` exists.
 
+    When a new ``scrapinghub.yml`` is created for a new project that does not
+    use a custom image, the project is also set to use the latest Scrapy stack
+    (see ``get_latest_scrapy_stack()``) instead of Scrapy Cloud's default
+    stack, unless a default stack or image is already configured, e.g. in
+    ``~/.scrapinghub.yml``.
+
     The wizard will only ever ask questions and touch the configuration if at
     least one of these two conditions is met:
 
@@ -850,8 +906,9 @@ def create_scrapinghub_yml_wizard(conf, target='default', image=None):
     without altering ``conf``.
     """
     closest_sh_yml = os.path.join(get_project_dir(), 'scrapinghub.yml')
+    new_sh_yml = not os.path.exists(closest_sh_yml)
     run_wizard = (
-        not os.path.exists(closest_sh_yml) or
+        new_sh_yml or
         (image and target in conf.projects
             and not conf.get_target_conf(target).image)
     )
@@ -859,6 +916,7 @@ def create_scrapinghub_yml_wizard(conf, target='default', image=None):
         return
     project = None
     repository = None
+    stack = None
     if target not in conf.projects and 'default' not in conf.projects:
         target, project = _get_target_project(conf, target)
         if target == 'default':
@@ -873,5 +931,16 @@ def create_scrapinghub_yml_wizard(conf, target='default', image=None):
         repository = click.prompt(
             "Image repository (leave empty to use Scrapinghub's repository)",
             default=True, show_default=False, type=_AnyParamType())
-    _update_conf(conf, target, project, repository)
-    _update_conf_file(closest_sh_yml, target, project, repository)
+    # Without a stack, Scrapy Cloud falls back to its default stack, which can
+    # be very old, so point new projects to the latest one instead. Never add
+    # a stack to existing configuration files, and respect any default stack
+    # or custom image already configured, e.g. in ~/.scrapinghub.yml.
+    if (new_sh_yml and project and not repository
+            and not conf.stacks.get('default')
+            and not conf.images.get(target, conf.images.get('default'))):
+        stack = get_latest_scrapy_stack()
+        click.echo(
+            "Using Scrapy Cloud stack %s. You can change it via the 'stack' "
+            "option in scrapinghub.yml." % stack)
+    _update_conf(conf, target, project, repository, stack)
+    _update_conf_file(closest_sh_yml, target, project, repository, stack)
