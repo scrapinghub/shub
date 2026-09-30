@@ -645,6 +645,33 @@ def update_available(silent_fail=True):
         return None
 
 
+def _fetch_latest_scrapy_stack(timeout=5.):
+    """
+    Return the latest release of the latest Scrapy Cloud stack, frozen to its
+    release date, e.g. ``'scrapy:2.18-20260824'``, based on the release tags of
+    https://github.com/scrapinghub/scrapinghub-stack-scrapy.
+
+    Raise an exception if the tags cannot be fetched or contain no release.
+    """
+    url = ("https://api.github.com/repos/scrapinghub/scrapinghub-stack-scrapy"
+           "/tags?per_page=100")
+    releases = []
+    while url:
+        response = requests.get(url, timeout=timeout)
+        response.raise_for_status()
+        for tag in response.json():
+            # Released stacks, e.g. 2.18-20260824, as opposed to release
+            # candidates and test builds, e.g. 2.18-rc1
+            match = re.fullmatch(r'(\d+)\.(\d+)-(\d{8})', tag['name'])
+            if match:
+                releases.append((int(match[1]), int(match[2]), match[3]))
+        url = response.links.get('next', {}).get('url')
+    if not releases:
+        raise ValueError("No Scrapy stack release found in the tags of "
+                         "scrapinghub/scrapinghub-stack-scrapy")
+    return 'scrapy:%d.%d-%s' % max(releases)
+
+
 def get_latest_scrapy_stack(timeout=5.):
     """
     Return the latest release of the latest Scrapy Cloud stack, frozen to its
@@ -654,26 +681,10 @@ def get_latest_scrapy_stack(timeout=5.):
     If the tags cannot be fetched, e.g. while offline, return
     ``FALLBACK_SCRAPY_STACK`` instead.
     """
-    url = ("https://api.github.com/repos/scrapinghub/scrapinghub-stack-scrapy"
-           "/tags?per_page=100")
-    releases = []
     try:
-        while url:
-            response = requests.get(url, timeout=timeout)
-            response.raise_for_status()
-            for tag in response.json():
-                # Released stacks, e.g. 2.18-20260824, as opposed to release
-                # candidates and test builds, e.g. 2.18-rc1
-                match = re.fullmatch(r'(\d+)\.(\d+)-(\d{8})', tag['name'])
-                if match:
-                    releases.append(
-                        (int(match[1]), int(match[2]), match[3]))
-            url = response.links.get('next', {}).get('url')
+        return _fetch_latest_scrapy_stack(timeout)
     except (requests.RequestException, ValueError, KeyError, TypeError):
         return FALLBACK_SCRAPY_STACK
-    if not releases:
-        return FALLBACK_SCRAPY_STACK
-    return 'scrapy:%d.%d-%s' % max(releases)
 
 
 def download_from_pypi(dest, pkg=None, reqfile=None, extra_args=None):

@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import stat
 import sys
 import unittest
@@ -34,6 +35,14 @@ def _tags_response(names, next_url=None):
     response.json.return_value = [{'name': name} for name in names]
     response.links = {'next': {'url': next_url}} if next_url else {}
     return response
+
+
+def _stack_release(stack):
+    """Return a date-frozen stack, e.g. scrapy:2.18-20260824, as a
+    (major, minor, date) tuple, so that stacks can be compared."""
+    major, minor, date = re.fullmatch(
+        r'scrapy:(\d+)\.(\d+)-(\d{8})', stack).groups()
+    return int(major), int(minor), date
 
 
 class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
@@ -383,6 +392,25 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
                 mock_get.side_effect = side_effect
                 self.assertEqual(utils.get_latest_scrapy_stack(),
                                  utils.FALLBACK_SCRAPY_STACK)
+
+    def test_fetch_latest_scrapy_stack_online(self):
+        # Unlike the tests above, reach the actual GitHub API, so that
+        # upstream changes, e.g. in the format of its responses or of the
+        # stack tags, which would make get_latest_scrapy_stack() silently fall
+        # back to FALLBACK_SCRAPY_STACK, make this test fail.
+        try:
+            stack = utils._fetch_latest_scrapy_stack()
+        except (requests.ConnectionError, requests.Timeout) as e:
+            self.skipTest("Cannot reach GitHub: %s" % e)
+        except requests.HTTPError as e:
+            # Anonymous requests are rate-limited per IP address, which may be
+            # shared, e.g. by macOS CI runners
+            if e.response.headers.get('X-RateLimit-Remaining') == '0':
+                self.skipTest("GitHub API rate limit exceeded")
+            raise
+        # FALLBACK_SCRAPY_STACK was the latest stack when it was last bumped
+        self.assertGreaterEqual(_stack_release(stack),
+                                _stack_release(utils.FALLBACK_SCRAPY_STACK))
 
     @patch('shub.utils.pip_main', autospec=True)
     @patch('shub.utils.pip', autospec=True)
