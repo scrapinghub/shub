@@ -48,6 +48,14 @@ You can also specify the amount of Scrapy Cloud units (``-u``) and the priority 
     or watch it running in Zyte's web interface:
         https://app.zyte.com/p/12345/job/2/16
 
+To reuse the spider arguments, job-specific settings, environment variables and
+tags of a previous job, pass its ID through the ``-i`` option. To inherit only
+some of them, add ``--inherit-args``, ``--inherit-settings``,
+``--inherit-environment`` or ``--inherit-tags``. Values passed through other
+options take precedence over inherited ones::
+
+    $ shub schedule myspider -i 2/15 --inherit-args -a ARG1=OTHER
+
 shub provides commands to retrieve log entries, scraped items, or requests from
 jobs. If the job is still running, you can provide the ``-f`` (follow) option
 to receive live updates::
