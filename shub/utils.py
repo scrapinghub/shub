@@ -57,8 +57,8 @@ LAST_N_LOGS = 30
 REQUEST_FILES_SIZE_LIMIT = 50 * 1024 * 1024 - 5 * 1024
 
 # Stack set in newly generated scrapinghub.yml files if the latest one cannot
-# be fetched, e.g. while offline. Bump it when a new Scrapy stack is released,
-# see https://github.com/scrapinghub/scrapinghub-stack-scrapy/tags
+# be fetched, e.g. while offline. Every release sets it to the latest stack,
+# see utils/update_fallback_stack.py.
 FALLBACK_SCRAPY_STACK = 'scrapy:2.18-20260824'
 
 _SETUP_PY_TEMPLATE = """\

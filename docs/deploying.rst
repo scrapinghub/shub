@@ -169,7 +169,8 @@ latest Scrapy stack released in the `scrapinghub-stack-scrapy
 unless a default stack is already configured, e.g. in ``~/.scrapinghub.yml``.
 The stack is frozen to its release date, e.g. |latest-scrapy-stack|, so that
 your deploys keep using the same environment until you change it. If the list
-of stacks cannot be fetched, e.g. while offline, a recent stack known to shub
-is used instead. shub never adds a stack to an existing ``scrapinghub.yml``.
+of stacks cannot be fetched, e.g. while offline, the latest stack at the time
+your version of shub was released is used instead. shub never adds a stack to
+an existing ``scrapinghub.yml``.
 
 .. _`Scrapy Cloud stack`: https://helpdesk.scrapinghub.com/support/solutions/articles/22000200402-scrapy-cloud-stacks
