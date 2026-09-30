@@ -5,7 +5,6 @@ import stat
 import sys
 import unittest
 import textwrap
-import time
 from io import StringIO
 from unittest.mock import Mock, MagicMock, patch
 
@@ -164,22 +163,22 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
             with self.assertRaises(BadParameterException):
                 utils.get_job_specs(job_id)
 
-    @patch('shub.utils.HubstorageClient', autospec=True)
-    def test_get_job(self, mock_HSC):
-        class MockJob:
-            metadata = {'some': 'val'}
-        mockjob = MockJob()
-        mock_HSC.return_value.get_job.return_value = mockjob
+    @patch('shub.utils.ScrapinghubClient', autospec=True)
+    def test_get_job(self, mock_SC):
+        mockjob = mock_SC.return_value.get_job.return_value
+        mockjob.metadata.iter.return_value = iter([('state', 'running')])
         conf = mock_conf(self)
 
         self.assertIs(utils.get_job('1/1/1'), mockjob)
-        mock_HSC.assert_called_once_with(auth=conf.apikeys['default'])
+        mock_SC.assert_called_once_with(conf.apikeys['default'])
+        self.assertTrue(utils.job_live(mockjob))
+        self.assertFalse(mockjob.metadata.get.called)
 
         with self.assertRaises(BadParameterException):
             utils.get_job('1/1/')
 
         # Non-existent job
-        mockjob.metadata = None
+        mockjob.metadata.iter.side_effect = StopIteration
         with self.assertRaises(NotFoundException):
             utils.get_job('1/1/1')
 
@@ -208,28 +207,28 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
         assert utils._is_deploy_successful(last_logs)
 
     def test_job_live(self):
-        job = MagicMock()
-        job._metadata_updated = time.time()
+        job = MagicMock(spec=['metadata'])
         for live_value in ('pending', 'running'):
-            job.metadata.__getitem__.return_value = live_value
-            self.assertTrue(utils.job_live(job))
+            job.metadata.get.return_value = live_value
+            self.assertTrue(utils.job_live(job, refresh_meta_after=-1))
         for dead_value in ('finished', 'deleted'):
-            job.metadata.__getitem__.return_value = dead_value
-            self.assertFalse(utils.job_live(job))
+            job.metadata.get.return_value = dead_value
+            self.assertFalse(utils.job_live(job, refresh_meta_after=-1))
+        job.metadata.get.assert_called_with('state')
 
     def test_job_live_updates_metadata(self):
         job = MagicMock(spec=['metadata'])
         with patch('shub.utils.time.time') as mock_time:
             mock_time.return_value = 0
             utils.job_live(job)
+            self.assertEqual(job.metadata.get.call_count, 1)
             mock_time.return_value = 10
             utils.job_live(job, refresh_meta_after=20)
-            self.assertFalse(job.metadata.expire.called)
+            self.assertEqual(job.metadata.get.call_count, 1)
             utils.job_live(job, refresh_meta_after=5)
-            self.assertTrue(job.metadata.expire.called)
-            job.metadata.expire.reset_mock()
+            self.assertEqual(job.metadata.get.call_count, 2)
             utils.job_live(job, refresh_meta_after=5)
-            self.assertFalse(job.metadata.expire.called)
+            self.assertEqual(job.metadata.get.call_count, 2)
 
     @patch('shub.utils.time.sleep')
     def test_job_resource_iter(self, mock_sleep):
@@ -238,7 +237,10 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
         job.metadata = {'state': 'running'}
 
         def make_items(iterable):
-            return [json.dumps({'_key': x}) for x in iterable]
+            return [{'_key': x} for x in iterable]
+
+        def make_lines(iterable):
+            return [json.dumps(x) for x in make_items(iterable)]
 
         def magic_iter(*args, **kwargs):
             """
@@ -253,7 +255,7 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
             elif magic_iter.stage == 1:
                 self.assertEqual(kwargs['startafter'], 3)
                 magic_iter.stage = 0
-                job.metadata = {'state': 'finished'}
+                job._state = 'finished'
                 return iter(make_items([4, 5, 6]))
             elif magic_iter.stage == 2:
                 self.assertEqual(kwargs['startafter'], 'jobkey/996')
@@ -268,19 +270,19 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
                 output_json=True,
             ))
 
-        job.resource.iter_json = magic_iter
+        job.resource.iter = magic_iter
 
         magic_iter.stage = 0
-        self.assertEqual(jri_result(False), make_items([1, 2, 3]))
+        self.assertEqual(jri_result(False), make_lines([1, 2, 3]))
         self.assertFalse(mock_sleep.called)
 
         magic_iter.stage = 0
-        self.assertEqual(jri_result(True), make_items([1, 2, 3, 4, 5, 6]))
+        self.assertEqual(jri_result(True), make_lines([1, 2, 3, 4, 5, 6]))
         self.assertTrue(mock_sleep.called)
 
         magic_iter.stage = 0
-        job.metadata = {'state': 'finished'}
-        self.assertEqual(jri_result(True), make_items([1, 2, 3]))
+        job._state = 'finished'
+        self.assertEqual(jri_result(True), make_lines([1, 2, 3]))
 
         magic_iter.stage = 2
         job.resource.stats.return_value = {'totals': {'input_values': 1000}}

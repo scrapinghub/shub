@@ -38,7 +38,7 @@ except:  # noqa
         except ImportError:
             from pip._internal import main as pip_main
 
-from scrapinghub import ScrapinghubClient, ScrapinghubAPIError, HubstorageClient
+from scrapinghub import ScrapinghubClient, ScrapinghubAPIError
 
 import shub
 from shub.compat import to_native_str
@@ -456,10 +456,15 @@ def get_job_specs(job):
 
 def get_job(job):
     jobid, apikey = get_job_specs(job)
-    hsc = HubstorageClient(auth=apikey)
-    job = hsc.get_job(jobid)
-    if not job.metadata:
+    job = ScrapinghubClient(apikey).get_job(jobid)
+    try:
+        metadata = dict(job.metadata.iter())
+    except StopIteration:
+        metadata = {}
+    if not metadata:
         raise NotFoundException(f'Job {jobid} does not exist')
+    job._state = metadata.get('state')
+    job._metadata_updated = time.time()
     return job
 
 
@@ -542,20 +547,17 @@ def job_live(job, refresh_meta_after=60):
     Check whether job is in 'pending' or 'running' state. If job metadata was
     fetched longer than `refresh_meta_after` seconds ago, refresh it.
     """
-    if not hasattr(job, '_metadata_updated'):
-        # Assume just loaded
+    if (not hasattr(job, '_state')
+            or time.time() - job._metadata_updated > refresh_meta_after):
+        job._state = job.metadata.get('state')
         job._metadata_updated = time.time()
-    if time.time() - job._metadata_updated > refresh_meta_after:
-        job.metadata.expire()
-        # Fetching actually happens on job.metadata['state'], but close enough
-        job._metadata_updated = time.time()
-    return job.metadata['state'] in ('pending', 'running')
+    return job._state in ('pending', 'running')
 
 
 def job_resource_iter(job, resource, output_json=False, follow=True,
                       tail=None):
     """
-    Given a python-hubstorage job and resource (e.g. job.items), return a
+    Given a python-scrapinghub job and resource (e.g. job.items), return a
     generator that periodically checks the job resource and yields its items.
     The generator will exit when the job has finished.
 
@@ -569,21 +571,12 @@ def job_resource_iter(job, resource, output_json=False, follow=True,
         last_item = total_nr_items - tail - 1
         if last_item >= 0:
             last_item_key = f'{job.key}/{last_item}'
-    if not job_live(job):
-        follow = False
-    resource_iter = resource.iter_json if output_json else resource.iter_values
-    if not follow:
-        for item in resource_iter(startafter=last_item_key):
-            yield item
-        return
+    follow = follow and job_live(job)
     while True:
-        # XXX: Always use iter_json until Kumo team fixes iter_values to also
-        # return '_key'
-        for json_line in resource.iter_json(startafter=last_item_key):
-            item = json.loads(json_line)
+        for item in resource.iter(startafter=last_item_key, meta=['_key']):
             last_item_key = item['_key']
-            yield json_line if output_json else item
-        if not job_live(job):
+            yield json.dumps(item, ensure_ascii=False) if output_json else item
+        if not follow or not job_live(job):
             break
         # Workers only upload data to hubstorage every 15 seconds
         time.sleep(15)
