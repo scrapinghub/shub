@@ -17,7 +17,7 @@ dependencies = [
 	"docker",
 	'importlib-metadata; python_version < "3.10"',
 	"packaging",
-	"pip",
+	"pip>=21.2",
 	"python-dotenv>=1.0.0",
 	"PyYAML",
 	"requests",

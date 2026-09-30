@@ -19,24 +19,10 @@ from tempfile import NamedTemporaryFile, TemporaryFile
 from urllib.parse import urljoin
 
 import click
-import pip
 import requests
 import yaml
 from click import ParamType
-
-# https://github.com/scrapinghub/shub/pull/309#pullrequestreview-113977920
-try:
-    from pip import main as pip_main
-except:  # noqa
-    try:
-        # For pip v20: https://tinyurl.com/pip20-error
-        from pip._internal.cli.main import pip_main
-    except ImportError:
-        try:
-            # For pip v9 and v10: https://tinyurl.com/y8mvl8rb
-            from pip._internal.main import main as pip_main
-        except ImportError:
-            from pip._internal import main as pip_main
+from pip import main as pip_main
 
 from scrapinghub import ScrapinghubClient, ScrapinghubAPIError, HubstorageClient
 
@@ -327,24 +313,9 @@ def run_python(cmd, *args, **kwargs):
 
 
 def decompress_egg_files(directory=None):
-    try:
-        EXTS = pip.utils.ARCHIVE_EXTENSIONS
-    except AttributeError:
-        try:
-            EXTS = pip._internal.utils.misc.ARCHIVE_EXTENSIONS
-        except AttributeError:
-            EXTS = ('.zip', '.whl', '.tar', '.tar.gz', '.tar.bz2')
-    try:
-        unpack_file = pip.utils.unpack_file
-    except AttributeError:
-        # XXX a work-around for pip >= 10.0
-        try:
-            unpack_file = pip.util.unpack_file
-        except AttributeError:
-            try:
-                unpack_file = pip._internal.utils.misc.unpack_file
-            except AttributeError:
-                from pip._internal.utils.unpacking import unpack_file
+    from pip._internal.utils.unpacking import unpack_file
+
+    EXTS = ('.zip', '.whl', '.tar', '.tar.gz', '.tar.bz2')
     pathname = "*"
     if directory is not None:
         pathname = os.path.join(directory, pathname)
@@ -358,10 +329,7 @@ def decompress_egg_files(directory=None):
         click.echo("Uncompressing: %s" % egg)
         egg_ext = EXTS[list(egg.endswith(ext) for ext in EXTS).index(True)]
         decompress_location = egg[:-len(egg_ext)]
-        try:
-            unpack_file(egg, decompress_location, None)
-        except TypeError:
-            unpack_file(egg, decompress_location, None, None)
+        unpack_file(egg, decompress_location)
 
 
 def build_and_deploy_eggs(project, endpoint, apikey):
@@ -691,19 +659,10 @@ def download_from_pypi(dest, pkg=None, reqfile=None, extra_args=None):
     if (not pkg and not reqfile) or (pkg and reqfile):
         raise ValueError('Call with either pkg or reqfile')
     extra_args = extra_args or []
-    pip_version = Version(getattr(pip, '__version__', '1.0'))
-    cmd = 'install'
-    no_wheel = []
     target = [pkg] if pkg else ['-r', reqfile]
-    if pip_version >= Version('1.4'):
-        no_wheel = ['--no-use-wheel']
-    if pip_version >= Version('7'):
-        no_wheel = ['--no-binary=:all:']
-    if pip_version >= Version('8'):
-        cmd = 'download'
     with patch_sys_executable():
-        pip_main([cmd, '-d', dest, '--no-deps'] + no_wheel + extra_args +
-                 target)
+        pip_main(['download', '-d', dest, '--no-deps', '--no-binary=:all:'] +
+                 extra_args + target)
 
 
 @contextlib.contextmanager
