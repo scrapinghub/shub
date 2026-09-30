@@ -6,7 +6,6 @@ import shub
 from shub.config import _load_dotenv_apikey
 from shub.utils import update_available
 
-
 HELP = """
 shub is the Scrapinghub command-line client. It allows you to deploy projects
 or dependencies, schedule spiders, and retrieve scraped data or logs without
@@ -21,21 +20,29 @@ For usage and help on a specific command, run it with a --help flag, e.g.:
     shub schedule --help
 """
 
-CONTEXT_SETTINGS = {'help_option_names': ['-h', '--help']}
+CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"]}
 
 
-@click.group(help=HELP, short_help=SHORT_HELP, epilog=EPILOG,
-             context_settings=CONTEXT_SETTINGS)
-@click.option('--dotenv-path', default=None, type=click.Path(dir_okay=False),
-              help="Path to a .env file to read the SHUB_APIKEY environment variable from."
-                   " Defaults to the '.env' file in the current directory.")
+@click.group(
+    help=HELP, short_help=SHORT_HELP, epilog=EPILOG, context_settings=CONTEXT_SETTINGS
+)
+@click.option(
+    "--dotenv-path",
+    default=None,
+    type=click.Path(dir_okay=False),
+    help="Path to a .env file to read the SHUB_APIKEY environment variable from."
+    " Defaults to the '.env' file in the current directory.",
+)
 @click.version_option(shub.__version__)
 def cli(dotenv_path: str | None) -> None:
     _load_dotenv_apikey(dotenv_path)
     update_url = update_available()
     if update_url:
-        click.echo("INFO: A newer version of shub is available. Update "
-                   "via pip or get it at {}".format(update_url),  err=True)
+        click.echo(
+            "INFO: A newer version of shub is available. Update "
+            f"via pip or get it at {update_url}",
+            err=True,
+        )
 
 
 commands = [
@@ -60,5 +67,5 @@ commands = [
 for command in commands:
     module_path = "shub." + command
     command_module = importlib.import_module(module_path)
-    command_name = command.replace('_', '-')  # easier to type
+    command_name = command.replace("_", "-")  # easier to type
     cli.add_command(command_module.cli, command_name)

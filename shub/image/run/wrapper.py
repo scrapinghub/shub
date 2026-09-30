@@ -21,19 +21,19 @@ should be rewritten in the future with something more basic and
 lightweight, to get rid of dependence on Python.
 """
 
-
-import os
-import sys
+import datetime
 import json
 import logging
-import datetime
+import os
+import sys
 from multiprocessing import Process
+from pathlib import Path
 from shutil import which
 
 
 def _consume_from_fifo(fifo_path):
     """Start reading/printing entries from FIFO."""
-    with open(fifo_path) as fifo:
+    with Path(fifo_path).open() as fifo:
         while True:
             line = fifo.readline()
             # returns an empty string only in the end of the file
@@ -45,30 +45,32 @@ def _consume_from_fifo(fifo_path):
 
 def _print_fifo_entry(message_type, message):
     """Print only specific entries."""
-    if message_type == 'LOG':
-        timestamp = _millis_to_str(message['time'])
-        loglevel = logging.getLevelName(message['level'])
+    if message_type == "LOG":
+        timestamp = _millis_to_str(message["time"])
+        loglevel = logging.getLevelName(message["level"])
         # mimic Scrapy logging format as much as possible
-        print('{} {} {}'.format(timestamp, loglevel, message['message']))
+        print("{} {} {}".format(timestamp, loglevel, message["message"]))
 
 
 def _millis_to_str(millis):
     """Convert a datatime in ms to a formatted string."""
-    datetime_ts = datetime.datetime.fromtimestamp(millis / 1000.0)
-    return datetime_ts.strftime('%Y-%m-%d %H:%M:%S')
+    datetime_ts = datetime.datetime.fromtimestamp(
+        millis / 1000.0, tz=datetime.timezone.utc
+    ).astimezone()
+    return datetime_ts.strftime("%Y-%m-%d %H:%M:%S")
 
 
 def main():
     """Main wrapper entrypoint."""
     # create a named pipe for communication
-    fifo_path = os.environ.get('SHUB_FIFO_PATH')
+    fifo_path = os.environ.get("SHUB_FIFO_PATH")
     os.mkfifo(fifo_path)
     # create and start a consumer process to read from the fifo:
     # non-daemon to allow it to finish reading from pipe before exit.
     Process(target=_consume_from_fifo, args=[fifo_path]).start()
     # replace current process with original start-crawl
-    os.execv(which('start-crawl'), sys.argv)
+    os.execv(which("start-crawl"), sys.argv)  # noqa: S606
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

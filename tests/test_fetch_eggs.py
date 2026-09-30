@@ -1,5 +1,5 @@
 import unittest
-from collections import namedtuple
+from typing import NamedTuple
 from unittest import mock
 
 from click.testing import CliRunner
@@ -10,12 +10,12 @@ from shub.exceptions import InvalidAuthException, RemoteErrorException
 from .utils import AssertInvokeRaisesMixin, mock_conf
 
 
-FakeResponse = namedtuple('FakeResponse', ['status_code'])
+class FakeResponse(NamedTuple):
+    status_code: int
 
 
-@mock.patch('shub.fetch_eggs.requests', autospec=True)
+@mock.patch("shub.fetch_eggs.requests", autospec=True)
 class FetchEggsTest(AssertInvokeRaisesMixin, unittest.TestCase):
-
     def setUp(self):
         self.runner = CliRunner()
         self.conf = mock_conf(self)

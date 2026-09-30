@@ -1,13 +1,13 @@
-import click
 import os
-import tempfile
 import shutil
+import tempfile
+from pathlib import Path
+
+import click
 
 from shub import DEPLOY_DOCS_LINK
 from shub.config import get_target_conf
-from shub.utils import (build_and_deploy_eggs, decompress_egg_files,
-                        download_from_pypi)
-
+from shub.utils import build_and_deploy_eggs, decompress_egg_files, download_from_pypi
 
 HELP = """
 Build eggs of your project's requirements and deploy them to Scrapy Cloud.
@@ -29,41 +29,43 @@ SHORT_HELP = "[DEPRECATED] Build and deploy eggs from requirements.txt"
 
 @click.command(help=HELP, short_help=SHORT_HELP)
 @click.argument("target", required=False, default="default")
-@click.option("-r", "--requirements-file", default='requirements.txt',
-              type=click.STRING)
+@click.option(
+    "-r", "--requirements-file", default="requirements.txt", type=click.STRING
+)
 def cli(target, requirements_file):
     click.secho(
         "deploy-reqs was deprecated, define a requirements file in your "
-        "scrapinghub.yml instead. See {}".format(DEPLOY_DOCS_LINK),
-        err=True, fg='yellow',
+        f"scrapinghub.yml instead. See {DEPLOY_DOCS_LINK}",
+        err=True,
+        fg="yellow",
     )
     main(target, requirements_file)
 
 
 def main(target, requirements_file):
     targetconf = get_target_conf(target)
-    requirements_full_path = os.path.abspath(requirements_file)
+    requirements_full_path = str(Path(requirements_file).resolve())
     eggs_tmp_dir = _mk_and_cd_eggs_tmpdir()
     _download_egg_files(eggs_tmp_dir, requirements_full_path)
     decompress_egg_files()
-    build_and_deploy_eggs(targetconf.project_id, targetconf.endpoint,
-                          targetconf.apikey)
+    build_and_deploy_eggs(targetconf.project_id, targetconf.endpoint, targetconf.apikey)
 
 
 def _mk_and_cd_eggs_tmpdir():
     tmpdir = tempfile.mkdtemp(prefix="eggs")
     os.chdir(tmpdir)
-    os.mkdir('eggs')
-    os.chdir('eggs')
-    return os.path.join(tmpdir, 'eggs')
+    Path("eggs").mkdir()
+    os.chdir("eggs")
+    return str(Path(tmpdir, "eggs"))
 
 
 def _download_egg_files(eggs_dir, requirements_file):
-    editable_src_dir = tempfile.mkdtemp(prefix='pipsrc')
+    editable_src_dir = tempfile.mkdtemp(prefix="pipsrc")
 
-    click.echo('Downloading eggs...')
+    click.echo("Downloading eggs...")
     try:
-        download_from_pypi(eggs_dir, reqfile=requirements_file,
-                           extra_args=["--src", editable_src_dir])
+        download_from_pypi(
+            eggs_dir, reqfile=requirements_file, extra_args=["--src", editable_src_dir]
+        )
     finally:
         shutil.rmtree(editable_src_dir, ignore_errors=True)

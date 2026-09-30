@@ -1,5 +1,5 @@
-import os
 import re
+from pathlib import Path
 from unittest import mock
 
 import pytest
@@ -7,21 +7,20 @@ from click.testing import CliRunner
 
 from shub import exceptions as shub_exceptions
 from shub.image.build import cli
-
-from ..utils import clean_progress_output, format_expected_progress
+from tests.utils import clean_progress_output, format_expected_progress
 
 
 @pytest.fixture
 def test_mock():
     """Mock for shub image test command"""
-    with mock.patch('shub.image.build.test_cmd') as m:
+    with mock.patch("shub.image.build.test_cmd") as m:
         yield m
 
 
 def test_cli(docker_client_mock, project_dir, test_mock):
     docker_client_mock.build.return_value = [
         {"stream": "all is ok"},
-        {"stream": "Successfully built 12345"}
+        {"stream": "Successfully built 12345"},
     ]
     runner = CliRunner()
     result = runner.invoke(cli, ["dev", "-v"])
@@ -29,11 +28,11 @@ def test_cli(docker_client_mock, project_dir, test_mock):
     docker_client_mock.build.assert_called_with(
         decode=True,
         path=project_dir,
-        tag='registry.io/user/project:1.0',
-        dockerfile='Dockerfile',
+        tag="registry.io/user/project:1.0",
+        dockerfile="Dockerfile",
         nocache=False,
         rm=True,
-        buildargs={}
+        buildargs={},
     )
     test_mock.assert_called_with("dev", None)
 
@@ -41,7 +40,7 @@ def test_cli(docker_client_mock, project_dir, test_mock):
 def test_cli_with_nocache(docker_client_mock, project_dir, test_mock):
     docker_client_mock.build.return_value = [
         {"stream": "all is ok"},
-        {"stream": "Successfully built 12345"}
+        {"stream": "Successfully built 12345"},
     ]
     runner = CliRunner()
     result = runner.invoke(cli, ["dev", "-v", "--no-cache"])
@@ -49,11 +48,11 @@ def test_cli_with_nocache(docker_client_mock, project_dir, test_mock):
     docker_client_mock.build.assert_called_with(
         decode=True,
         path=project_dir,
-        tag='registry.io/user/project:1.0',
-        dockerfile='Dockerfile',
+        tag="registry.io/user/project:1.0",
+        dockerfile="Dockerfile",
         nocache=True,
         rm=True,
-        buildargs={}
+        buildargs={},
     )
     test_mock.assert_called_with("dev", None)
 
@@ -61,20 +60,31 @@ def test_cli_with_nocache(docker_client_mock, project_dir, test_mock):
 def test_cli_with_buildargs(docker_client_mock, project_dir, test_mock):
     docker_client_mock.build.return_value = [
         {"stream": "all is ok"},
-        {"stream": "Successfully built 12345"}
+        {"stream": "Successfully built 12345"},
     ]
     runner = CliRunner()
-    result = runner.invoke(cli, ["dev", "-v", "-b", "AWS_KEY=asdasdeg", "-b",
-                                 "AWS_SEC=ashthku", "-b", "PARAM=query=4"])
+    result = runner.invoke(
+        cli,
+        [
+            "dev",
+            "-v",
+            "-b",
+            "AWS_KEY=asdasdeg",
+            "-b",
+            "AWS_SEC=ashthku",
+            "-b",
+            "PARAM=query=4",
+        ],
+    )
     assert result.exit_code == 0
     docker_client_mock.build.assert_called_with(
         decode=True,
         path=project_dir,
-        tag='registry.io/user/project:1.0',
-        dockerfile='Dockerfile',
+        tag="registry.io/user/project:1.0",
+        dockerfile="Dockerfile",
         nocache=False,
         rm=True,
-        buildargs={'AWS_KEY': 'asdasdeg', 'AWS_SEC': 'ashthku', 'PARAM': 'query=4'}
+        buildargs={"AWS_KEY": "asdasdeg", "AWS_SEC": "ashthku", "PARAM": "query=4"},
     )
     test_mock.assert_called_with("dev", None)
 
@@ -86,16 +96,16 @@ def test_cli_with_progress(docker_client_mock, project_dir, test_mock):
         {"stream": "Step 2/3 : RUN cmd1"},
         {"stream": "some other actions"},
         {"stream": "Step 3/3 : RUN cmd2"},
-        {"stream": "Successfully built 12345"}
+        {"stream": "Successfully built 12345"},
     ]
     runner = CliRunner()
     result = runner.invoke(cli, ["dev"])
     assert result.exit_code == 0
     expected = format_expected_progress(
-        r'Building registry\.io/user/project:1\.0\.'
-        r'Steps:   0%\| +\| 0/1'
-        r'Steps: 100%\|█+\| 3/3'
-        r'The image registry\.io/user/project:1\.0 build is completed\.'
+        r"Building registry\.io/user/project:1\.0\."
+        r"Steps:   0%\| +\| 0/1"
+        r"Steps: 100%\|█+\| 3/3"
+        r"The image registry\.io/user/project:1\.0 build is completed\."
     )
     assert re.search(clean_progress_output(result.output), expected)
 
@@ -103,7 +113,7 @@ def test_cli_with_progress(docker_client_mock, project_dir, test_mock):
 def test_cli_custom_version(docker_client_mock, project_dir, test_mock):
     docker_client_mock.build.return_value = [
         {"stream": "all is ok"},
-        {"stream": "Successfully built 12345"}
+        {"stream": "Successfully built 12345"},
     ]
     runner = CliRunner()
     result = runner.invoke(cli, ["dev", "--version", "test"])
@@ -111,11 +121,11 @@ def test_cli_custom_version(docker_client_mock, project_dir, test_mock):
     docker_client_mock.build.assert_called_with(
         decode=True,
         path=project_dir,
-        tag='registry.io/user/project:test',
-        dockerfile='Dockerfile',
+        tag="registry.io/user/project:test",
+        dockerfile="Dockerfile",
         nocache=False,
         rm=True,
-        buildargs={}
+        buildargs={},
     )
     test_mock.assert_called_with("dev", "test")
 
@@ -123,29 +133,27 @@ def test_cli_custom_version(docker_client_mock, project_dir, test_mock):
 def test_cli_no_dockerfile(docker_client_mock, project_dir):
     docker_client_mock.build.return_value = [
         {"error": "Minor", "errorDetail": "Testing output"},
-        {"stream": "Successfully built 12345"}
+        {"stream": "Successfully built 12345"},
     ]
-    os.remove(os.path.join(project_dir, 'Dockerfile'))
+    Path(project_dir, "Dockerfile").unlink()
     runner = CliRunner()
     result = runner.invoke(cli, ["dev"])
     assert result.exit_code == shub_exceptions.NotFoundException.exit_code
 
 
-@pytest.mark.usefixtures('project_dir')
+@pytest.mark.usefixtures("project_dir")
 def test_cli_fail(docker_client_mock):
-    docker_client_mock.build.return_value = [
-        {"error": "Minor", "errorDetail": "Test"}
-    ]
+    docker_client_mock.build.return_value = [{"error": "Minor", "errorDetail": "Test"}]
     runner = CliRunner()
     result = runner.invoke(cli, ["dev"])
     assert result.exit_code == shub_exceptions.RemoteErrorException.exit_code
 
 
-@pytest.mark.parametrize('skip_tests_flag', ['-S', '--skip-tests'])
+@pytest.mark.parametrize("skip_tests_flag", ["-S", "--skip-tests"])
 def test_cli_skip_tests(docker_client_mock, test_mock, project_dir, skip_tests_flag):
     docker_client_mock.build.return_value = [
         {"stream": "all is ok"},
-        {"stream": "Successfully built 12345"}
+        {"stream": "Successfully built 12345"},
     ]
     runner = CliRunner()
     result = runner.invoke(cli, ["dev", skip_tests_flag])
@@ -153,20 +161,20 @@ def test_cli_skip_tests(docker_client_mock, test_mock, project_dir, skip_tests_f
     docker_client_mock.build.assert_called_with(
         decode=True,
         path=project_dir,
-        tag='registry.io/user/project:1.0',
-        dockerfile='Dockerfile',
+        tag="registry.io/user/project:1.0",
+        dockerfile="Dockerfile",
         nocache=False,
         rm=True,
-        buildargs={}
+        buildargs={},
     )
     assert test_mock.call_count == 0
 
 
-@pytest.mark.parametrize('file_param', ['-f', '--file'])
+@pytest.mark.parametrize("file_param", ["-f", "--file"])
 def test_cli_custom_dockerfile(docker_client_mock, project_dir, test_mock, file_param):
     docker_client_mock.build.return_value = [
         {"stream": "all is ok"},
-        {"stream": "Successfully built 12345"}
+        {"stream": "Successfully built 12345"},
     ]
     runner = CliRunner()
     result = runner.invoke(cli, ["dev", file_param, "Dockerfile"])
@@ -174,21 +182,21 @@ def test_cli_custom_dockerfile(docker_client_mock, project_dir, test_mock, file_
     docker_client_mock.build.assert_called_with(
         decode=True,
         path=project_dir,
-        tag='registry.io/user/project:1.0',
-        dockerfile='Dockerfile',
+        tag="registry.io/user/project:1.0",
+        dockerfile="Dockerfile",
         nocache=False,
         rm=True,
-        buildargs={}
+        buildargs={},
     )
     test_mock.assert_called_with("dev", None)
 
 
-@pytest.mark.usefixtures('project_dir')
-@pytest.mark.parametrize('file_param', ['-f', '--file'])
+@pytest.mark.usefixtures("project_dir")
+@pytest.mark.parametrize("file_param", ["-f", "--file"])
 def test_cli_missing_custom_dockerfile(docker_client_mock, file_param):
     docker_client_mock.build.return_value = [
         {"error": "Minor", "errorDetail": "Testing output"},
-        {"stream": "Successfully built 12345"}
+        {"stream": "Successfully built 12345"},
     ]
     runner = CliRunner()
     result = runner.invoke(cli, ["dev", file_param, "Dockerfile-missing"])

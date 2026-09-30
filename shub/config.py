@@ -1,51 +1,62 @@
 import netrc
 import os
 import warnings
-from collections import namedtuple
+from pathlib import Path
+from typing import Any, ClassVar, NamedTuple
 from urllib.parse import urlparse, urlunparse
 
 import click
 import yaml
 from dotenv import dotenv_values, find_dotenv
 
-from shub import DOCS_LINK, CONFIG_DOCS_LINK
-from shub.exceptions import (BadParameterException, BadConfigException,
-                             ConfigParseException, MissingAuthException,
-                             NotFoundException, ShubDeprecationWarning,
-                             print_warning)
-from shub.utils import (closest_file, get_scrapycfg_targets, get_sources,
-                        pwd_hg_version, pwd_git_version, pwd_version,
-                        update_yaml_dict)
+from shub import CONFIG_DOCS_LINK, DOCS_LINK
+from shub.exceptions import (
+    BadConfigException,
+    BadParameterException,
+    ConfigParseException,
+    MissingAuthException,
+    NotFoundException,
+    ShubDeprecationWarning,
+    print_warning,
+)
+from shub.utils import (
+    closest_file,
+    get_scrapycfg_targets,
+    get_sources,
+    pwd_git_version,
+    pwd_hg_version,
+    pwd_version,
+    update_yaml_dict,
+)
 
 APIKEY_SHOW_N_CHARS = 6
-SH_IMAGES_REGISTRY = 'images.scrapinghub.com'
-SH_IMAGES_REPOSITORY = SH_IMAGES_REGISTRY + '/project/{project}'
-GLOBAL_SCRAPINGHUB_YML_PATH = os.path.expanduser(
-    os.environ.get('SHUB_GLOBAL_CONFIG', '~/.scrapinghub.yml')
+SH_IMAGES_REGISTRY = "images.scrapinghub.com"
+SH_IMAGES_REPOSITORY = SH_IMAGES_REGISTRY + "/project/{project}"
+GLOBAL_SCRAPINGHUB_YML_PATH = str(
+    Path(os.environ.get("SHUB_GLOBAL_CONFIG", "~/.scrapinghub.yml")).expanduser()
 )
-NETRC_PATH = os.path.expanduser('~/_netrc' if os.name == 'nt' else '~/.netrc')
+NETRC_PATH = str(Path("~/_netrc" if os.name == "nt" else "~/.netrc").expanduser())
 
 
 class ShubConfig:
-
-    DEFAULT_ENDPOINT = 'https://app.zyte.com/api/'
+    DEFAULT_ENDPOINT = "https://app.zyte.com/api/"
 
     # Dictionary option name: Shortcut to set 'default' key
-    SHORTCUTS = {
-        'projects': 'project',
-        'endpoints': 'endpoint',
-        'apikeys': 'apikey',
-        'stacks': 'stack',
-        'images': 'image',
+    SHORTCUTS: ClassVar[dict[str, str]] = {
+        "projects": "project",
+        "endpoints": "endpoint",
+        "apikeys": "apikey",
+        "stacks": "stack",
+        "images": "image",
     }
 
     def __init__(self):
         self.projects = {}
         self.endpoints = {
-            'default': self.DEFAULT_ENDPOINT,
+            "default": self.DEFAULT_ENDPOINT,
         }
         self.apikeys = {}
-        self.version = 'AUTO'
+        self.version = "AUTO"
         self.stacks = {}
         self.requirements_file = None
         self.eggs = []
@@ -55,22 +66,20 @@ class ShubConfig:
         """Check the endpoints. Send warnings if necessary."""
         for endpoint, url in self.endpoints.items():
             parsed = urlparse(url)
-            if parsed.netloc == 'staging.scrapinghub.com':
+            if parsed.netloc == "staging.scrapinghub.com":
                 self.endpoints[endpoint] = urlunparse(
-                    parsed._replace(netloc='app.zyte.com')
+                    parsed._replace(netloc="app.zyte.com")
                 )
                 click.echo(
-                    'WARNING: Endpoint "%s" is still using %s which has been '
-                    'obsoleted. shub has updated it to app.zyte.com '
-                    'for this time only. Please update your configuration.' % (
-                        endpoint, parsed.netloc,
-                    ),
-                    err=True
+                    f'WARNING: Endpoint "{endpoint}" is still using {parsed.netloc} which has been '
+                    "obsoleted. shub has updated it to app.zyte.com "
+                    "for this time only. Please update your configuration.",
+                    err=True,
                 )
-            if parsed.scheme == 'http':
+            if parsed.scheme == "http":
                 print_warning(
-                    'Endpoint "%s" is still using HTTP. '
-                    'Please change it to HTTPS if possible.' % endpoint
+                    f'Endpoint "{endpoint}" is still using HTTP. '
+                    "Please change it to HTTPS if possible."
                 )
 
     def load(self, stream):
@@ -85,84 +94,87 @@ class ShubConfig:
                 option_conf = getattr(self, option)
                 yaml_option_conf = yaml_cfg.get(option, {})
                 option_conf.update(yaml_option_conf)
-                if option == 'images' and yaml_option_conf:
+                if option == "images" and yaml_option_conf:
                     print_warning(
                         "Images section is deprecated, please replace it with "
                         "global `image` setting or define `image` setting for "
-                        "the project.\n  Check for additional details in {}."
-                        .format(CONFIG_DOCS_LINK),
-                        category=ShubDeprecationWarning
+                        f"the project.\n  Check for additional details in {CONFIG_DOCS_LINK}.",
+                        category=ShubDeprecationWarning,
                     )
-                    if 'default' in yaml_option_conf:
+                    if "default" in yaml_option_conf:
                         check_default_image_scope = True
                 if shortcut in yaml_cfg:
                     # We explicitly check yaml_option_conf and not option_conf.
                     # It is okay to set conflicting defaults if they are in
                     # different files (b/c then one of these will have
                     # priority)
-                    if 'default' in yaml_option_conf:
+                    if "default" in yaml_option_conf:
                         raise BadConfigException(
-                            "You cannot specify both '%s' and a 'default' key "
-                            "for '%s' in the same file" % (shortcut,  option))
-                    option_conf['default'] = yaml_cfg[shortcut]
-            self.version = yaml_cfg.get('version', self.version)
-            self.requirements_file = yaml_cfg.get('requirements_file',
-                                                  self.requirements_file)
-            self.requirements_file = yaml_cfg.get('requirements', {}).get(
-                'file', self.requirements_file)
-            self.eggs = yaml_cfg.get('requirements', {}).get('eggs', self.eggs)
-        except (yaml.YAMLError, AttributeError):
+                            f"You cannot specify both '{shortcut}' and a 'default' key "
+                            f"for '{option}' in the same file"
+                        )
+                    option_conf["default"] = yaml_cfg[shortcut]
+            self.version = yaml_cfg.get("version", self.version)
+            self.requirements_file = yaml_cfg.get(
+                "requirements_file", self.requirements_file
+            )
+            self.requirements_file = yaml_cfg.get("requirements", {}).get(
+                "file", self.requirements_file
+            )
+            self.eggs = yaml_cfg.get("requirements", {}).get("eggs", self.eggs)
+        except (yaml.YAMLError, AttributeError) as e:
             # AttributeError: stream is valid YAML but not dictionary-like
-            raise ConfigParseException
+            raise ConfigParseException from e
         # fail if `projects` section has keys not found in `images`
-        if (check_default_image_scope and
-                not set(self.projects).issubset(set(self.images))):
+        if check_default_image_scope and not set(self.projects).issubset(
+            set(self.images)
+        ):
             raise BadConfigException(
-                    "Found ambigious configuration: default image has global "
-                    "scope now, but some projects were not using custom "
-                    "images and can be broken now. Please fix your config by "
-                    "replacing `images` section with `image` settings. Check "
-                    "for additional details in {}".format(CONFIG_DOCS_LINK)
-                )
+                "Found ambigious configuration: default image has global "
+                "scope now, but some projects were not using custom "
+                "images and can be broken now. Please fix your config by "
+                "replacing `images` section with `image` settings. Check "
+                f"for additional details in {CONFIG_DOCS_LINK}"
+            )
         self._check_endpoints()
 
     def load_file(self, filename):
-        """Load Scrapinghub configuration from YAML file. """
+        """Load Scrapinghub configuration from YAML file."""
         try:
-            with open(filename) as f:
+            with Path(filename).open() as f:
                 self.load(f)
-        except ConfigParseException:
+        except ConfigParseException as e:
             raise ConfigParseException(
-                "Unable to parse configuration file %s. Maybe a missing "
-                "colon?" % filename
-            )
+                f"Unable to parse configuration file {filename}. Maybe a missing colon?"
+            ) from e
 
     def _load_scrapycfg_target(self, tname, t):
-        default_endpoint = ('url' not in t or
-                            t['url'] == self.endpoints['default'])
-        default_user = ('username' not in t or
-                        t['username'] == self.apikeys.get('default'))
-        if 'project' in t:
-            if tname == 'default' or (default_endpoint and default_user):
-                self.projects[tname] = t['project']
+        default_endpoint = "url" not in t or t["url"] == self.endpoints["default"]
+        default_user = "username" not in t or t["username"] == self.apikeys.get(
+            "default"
+        )
+        if "project" in t:
+            if tname == "default" or (default_endpoint and default_user):
+                self.projects[tname] = t["project"]
             elif default_endpoint and not default_user:
                 self.projects[tname] = {
-                    'id': t['project'], 'apikey': tname,
+                    "id": t["project"],
+                    "apikey": tname,
                 }
             else:
-                self.projects[tname] = tname + '/' + t['project']
+                self.projects[tname] = tname + "/" + t["project"]
         if not default_endpoint:
-            self.endpoints[tname] = t['url']
-        if not default_user or (not default_endpoint and 'username' in t):
-            self.apikeys[tname] = t['username']
-        if 'version' in t:
-            self.version = t['version']
+            self.endpoints[tname] = t["url"]
+        if not default_user or (not default_endpoint and "username" in t):
+            self.apikeys[tname] = t["username"]
+        if "version" in t:
+            self.version = t["version"]
 
     def load_scrapycfg(self, sources):
         """Load configuration from a list of scrapy.cfg-like sources."""
         targets = get_scrapycfg_targets(sources)
-        self._load_scrapycfg_target('default', targets['default'])
-        del targets['default']
+        self._load_scrapycfg_target("default", targets["default"])
+        del targets["default"]
         for tname, t in targets.items():
             self._load_scrapycfg_target(tname, t)
         self._check_endpoints()
@@ -175,7 +187,7 @@ class ShubConfig:
             try:
                 if isinstance(project, dict):
                     project = project.copy()
-                    project['id'] = int(project['id'])
+                    project["id"] = int(project["id"])
                 else:
                     project = int(project)
             except ValueError:
@@ -190,24 +202,23 @@ class ShubConfig:
             for option in options:
                 shortcut = self.SHORTCUTS[option]
                 conf = getattr(self, option)
-                if option == 'endpoints' and conf == ShubConfig().endpoints:
+                if option == "endpoints" and conf == ShubConfig().endpoints:
                     # Don't write default endpoint
                     continue
-                elif option == 'projects':
+                if option == "projects":
                     conf = {k: _project_id_as_int(v) for k, v in conf.items()}
-                if list(conf.keys()) == ['default']:
-                    yml[shortcut] = conf['default']
+                if list(conf.keys()) == ["default"]:
+                    yml[shortcut] = conf["default"]
                     yml.pop(option, None)
                 else:
                     yml[option] = conf
                     yml.pop(shortcut, None)
-            if self.version != 'AUTO':
-                yml['version'] = self.version
+            if self.version != "AUTO":
+                yml["version"] = self.version
             if self.eggs:
-                yml.setdefault('requirements', {})['eggs'] = self.eggs
+                yml.setdefault("requirements", {})["eggs"] = self.eggs
             if self.requirements_file:
-                yml.setdefault('requirements', {})['file'] = (
-                    self.requirements_file)
+                yml.setdefault("requirements", {})["file"] = self.requirements_file
 
     @property
     def normalized_projects(self):
@@ -216,25 +227,25 @@ class ShubConfig:
         that have at least the keys ``id``, ``endpoint``, and ``apikey``.
         """
         projects = self.projects.copy()
-        for target, proj in list(projects.items()):
+        for target, value in list(projects.items()):
+            proj = value
             if not isinstance(proj, dict):
-                proj = {'id': proj}
+                proj = {"id": proj}
                 projects[target] = proj
-            elif 'id' not in proj:
-                raise BadConfigException("Please define an ID for project "
-                                         "\"%s\"" % target)
+            elif "id" not in proj:
+                raise BadConfigException(f'Please define an ID for project "{target}"')
             try:
-                proj['endpoint'], proj['id'] = proj['id'].split('/')
+                proj["endpoint"], proj["id"] = proj["id"].split("/")
             except (ValueError, AttributeError):
-                proj.setdefault('endpoint', 'default')
-            proj.setdefault('apikey', proj['endpoint'])
+                proj.setdefault("endpoint", "default")
+            proj.setdefault("apikey", proj["endpoint"])
             try:
-                proj['id'] = int(proj['id'])
-            except ValueError:
+                proj["id"] = int(proj["id"])
+            except ValueError as e:
                 raise BadConfigException(
-                    "\"%s\" is not a valid Scrapinghub project ID. Please "
-                    "check your scrapinghub.yml" % proj['id']
-                )
+                    '"{}" is not a valid Scrapinghub project ID. Please '
+                    "check your scrapinghub.yml".format(proj["id"])
+                ) from e
         return projects
 
     def get_project(self, project):
@@ -246,61 +257,68 @@ class ShubConfig:
         if project in self.projects:
             return self.normalized_projects[project]
         try:
-            endpoint, proj_id = project.split('/')
+            endpoint, proj_id = project.split("/")
         except (ValueError, AttributeError):
-            endpoint, proj_id = 'default', project
+            endpoint, proj_id = "default", project
         try:
             proj_id = int(proj_id)
-        except ValueError:
-            if project == 'default':
-                msg = ("Please specify target or configure a default target "
-                       "in scrapinghub.yml.")
+        except ValueError as e:
+            if project == "default":
+                msg = (
+                    "Please specify target or configure a default target "
+                    "in scrapinghub.yml."
+                )
             else:
-                msg = ("Could not find target \"%s\". Please define it in "
-                       "your scrapinghub.yml or supply a numerical project ID."
-                       "" % project)
-            raise BadParameterException(msg, param_hint='target')
+                msg = (
+                    f'Could not find target "{project}". Please define it in '
+                    "your scrapinghub.yml or supply a numerical project ID."
+                )
+            raise BadParameterException(msg, param_hint="target") from e
         for proj in self.normalized_projects.values():
-            if proj['id'] == proj_id and proj['endpoint'] == endpoint:
+            if proj["id"] == proj_id and proj["endpoint"] == endpoint:
                 return proj
-        else:
-            return {'id': proj_id, 'endpoint': endpoint, 'apikey': endpoint}
+        return {"id": proj_id, "endpoint": endpoint, "apikey": endpoint}
 
     def get_version(self):
-        if not self.version or self.version == 'AUTO':
+        if not self.version or self.version == "AUTO":
             return pwd_version()
-        elif self.version == 'GIT':
+        if self.version == "GIT":
             return pwd_git_version()
-        elif self.version == 'HG':
+        if self.version == "HG":
             return pwd_hg_version()
-        elif self.version:
-            return str(self.version)
+        return str(self.version)
 
     def get_target_conf(self, target, auth_required=True):
         proj = self.get_project(target)
-        if proj['endpoint'] not in self.endpoints:
-            raise NotFoundException("Could not find endpoint %s. Please "
-                                    "define it in your scrapinghub.yml."
-                                    "" % proj['endpoint'])
+        if proj["endpoint"] not in self.endpoints:
+            raise NotFoundException(
+                "Could not find endpoint {}. Please "
+                "define it in your scrapinghub.yml."
+                "".format(proj["endpoint"])
+            )
         try:
-            apikey = str(self.apikeys[proj['apikey']])
-        except KeyError:
+            apikey = str(self.apikeys[proj["apikey"]])
+        except KeyError as e:
             if auth_required:
                 msg = None
-                if proj['endpoint'] != 'default':
-                    msg = ("Could not find API key for endpoint %s."
-                           "" % proj['endpoint'])
-                raise MissingAuthException(msg)
+                if proj["endpoint"] != "default":
+                    msg = "Could not find API key for endpoint {}.".format(
+                        proj["endpoint"]
+                    )
+                raise MissingAuthException(msg) from e
             apikey = None
-        proj_requirements = proj.get('requirements', {})
-        requirements = proj_requirements.get('file', self.requirements_file)
-        eggs = proj_requirements.get('eggs', self.eggs)
+        proj_requirements = proj.get("requirements", {})
+        requirements = proj_requirements.get("file", self.requirements_file)
+        eggs = proj_requirements.get("eggs", self.eggs)
         return Target(
-            project_id=proj['id'],
-            endpoint=self.endpoints[proj['endpoint']],
+            project_id=proj["id"],
+            endpoint=self.endpoints[proj["endpoint"]],
             apikey=apikey,
-            stack=(self.stacks.get(proj['stack'], proj['stack'])
-                   if 'stack' in proj else self.stacks.get('default')),
+            stack=(
+                self.stacks.get(proj["stack"], proj["stack"])
+                if "stack" in proj
+                else self.stacks.get("default")
+            ),
             image=self._select_image_for_project(target, proj),
             requirements_file=requirements,
             version=self.get_version(),
@@ -320,22 +338,21 @@ class ShubConfig:
         The function responds with a custom image name string
         (or None/False meaning regular stack-based deploy).
         """
-        image = project.get('image', self.images.get(
-            target, self.images.get('default')))
+        image = project.get(
+            "image", self.images.get(target, self.images.get("default"))
+        )
         # aliases to use internal scrapinghub registry as image storage
-        if image is True or image == 'scrapinghub':
-            image = SH_IMAGES_REPOSITORY.format(project=project['id'])
+        if image is True or image == "scrapinghub":
+            image = SH_IMAGES_REPOSITORY.format(project=project["id"])
         return image
 
     def get_target(self, target, auth_required=True):
         """Return (project_id, endpoint, apikey) for given target."""
-        warnings.warn("get_target is deprecated, use get_target_conf instead")
-        targetconf = self.get_target_conf(target, auth_required=auth_required)
-        return (
-            targetconf.project_id,
-            targetconf.endpoint,
-            targetconf.apikey
+        warnings.warn(
+            "get_target is deprecated, use get_target_conf instead", stacklevel=2
         )
+        targetconf = self.get_target_conf(target, auth_required=auth_required)
+        return (targetconf.project_id, targetconf.endpoint, targetconf.apikey)
 
     def get_project_id(self, target):
         return self.get_target_conf(target, auth_required=False).project_id
@@ -345,7 +362,7 @@ class ShubConfig:
 
     def get_apikey(self, target, required=True):
         apikey = self.get_target_conf(target, auth_required=required).apikey
-        return getattr(apikey, 'value', apikey)
+        return getattr(apikey, "value", apikey)
 
     def get_image(self, target):
         """Return image for a given target."""
@@ -353,34 +370,43 @@ class ShubConfig:
         project, image = target_conf.project_id, target_conf.image
         if image is None:
             raise NotFoundException(
-                "Could not find image for project '{}'. Please define it "
-                "in your scrapinghub.yml.".format(target))
-        elif image is False:
+                f"Could not find image for project '{target}'. Please define it "
+                "in your scrapinghub.yml."
+            )
+        if image is False:
             raise BadConfigException(
-                "Using custom images is disabled for the project '{}'. "
-                "Please enable it in your scrapinghub.yml.".format(target))
-        elif target_conf.stack:
+                f"Using custom images is disabled for the project '{target}'. "
+                "Please enable it in your scrapinghub.yml."
+            )
+        if target_conf.stack:
             raise BadConfigException(
                 "Ambiguous configuration: There is both a custom image and a "
-                "stack configured for project '{}'. Please see {} for "
+                f"stack configured for project '{target}'. Please see {CONFIG_DOCS_LINK} for "
                 "information on how to configure both custom image-based and "
-                "stack-based projects.".format(target, CONFIG_DOCS_LINK))
+                "stack-based projects."
+            )
         default_image = SH_IMAGES_REPOSITORY.format(project=project)
         if image.startswith(SH_IMAGES_REGISTRY) and image != default_image:
             raise BadConfigException(
-                "Found wrong SH repository for project '{}': expected {}.\n  "
+                f"Found wrong SH repository for project '{target}': expected {default_image}.\n  "
                 "Please use aliases `True` or `scrapinghub` to fix it in your "
-                "config.".format(target, default_image))
+                "config."
+            )
         return image
 
 
-_Target = namedtuple('Target', ['project_id', 'endpoint', 'apikey', 'stack',
-                                'image', 'requirements_file', 'version',
-                                'eggs'])
+class _Target(NamedTuple):
+    project_id: Any
+    endpoint: Any
+    apikey: Any
+    stack: Any
+    image: Any
+    requirements_file: Any
+    version: Any
+    eggs: Any
 
 
-class APIkey(str):
-
+class APIkey(str):  # noqa: SLOT000
     def __new__(cls, *args, **kwargs):
         cls._inst = super().__new__(cls, *args, **kwargs)
         return cls._inst
@@ -390,21 +416,22 @@ class APIkey(str):
 
     def __repr__(self):
         if not self.value:
-            return ''
+            return ""
         visible_chars = APIKEY_SHOW_N_CHARS
-        return (self.value[:visible_chars] +
-                'X' * max(len(self.value) - visible_chars, 0))
+        return self.value[:visible_chars] + "X" * max(
+            len(self.value) - visible_chars, 0
+        )
 
 
 class Target(_Target):
-
     def __new__(cls, project_id, endpoint, apikey, *args, **kwargs):
-        cls._inst = super().__new__(cls, project_id, endpoint,
-                                    APIkey(apikey), *args, **kwargs)
+        cls._inst = super().__new__(
+            cls, project_id, endpoint, APIkey(apikey), *args, **kwargs
+        )
         return cls._inst
 
 
-MIGRATION_BANNER = """
+MIGRATION_BANNER = f"""
 -------------------------------------------------------------------------------
 Welcome to shub version 2!
 
@@ -424,12 +451,12 @@ But no worries, shub has automatically migrated your global settings to
 ~/.scrapinghub.yml, and will also automatically migrate your project settings
 when you run a command within a Scrapy project.
 
-Visit {docs_link} for more information on the new configuration format and
+Visit {DOCS_LINK} for more information on the new configuration format and
 its benefits.
 
 Happy scraping!
 -------------------------------------------------------------------------------
-""".format(docs_link=DOCS_LINK)
+"""
 
 
 def _migrate_to_global_scrapinghub_yml():
@@ -441,37 +468,38 @@ def _migrate_to_global_scrapinghub_yml():
     except (OSError, TypeError):
         netrc_key = None
     if netrc_key:
-        conf.apikeys['default'] = netrc_key
+        conf.apikeys["default"] = netrc_key
     conf.save(GLOBAL_SCRAPINGHUB_YML_PATH)
     default_conf = ShubConfig()
-    migrated_data = any(getattr(conf, attr) != getattr(default_conf, attr)
-                        for attr in ('projects', 'endpoints', 'apikeys',
-                                     'version'))
+    migrated_data = any(
+        getattr(conf, attr) != getattr(default_conf, attr)
+        for attr in ("projects", "endpoints", "apikeys", "version")
+    )
     if migrated_data:
         click.echo(MIGRATION_BANNER, err=True)
 
 
-PROJECT_MIGRATION_OK_BANNER = """
+PROJECT_MIGRATION_OK_BANNER = f"""
 INFO: Your deploy configuration has been migrated to scrapinghub.yml.
 shub will no longer read from scrapy.cfg (but Scrapy will, so don't delete it).
-Visit {docs_link} for more information.
-""".format(docs_link=DOCS_LINK)
+Visit {DOCS_LINK} for more information.
+"""
 
 
-PROJECT_MIGRATION_FAILED_BANNER = """
+PROJECT_MIGRATION_FAILED_BANNER = f"""
 WARNING: shub failed to convert your scrapy.cfg to scrapinghub.yml. Please
-visit {docs_link} for help on how to use the new configuration format. We
+visit {DOCS_LINK} for help on how to use the new configuration format. We
 would be grateful if you could also file a bug report at
 https://github.com/scrapinghub/shub/issues
 
 For now, shub fell back to reading from scrapy.cfg, everything should work as
 expected.
-""".format(docs_link=DOCS_LINK)
+"""
 
 
 def _migrate_and_load_scrapy_cfg(conf):
     # Load from closest scrapy.cfg
-    closest_scrapycfg = closest_file('scrapy.cfg')
+    closest_scrapycfg = closest_file("scrapy.cfg")
     if not closest_scrapycfg:
         return
     targets = get_scrapycfg_targets([closest_scrapycfg])
@@ -480,8 +508,7 @@ def _migrate_and_load_scrapy_cfg(conf):
         return
     conf.load_scrapycfg([closest_scrapycfg])
     # Migrate to scrapinghub.yml
-    closest_sh_yml = os.path.join(os.path.dirname(closest_scrapycfg),
-                                  'scrapinghub.yml')
+    closest_sh_yml = str(Path(closest_scrapycfg).parent / "scrapinghub.yml")
     temp_conf = ShubConfig()
     temp_conf.load_scrapycfg([closest_scrapycfg])
     try:
@@ -500,11 +527,11 @@ def _load_dotenv_apikey(dotenv_path: str | None = None) -> None:
     the file. When ``dotenv_path`` is None, the nearest ``.env`` file in the current
     directory or its parents is used.
     """
-    if 'SHUB_APIKEY' in os.environ:
+    if "SHUB_APIKEY" in os.environ:
         return
-    apikey = dotenv_values(dotenv_path or find_dotenv(usecwd=True)).get('SHUB_APIKEY')
+    apikey = dotenv_values(dotenv_path or find_dotenv(usecwd=True)).get("SHUB_APIKEY")
     if apikey:
-        os.environ['SHUB_APIKEY'] = apikey
+        os.environ["SHUB_APIKEY"] = apikey
 
 
 def load_shub_config(load_global=True, load_local=True, load_env=True):
@@ -514,19 +541,19 @@ def load_shub_config(load_global=True, load_local=True, load_env=True):
     """
     conf = ShubConfig()
     if load_global:
-        if not os.path.exists(GLOBAL_SCRAPINGHUB_YML_PATH):
+        if not Path(GLOBAL_SCRAPINGHUB_YML_PATH).exists():
             _migrate_to_global_scrapinghub_yml()
         conf.load_file(GLOBAL_SCRAPINGHUB_YML_PATH)
     if load_local:
-        closest_sh_yml = closest_file('scrapinghub.yml')
+        closest_sh_yml = closest_file("scrapinghub.yml")
         if closest_sh_yml:
             conf.load_file(closest_sh_yml)
         else:
             _migrate_and_load_scrapy_cfg(conf)
     if load_env:
         _load_dotenv_apikey()
-        if 'SHUB_APIKEY' in os.environ:
-            conf.apikeys['default'] = os.environ['SHUB_APIKEY']
+        if "SHUB_APIKEY" in os.environ:
+            conf.apikeys["default"] = os.environ["SHUB_APIKEY"]
     return conf
 
 

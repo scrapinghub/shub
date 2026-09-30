@@ -1,11 +1,7 @@
 import click
 
 from shub.config import list_targets_callback
-from shub.image import build
-from shub.image import push
-from shub.image import deploy
-from shub.image import utils
-
+from shub.image import build, deploy, push, utils
 
 SHORT_HELP = "Shortcut command for build-push-deploy chain"
 HELP = """
@@ -18,42 +14,118 @@ Obviously it accepts all the options for the commands above.
 
 @click.command(help=HELP, short_help=SHORT_HELP)
 @click.argument("target", required=False, default="default")
-@click.option("-l", "--list-targets", is_flag=True, is_eager=True,
-              expose_value=False, callback=list_targets_callback,
-              help="List available project names defined in your config")
-@click.option("-d", "--debug", help="debug mode", is_flag=True,
-              callback=utils.deprecate_debug_parameter)
-@click.option("-v", "--verbose", is_flag=True,
-              help="stream upload logs to console")
+@click.option(
+    "-l",
+    "--list-targets",
+    is_flag=True,
+    is_eager=True,
+    expose_value=False,
+    callback=list_targets_callback,
+    help="List available project names defined in your config",
+)
+@click.option(
+    "-d",
+    "--debug",
+    help="debug mode",
+    is_flag=True,
+    callback=utils.deprecate_debug_parameter,
+)
+@click.option("-v", "--verbose", is_flag=True, help="stream upload logs to console")
 @click.option("-V", "--version", help="release version")
 @click.option("--username", help="docker registry name")
 @click.option("--password", help="docker registry password")
 @click.option("--email", help="docker registry email")
 @click.option("--apikey", help="SH apikey to use built-in registry")
 @click.option("--insecure", is_flag=True, help="use insecure registry")
-@click.option("--async", "async_", is_flag=True, help="[DEPRECATED] enable asynchronous mode",
-              callback=utils.deprecate_async_parameter)
+@click.option(
+    "--async",
+    "async_",
+    is_flag=True,
+    help="[DEPRECATED] enable asynchronous mode",
+    callback=utils.deprecate_async_parameter,
+)
 @click.option("-S", "--skip-tests", help="skip testing image", is_flag=True)
-@click.option("-R", "--reauth", is_flag=True,
-              help="re-authenticate to registry before pushing")
-@click.option("-n", "--no-cache", is_flag=True,
-              help="Do not use cache when building the image")
-@click.option("-b", "--build-arg", multiple=True,
-              help="Allow to pass build arguments to docker client.")
-@click.option("-f", "--file", "filename", default='Dockerfile',
-              help="Name of the Dockerfile (Default is 'PATH/Dockerfile')")
-def cli(target, debug, verbose, version, username, password, email,
-        apikey, insecure, async_, skip_tests, reauth, no_cache, build_arg, filename):
-    upload_cmd(target, version, username, password, email, apikey, insecure,
-               async_, skip_tests, reauth, no_cache, build_arg, filename)
+@click.option(
+    "-R", "--reauth", is_flag=True, help="re-authenticate to registry before pushing"
+)
+@click.option(
+    "-n", "--no-cache", is_flag=True, help="Do not use cache when building the image"
+)
+@click.option(
+    "-b",
+    "--build-arg",
+    multiple=True,
+    help="Allow to pass build arguments to docker client.",
+)
+@click.option(
+    "-f",
+    "--file",
+    "filename",
+    default="Dockerfile",
+    help="Name of the Dockerfile (Default is 'PATH/Dockerfile')",
+)
+def cli(
+    target,
+    debug,
+    verbose,
+    version,
+    username,
+    password,
+    email,
+    apikey,
+    insecure,
+    async_,
+    skip_tests,
+    reauth,
+    no_cache,
+    build_arg,
+    filename,
+):
+    upload_cmd(
+        target,
+        version,
+        username,
+        password,
+        email,
+        apikey,
+        insecure,
+        async_,
+        skip_tests,
+        reauth,
+        no_cache,
+        build_arg,
+        filename,
+    )
 
 
-def upload_cmd(target, version, username=None, password=None, email=None,
-               apikey=None, insecure=False, async_=False, skip_tests=False,
-               reauth=False, no_cache=False, build_arg=(), filename='Dockerfile'):
+def upload_cmd(
+    target,
+    version,
+    username=None,
+    password=None,
+    email=None,
+    apikey=None,
+    insecure=False,
+    async_=False,
+    skip_tests=False,
+    reauth=False,
+    no_cache=False,
+    build_arg=(),
+    filename="Dockerfile",
+):
     build.build_cmd(target, version, skip_tests, no_cache, build_arg, filename=filename)
     # skip tests for push command anyway because they run in build command if not skipped
-    push.push_cmd(target, version, username, password, email, apikey,
-                  insecure, skip_tests=True, reauth=reauth)
-    deploy.deploy_cmd(target, version, username, password, email,
-                      apikey, insecure, async_)
+    push.push_cmd(
+        target,
+        version,
+        username,
+        password,
+        email,
+        apikey,
+        insecure,
+        skip_tests=True,
+        reauth=reauth,
+    )
+    deploy.deploy_cmd(
+        target, version, username, password, email, apikey, insecure, async_
+    )

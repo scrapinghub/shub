@@ -1,12 +1,11 @@
 import json
-
-import click
-from scrapinghub import ScrapinghubClient, ScrapinghubAPIError
 from urllib.parse import urljoin
 
-from shub.exceptions import RemoteErrorException
-from shub.config import get_target_conf
+import click
+from scrapinghub import ScrapinghubAPIError, ScrapinghubClient
 
+from shub.config import get_target_conf
+from shub.exceptions import RemoteErrorException
 
 HELP = """
 Schedule a spider to run on Scrapy Cloud, optionally with provided spider
@@ -40,61 +39,83 @@ DEFAULT_PRIORITY = 2
 
 
 @click.command(help=HELP, short_help=SHORT_HELP)
-@click.argument('spider', type=click.STRING)
-@click.option('-a', '--argument',
-              help='Spider argument (-a name=value)', multiple=True)
-@click.option('-s', '--set',
-              help='Job-specific setting (-s name=value)', multiple=True)
-@click.option('-p', '--priority', type=int, default=DEFAULT_PRIORITY,
-              help='Job priority (-p number). From 0 (lowest) to 4 (highest)')
-@click.option('-e', '--environment', multiple=True,
-              help='Job environment variable (-e VAR=VAL)')
-@click.option('-u', '--units', type=int,
-              help='Amount of Scrapy Cloud units (-u number)')
-@click.option('-t', '--tag',
-              help='Job tags (-t tag)', multiple=True)
-def cli(spider, argument, set, environment, priority, units, tag):
+@click.argument("spider", type=click.STRING)
+@click.option("-a", "--argument", help="Spider argument (-a name=value)", multiple=True)
+@click.option("-s", "--set", help="Job-specific setting (-s name=value)", multiple=True)
+@click.option(
+    "-p",
+    "--priority",
+    type=int,
+    default=DEFAULT_PRIORITY,
+    help="Job priority (-p number). From 0 (lowest) to 4 (highest)",
+)
+@click.option(
+    "-e", "--environment", multiple=True, help="Job environment variable (-e VAR=VAL)"
+)
+@click.option(
+    "-u", "--units", type=int, help="Amount of Scrapy Cloud units (-u number)"
+)
+@click.option("-t", "--tag", help="Job tags (-t tag)", multiple=True)
+def cli(spider, argument, set, environment, priority, units, tag):  # noqa: A002
     try:
-        target, spider = spider.rsplit('/', 1)
+        target, spider = spider.rsplit("/", 1)
     except ValueError:
-        target = 'default'
+        target = "default"
     targetconf = get_target_conf(target)
-    job_key = schedule_spider(targetconf.project_id, targetconf.endpoint,
-                              targetconf.apikey, spider, argument, set,
-                              priority, units, tag, environment)
+    job_key = schedule_spider(
+        targetconf.project_id,
+        targetconf.endpoint,
+        targetconf.apikey,
+        spider,
+        argument,
+        set,
+        priority,
+        units,
+        tag,
+        environment,
+    )
     watch_url = urljoin(
         targetconf.endpoint,
-        '../p/{}/{}/{}'.format(*job_key.split('/')),
+        "../p/{}/{}/{}".format(*job_key.split("/")),
     )
-    short_key = job_key.split('/', 1)[1] if target == 'default' else job_key
+    short_key = job_key.split("/", 1)[1] if target == "default" else job_key
     click.echo(f"Spider {spider} scheduled, job ID: {job_key}")
-    click.echo("Watch the log on the command line:\n    shub log -f {}"
-               "".format(short_key))
-    click.echo("or print items as they are being scraped:\n    shub items -f "
-               "{}".format(short_key))
-    click.echo("or watch it running in Zyte's web interface:\n    {}"
-               "".format(watch_url))
+    click.echo(f"Watch the log on the command line:\n    shub log -f {short_key}")
+    click.echo(
+        f"or print items as they are being scraped:\n    shub items -f {short_key}"
+    )
+    click.echo(f"or watch it running in Zyte's web interface:\n    {watch_url}")
 
 
-def schedule_spider(project, endpoint, apikey, spider, arguments=(), settings=(),
-                    priority=DEFAULT_PRIORITY, units=None, tag=(), environment=()):
+def schedule_spider(
+    project,
+    endpoint,
+    apikey,
+    spider,
+    arguments=(),
+    settings=(),
+    priority=DEFAULT_PRIORITY,
+    units=None,
+    tag=(),
+    environment=(),
+):
     client = ScrapinghubClient(apikey, dash_endpoint=endpoint)
     try:
         project = client.get_project(project)
-        args = dict(x.split('=', 1) for x in arguments)
-        cmd_args = args.pop('cmd_args', None)
-        meta = args.pop('meta', None)
+        args = dict(x.split("=", 1) for x in arguments)
+        cmd_args = args.pop("cmd_args", None)
+        meta = args.pop("meta", None)
         job = project.jobs.run(
             spider=spider,
             meta=json.loads(meta) if meta else {},
             cmd_args=cmd_args,
             job_args=args,
-            job_settings=dict(x.split('=', 1) for x in settings),
+            job_settings=dict(x.split("=", 1) for x in settings),
             priority=priority,
             units=units,
             add_tag=tag,
-            environment=dict(x.split('=', 1) for x in environment),
+            environment=dict(x.split("=", 1) for x in environment),
         )
         return job.key
     except ScrapinghubAPIError as e:
-        raise RemoteErrorException(str(e))
+        raise RemoteErrorException(str(e)) from e

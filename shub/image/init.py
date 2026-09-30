@@ -1,5 +1,6 @@
 import os
 import textwrap
+from pathlib import Path
 from string import Template
 
 import click
@@ -7,22 +8,21 @@ import click
 from shub import exceptions as shub_exceptions
 from shub import utils as shub_utils
 
-
-DOCKER_APP_DIR = '/app'
-DOCKERFILE_TEMPLATE = """\
+DOCKER_APP_DIR = "/app"
+DOCKERFILE_TEMPLATE = f"""\
 FROM $base_image
 $system_deps
 $system_env
-RUN mkdir -p {docker_app_dir}
-WORKDIR {docker_app_dir}
+RUN mkdir -p {DOCKER_APP_DIR}
+WORKDIR {DOCKER_APP_DIR}
 $requirements
-COPY . {docker_app_dir}
+COPY . {DOCKER_APP_DIR}
 RUN python -m pip install .
-""".format(docker_app_dir=DOCKER_APP_DIR)
+"""
 
 DEFAULT_BASE_IMAGE = "scrapinghub/scrapinghub-stack-scrapy:2.13-20250721"
 RECOMMENDED_PYTHON_DEPS = [
-    'guppy==0.1.10',
+    "guppy==0.1.10",
 ]
 
 SHORT_HELP = "Create Dockerfile for existing Scrapy project."
@@ -55,109 +55,126 @@ def list_recommended_python_reqs(ctx, param, value):
         return
     click.echo("Recommended Python deps list:")
     for dep in RECOMMENDED_PYTHON_DEPS:
-        click.echo(f'- {dep}')
+        click.echo(f"- {dep}")
     ctx.exit()
 
 
 def _deprecate_base_deps_parameter(ctx, param, value):
     if value:
-        click.echo("WARNING: --base-deps parameter is deprecated. "
-                   "Please use --add-deps parameter instead.",
-                   err=True)
+        click.echo(
+            "WARNING: --base-deps parameter is deprecated. "
+            "Please use --add-deps parameter instead.",
+            err=True,
+        )
     return value
 
 
 @click.command(help=HELP, short_help=SHORT_HELP)
-@click.option("--list-recommended-reqs", is_flag=True, is_eager=True,
-              expose_value=False, callback=list_recommended_python_reqs,
-              help="list recommended python requirements")
-@click.option("--project", default="default",
-              help="project name to get settings module from scrapy.cfg")
-@click.option("--base-image", default=DEFAULT_BASE_IMAGE,
-              help="base docker image name")
-@click.option("--base-deps", default='',
-              help="[DEPRECATED] a comma-separated list with base system dependencies",
-              callback=_deprecate_base_deps_parameter)
-@click.option("--add-deps",
-              help="a comma-separated list with additional system dependencies")
-@click.option("--requirements", default="requirements.txt",
-              help="path to requirements.txt")
+@click.option(
+    "--list-recommended-reqs",
+    is_flag=True,
+    is_eager=True,
+    expose_value=False,
+    callback=list_recommended_python_reqs,
+    help="list recommended python requirements",
+)
+@click.option(
+    "--project",
+    default="default",
+    help="project name to get settings module from scrapy.cfg",
+)
+@click.option("--base-image", default=DEFAULT_BASE_IMAGE, help="base docker image name")
+@click.option(
+    "--base-deps",
+    default="",
+    help="[DEPRECATED] a comma-separated list with base system dependencies",
+    callback=_deprecate_base_deps_parameter,
+)
+@click.option(
+    "--add-deps", help="a comma-separated list with additional system dependencies"
+)
+@click.option(
+    "--requirements", default="requirements.txt", help="path to requirements.txt"
+)
 def cli(project, base_image, base_deps, add_deps, requirements):
-    closest_scrapy_cfg = shub_utils.closest_file('scrapy.cfg')
+    closest_scrapy_cfg = shub_utils.closest_file("scrapy.cfg")
     scrapy_config = shub_utils.get_config()
-    if not closest_scrapy_cfg or not scrapy_config.has_option('settings', project):
+    if not closest_scrapy_cfg or not scrapy_config.has_option("settings", project):
         raise shub_exceptions.BadConfigException(
-            'Cannot find Scrapy project settings. Please ensure that current directory '
-            'contains scrapy.cfg with settings section, see example at '
-            'https://doc.scrapy.org/en/latest/topics/commands.html#default-structure-of-scrapy-projects')  # NOQA
-    project_dir = os.path.dirname(closest_scrapy_cfg)
-    dockefile_path = os.path.join(project_dir, 'Dockerfile')
-    if os.path.exists(dockefile_path):
-        raise shub_exceptions.ShubException('Found a Dockerfile in the project directory, aborting')
-    settings_module = scrapy_config.get('settings', 'default')
+            "Cannot find Scrapy project settings. Please ensure that current directory "
+            "contains scrapy.cfg with settings section, see example at "
+            "https://doc.scrapy.org/en/latest/topics/commands.html#default-structure-of-scrapy-projects"
+        )
+    project_dir = str(Path(closest_scrapy_cfg).parent)
+    dockefile_path = Path(project_dir, "Dockerfile")
+    if dockefile_path.exists():
+        raise shub_exceptions.ShubException(
+            "Found a Dockerfile in the project directory, aborting"
+        )
+    settings_module = scrapy_config.get("settings", "default")
     shub_utils.create_default_setup_py(settings=settings_module)
     values = {
-        'base_image':   base_image,
-        'system_deps':  _format_system_deps(base_deps, add_deps),
-        'system_env':   _format_system_env(settings_module),
-        'requirements': _format_requirements(project_dir, requirements),
+        "base_image": base_image,
+        "system_deps": _format_system_deps(base_deps, add_deps),
+        "system_env": _format_system_env(settings_module),
+        "requirements": _format_requirements(project_dir, requirements),
     }
-    values = {key: value if value else '' for key, value in values.items()}
+    values = {key: value or "" for key, value in values.items()}
     source = Template(DOCKERFILE_TEMPLATE)
     results = source.substitute(values)
-    results = results.replace('\n\n', '\n')
-    with open(dockefile_path, 'w') as dockerfile:
-        dockerfile.write(results)
+    results = results.replace("\n\n", "\n")
+    dockefile_path.write_text(results)
     click.echo(f"Dockerfile is saved to {dockefile_path}")
 
 
 def _format_system_deps(base_deps, add_deps):
     """Prepare a list with system dependencies install cmds"""
-    system_deps = base_deps.split(',') if base_deps != '-' else []
+    system_deps = base_deps.split(",") if base_deps != "-" else []
     if add_deps:
-        system_add_deps = add_deps.split(',')
+        system_add_deps = add_deps.split(",")
         system_deps = list(set(system_deps + system_add_deps))
     system_deps = sorted(filter(None, system_deps))
     if not system_deps:
-        return
-    commands = ["apt-get update -qq",
-                "apt-get install -qy {}".format(' '.join(system_deps)),
-                "rm -rf /var/lib/apt/lists/*"]
-    return 'RUN ' + ' && \\\n    '.join(
-        [_wrap(cmd) for cmd in commands])
+        return None
+    commands = [
+        "apt-get update -qq",
+        "apt-get install -qy {}".format(" ".join(system_deps)),
+        "rm -rf /var/lib/apt/lists/*",
+    ]
+    return "RUN " + " && \\\n    ".join([_wrap(cmd) for cmd in commands])
 
 
 def _wrap(text):
     """Wrap dependencies with separator"""
-    lines = textwrap.wrap(text, subsequent_indent='    ',
-                          break_long_words=False,
-                          break_on_hyphens=False)
-    return ' \\\n'.join(lines)
+    lines = textwrap.wrap(
+        text, subsequent_indent="    ", break_long_words=False, break_on_hyphens=False
+    )
+    return " \\\n".join(lines)
 
 
 def _format_system_env(settings_module):
-    rows = ['ENV TERM xterm']
+    rows = ["ENV TERM xterm"]
     if settings_module:
-        rows.append('ENV SCRAPY_SETTINGS_MODULE %s' % settings_module)
-    return '\n'.join(rows)
+        rows.append(f"ENV SCRAPY_SETTINGS_MODULE {settings_module}")
+    return "\n".join(rows)
 
 
 def _format_requirements(project_dir, requirements):
     """Prepare cmds for project requirements"""
-    rel_reqs_path = os.path.relpath(
-        os.path.join(project_dir, requirements), project_dir)
-    if os.path.isfile(rel_reqs_path):
-        if rel_reqs_path.startswith('../'):
+    rel_reqs_path = os.path.relpath(Path(project_dir, requirements), project_dir)
+    if Path(rel_reqs_path).is_file():
+        if rel_reqs_path.startswith("../"):
             raise shub_exceptions.BadParameterException(
                 "Requirements file must be inside your project directory, "
-                "otherwise it will not be included in the Docker build context.")
+                "otherwise it will not be included in the Docker build context."
+            )
     else:
         # let's create requirements.txt with base dependencies
-        with open(rel_reqs_path, 'w') as reqs_file:
-            reqs_file.writelines("%s\n" % line for line in RECOMMENDED_PYTHON_DEPS)
-        click.echo('Created base requirements.txt in project dir.')
+        with Path(rel_reqs_path).open("w") as reqs_file:
+            reqs_file.writelines(f"{line}\n" for line in RECOMMENDED_PYTHON_DEPS)
+        click.echo("Created base requirements.txt in project dir.")
     rows = [
-        f'COPY ./{rel_reqs_path} {DOCKER_APP_DIR}/requirements.txt',
-        'RUN pip install --no-cache-dir -r requirements.txt',
+        f"COPY ./{rel_reqs_path} {DOCKER_APP_DIR}/requirements.txt",
+        "RUN pip install --no-cache-dir -r requirements.txt",
     ]
-    return '\n'.join(rows)
+    return "\n".join(rows)

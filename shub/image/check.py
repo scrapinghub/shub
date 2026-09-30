@@ -14,7 +14,7 @@ temporary file.
 
 @click.command(help=HELP, short_help=SHORT_HELP)
 @click.option("--id", type=int, help="status id to check deploy results")
-def cli(id):
+def cli(id):  # noqa: A002
     status_url = load_status_url(id)
     status_req = requests.get(status_url, timeout=300)
     status_req.raise_for_status()
