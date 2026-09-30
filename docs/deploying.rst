@@ -160,6 +160,8 @@ It is also possible to define the stack per project for advanced use cases::
         stack: scrapy:1.3-py3
       prod: 33333  # will use Scrapinghub's default stack
 
+Run ``shub list-stacks`` to see the available stacks.
+
 Projects without a configured stack use Scrapy Cloud's default stack, which
 can be much older than the latest one. That is why, when ``shub deploy``
 creates a new ``scrapinghub.yml`` for a project that does not use a

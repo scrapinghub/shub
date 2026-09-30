@@ -645,13 +645,13 @@ def update_available(silent_fail=True):
         return None
 
 
-def _fetch_latest_scrapy_stack(timeout=5.):
+def _fetch_scrapy_stack_releases(timeout=5.):
     """
-    Return the latest release of the latest Scrapy Cloud stack, frozen to its
-    release date, e.g. ``'scrapy:2.18-20260824'``, based on the release tags of
-    https://github.com/scrapinghub/scrapinghub-stack-scrapy.
+    Return the releases of Scrapy Cloud stacks, based on the release tags of
+    https://github.com/scrapinghub/scrapinghub-stack-scrapy, as
+    ``(major, minor, date)`` tuples, e.g. ``(2, 18, '20260824')``.
 
-    Raise an exception if the tags cannot be fetched or contain no release.
+    Raise an exception if the tags cannot be fetched.
     """
     url = ("https://api.github.com/repos/scrapinghub/scrapinghub-stack-scrapy"
            "/tags?per_page=100")
@@ -666,10 +666,26 @@ def _fetch_latest_scrapy_stack(timeout=5.):
             if match:
                 releases.append((int(match[1]), int(match[2]), match[3]))
         url = response.links.get('next', {}).get('url')
+    return releases
+
+
+def _format_scrapy_stack(release):
+    return 'scrapy:%d.%d-%s' % release
+
+
+def _fetch_latest_scrapy_stack(timeout=5.):
+    """
+    Return the latest release of the latest Scrapy Cloud stack, frozen to its
+    release date, e.g. ``'scrapy:2.18-20260824'``, based on the release tags of
+    https://github.com/scrapinghub/scrapinghub-stack-scrapy.
+
+    Raise an exception if the tags cannot be fetched or contain no release.
+    """
+    releases = _fetch_scrapy_stack_releases(timeout)
     if not releases:
         raise ValueError("No Scrapy stack release found in the tags of "
                          "scrapinghub/scrapinghub-stack-scrapy")
-    return 'scrapy:%d.%d-%s' % max(releases)
+    return _format_scrapy_stack(max(releases))
 
 
 def get_latest_scrapy_stack(timeout=5.):

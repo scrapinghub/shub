@@ -55,6 +55,7 @@ commands = [
     "migrate_eggs",
     "image",
     "cancel",
+    "list_stacks",
 ]
 
 for command in commands:
