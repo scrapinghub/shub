@@ -30,8 +30,6 @@ LOGIN_ERROR_MSG = 'Please authorize with docker login'
 @click.option("-l", "--list-targets", is_flag=True, is_eager=True,
               expose_value=False, callback=list_targets_callback,
               help="List available project names defined in your config")
-@click.option("-d", "--debug", help="debug mode", is_flag=True,
-              callback=utils.deprecate_debug_parameter)
 @click.option("-v", "--verbose", is_flag=True,
               help="stream push logs to console")
 @click.option("-V", "--version", help="release version")
@@ -43,7 +41,7 @@ LOGIN_ERROR_MSG = 'Please authorize with docker login'
 @click.option("-S", "--skip-tests", help="skip testing image", is_flag=True)
 @click.option("-R", "--reauth", is_flag=True,
               help="re-authenticate to registry")
-def cli(target, debug, verbose, version, username, password, email, apikey,
+def cli(target, verbose, version, username, password, email, apikey,
         insecure, skip_tests, reauth):
     push_cmd(target, version, username, password, email, apikey, insecure,
              skip_tests, reauth)

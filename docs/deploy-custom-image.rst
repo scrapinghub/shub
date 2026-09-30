@@ -150,8 +150,8 @@ build
 
 This command uses the Dockerfile to build the image that's going to be deployed later.
 
-It reads the target images from the :ref:`scrapinghub.yml <configuration>` file.
-You should add a section called ``images`` on it using the following format:
+It reads the target image from the ``image`` setting of the
+:ref:`scrapinghub.yml <configuration>` file:
 
 .. code-block:: yaml
 
@@ -337,18 +337,6 @@ Use provided apikey to authenticate in the Scrapy Cloud Docker registry.
 
 Use the Docker registry in insecure mode.
 
-.. function:: --async
-
-.. warning::
-
-    Deploy in asynchronous mode is deprecated.
-
-Make deploy asynchronous. When enabled, the tool will exit as soon as the deploy is started in background.
-You can then check the status of your deploy task periodically via the :ref:`check <commands-check>` command.
-
-**Default value**: ``False``
-
-
 .. function:: -v/--verbose
 
 Increase the tool's verbosity.
@@ -392,11 +380,7 @@ argument.
 check
 -----
 
-This command checks the status of your deployment and is useful when you do the deploy in asynchronous mode.
-
-.. warning::
-
-    Deploy in asynchronous mode is deprecated.
+This command checks the status of your deployment.
 
 By default, the ``check`` command will return results from the last deploy.
 
@@ -538,8 +522,9 @@ Troubleshooting
 Image not found while deploying
 -------------------------------
 
-If you don't use default Scrapinghub repository - make sure the repository you set in your
-:ref:`scrapinghub.yml <configuration>` images section exists in the registry. Consider this example:
+If you don't use default Scrapinghub repository - make sure the repository you
+set in the ``image`` setting of your :ref:`scrapinghub.yml <configuration>`
+exists in the registry. Consider this example:
 
 .. code-block:: yaml
 

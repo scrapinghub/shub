@@ -10,12 +10,12 @@ import yaml
 from click.testing import CliRunner
 from yaml import CLoader as Loader
 
-from shub.config import (get_target, get_target_conf, get_version,
+from shub.config import (get_target_conf, get_version,
                          load_shub_config, ShubConfig, Target,
                          SH_IMAGES_REPOSITORY)
 from shub.exceptions import (BadParameterException, BadConfigException,
                              ConfigParseException, MissingAuthException,
-                             NotFoundException)
+                             NotFoundException, ShubDeprecationWarning)
 
 
 VALID_YAML_CFG = """
@@ -45,9 +45,6 @@ VALID_YAML_CFG = """
         otheruser: otherkey
     stacks:
         dev: scrapy:v1.1
-    images:
-        dev: registry/user/project
-        prod: user/project
     requirements:
         eggs:
           - ./egg1.egg
@@ -129,9 +126,6 @@ class ShubConfigTest(unittest.TestCase):
         self.assertEqual(apikeys, self.conf.apikeys)
         stacks = {'dev': 'scrapy:v1.1'}
         self.assertEqual(stacks, self.conf.stacks)
-        images = {'dev': 'registry/user/project',
-                  'prod': 'user/project'}
-        self.assertEqual(images, self.conf.images)
         self.assertEqual('requirements.txt', self.conf.requirements_file)
 
     def test_load_partial(self):
@@ -357,6 +351,15 @@ class ShubConfigTest(unittest.TestCase):
                 self.assertEqual(
                     getattr(self.conf, option), getattr(loaded_conf, option))
 
+    @mock.patch('shub.config.print_warning')
+    @mock.patch('shub.config.GLOBAL_SCRAPINGHUB_YML_PATH', 'global.yml')
+    def test_save_without_path(self, mock_print_warning):
+        with CliRunner().isolated_filesystem():
+            self.conf.save()
+            self.assertTrue(os.path.isfile('global.yml'))
+        self.assertIs(mock_print_warning.call_args[0][1],
+                      ShubDeprecationWarning)
+
     def test_save_partial(self):
         runner = CliRunner()
         with runner.isolated_filesystem():
@@ -510,10 +513,7 @@ class ShubConfigTest(unittest.TestCase):
                 custom:
                     id: 789
                     image: user/repo
-                deprecated: 987
             image: true
-            images:
-                deprecated: old/style
         """)
         self.assertEqual(self.conf.get_image('default'),
                          SH_IMAGES_REPOSITORY.format(project=123))
@@ -526,8 +526,6 @@ class ShubConfigTest(unittest.TestCase):
                          SH_IMAGES_REPOSITORY.format(project=654))
         # check if custom image is respected
         self.assertEqual(self.conf.get_image('custom'), 'user/repo')
-        # check for backward compatibility
-        self.assertEqual(self.conf.get_image('deprecated'), 'old/style')
 
     def test_get_image_not_found(self):
         self.conf.load("""
@@ -540,13 +538,15 @@ class ShubConfigTest(unittest.TestCase):
     def test_get_image_mismatch_project(self):
         self.conf.load("""
             projects:
-                prod: 123
-                develop: 321
-                success: 456
-            images:
-                prod: images.scrapinghub.com/wrong-prefix/123
-                develop: images.scrapinghub.com/project/123
-                success: images.scrapinghub.com/project/456
+                prod:
+                    id: 123
+                    image: images.scrapinghub.com/wrong-prefix/123
+                develop:
+                    id: 321
+                    image: images.scrapinghub.com/project/123
+                success:
+                    id: 456
+                    image: images.scrapinghub.com/project/456
         """)
         with self.assertRaises(BadConfigException):
             self.conf.get_image('prod')
@@ -555,28 +555,13 @@ class ShubConfigTest(unittest.TestCase):
         self.assertEqual(self.conf.get_image('success'),
                          SH_IMAGES_REPOSITORY.format(project=456))
 
-    def test_get_image_ambigious_deprecated_images_section(self):
-        with self.assertRaises(BadConfigException):
-            self.conf.load("""
-                projects:
-                    default:
-                        id: 123
-                    stacks:
-                        id: 322
-                        stack: scrapy:1.2
-                images:
-                    default: custom/image
-            """)
-        self.conf.load("""
-            projects:
-                default:
-                    id: 123
-                stacks:
-                    id: 322
-                    image: false
-                    stack: scrapy:1.2
-            image: custom/image
+    def test_load_images_section(self):
+        conf = self._get_conf_with_yml("""
+            project: 123
+            images:
+                default: custom/image
         """)
+        self.assertEqual(conf.images, {})
 
     def test_get_image_ambiguous_global_image_and_global_stack(self):
         self.conf.load("""
@@ -865,12 +850,12 @@ class LoadShubConfigTest(unittest.TestCase):
         def _check_conf():
             conf = load_shub_config()
             self.assertEqual(
-                conf.get_target('123'),
+                conf.get_target_conf('123')[:3],
                 (123, 'dotsc_endpoint', 'netrc_key'),
             )
             self.assertEqual(conf.projects['ext2'], 'ext2/333')
             self.assertEqual(
-                conf.get_target('ext2'),
+                conf.get_target_conf('ext2')[:3],
                 (333, 'ext2_endpoint', 'ext2_key'),
             )
         os.remove(self.globalpath)
@@ -884,19 +869,19 @@ class LoadShubConfigTest(unittest.TestCase):
         def _check_conf():
             conf = load_shub_config()
             self.assertEqual(
-                conf.get_target('default'),
+                conf.get_target_conf('default')[:3],
                 (222, 'scrapycfg_endpoint/', 'key'),
             )
             self.assertEqual(
-                conf.get_target('ext2'),
+                conf.get_target_conf('ext2')[:3],
                 (333, 'ext2_endpoint/', 'ext2_key'),
             )
             self.assertEqual(
-                conf.get_target('ext3'),
+                conf.get_target_conf('ext3')[:3],
                 (333, 'scrapycfg_endpoint/', 'key'),
             )
             self.assertEqual(
-                conf.get_target('ext4'),
+                conf.get_target_conf('ext4')[:3],
                 (444, 'scrapycfg_endpoint/', 'ext4_key'),
             )
             self.assertEqual(conf.get_version(), 'ext2_ver')
@@ -924,7 +909,7 @@ class LoadShubConfigTest(unittest.TestCase):
         os.chdir('project')
         conf = load_shub_config()
         with self.assertRaises(BadParameterException):
-            conf.get_target('ext2')
+            conf.get_target_conf('ext2')
         os.remove(self.localpath)
         # Loaded from scrapy.cfg
         _check_conf()
@@ -937,11 +922,8 @@ class ConfigHelpersTest(unittest.TestCase):
 
     @mock.patch('shub.config.load_shub_config')
     def test_get_target_version(self, mock_lsh):
-        get_target('mytarget', auth_required=False)
         get_target_conf('mytargetconf', auth_required=False)
         get_version()
-        mock_lsh.return_value.get_target.assert_called_once_with(
-            'mytarget', auth_required=False)
         mock_lsh.return_value.get_target_conf.assert_called_once_with(
             'mytargetconf', auth_required=False)
         mock_lsh.return_value.get_version.assert_called_once_with()

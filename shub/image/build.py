@@ -19,7 +19,7 @@ Internally, this command is a simple wrapper to `docker build` and uses
 docker daemon on your system to build an image. Also it can generate
 project version for you, and locate root project directory by itself.
 
-Image should be set via scrapinghub.yml, section "images". If version is not
+Image should be set via the image setting in scrapinghub.yml. If version is not
 provided, the tool uses VCS-based stamp over project directory (the same as
 shub utils itself).
 """
@@ -33,8 +33,6 @@ BUILD_SUCCESS_REGEX = re.compile(r'Successfully built ([0-9a-f]+)')
 @click.option("-l", "--list-targets", is_flag=True, is_eager=True,
               expose_value=False, callback=list_targets_callback,
               help="List available project names defined in your config")
-@click.option("-d", "--debug", help="debug mode", is_flag=True,
-              callback=utils.deprecate_debug_parameter)
 @click.option("-v", "--verbose", is_flag=True,
               help="stream build logs to console")
 @click.option("-V", "--version", help="release version")
@@ -45,7 +43,7 @@ BUILD_SUCCESS_REGEX = re.compile(r'Successfully built ([0-9a-f]+)')
               help="Allow to pass build arguments to docker client.")
 @click.option("-f", "--file", "filename", default='Dockerfile',
               help="Name of the Dockerfile (Default is 'PATH/Dockerfile')")
-def cli(target, debug, verbose, version, skip_tests, no_cache, build_arg, filename):
+def cli(target, verbose, version, skip_tests, no_cache, build_arg, filename):
     build_cmd(target, version, skip_tests, no_cache, build_arg, filename=filename)
 
 

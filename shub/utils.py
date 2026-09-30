@@ -707,17 +707,11 @@ def download_from_pypi(dest, pkg=None, reqfile=None, extra_args=None):
 
 
 @contextlib.contextmanager
-def update_yaml_dict(conf_path=None):
+def update_yaml_dict(conf_path):
     """
     Context manager for updating a YAML file. Key ordering and comments are not
     preserved.
     """
-    if not conf_path:
-        click.secho("Using update_yaml_dict without path is deprecated. Import"
-                    " GLOBAL_SCRAPINGHUB_YML_PATH from shub.config",
-                    fg='yellow')
-        from shub.config import GLOBAL_SCRAPINGHUB_YML_PATH
-        conf_path = GLOBAL_SCRAPINGHUB_YML_PATH
     try:
         with open(conf_path) as f:
             conf = yaml.safe_load(f) or {}
