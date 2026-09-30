@@ -14,6 +14,17 @@ Changes
     a git repository, or where ``git`` isn't available, keep the previous
     behavior of deploying the working directory as-is.
 
+-   When ``shub deploy`` creates a new ``scrapinghub.yml`` for a project that
+    does not use a custom Docker image, it now sets ``stack`` to the latest
+    Scrapy stack released in the `scrapinghub-stack-scrapy
+    <https://github.com/scrapinghub/scrapinghub-stack-scrapy/tags>`__
+    repository, frozen to its release date (e.g. ``scrapy:2.18-20260824``).
+    If that repository cannot be reached, e.g. while offline, the latest stack
+    at the time of this release is used instead. Previously, no stack was set,
+    so Scrapy Cloud used its default stack, which can be much older. Existing
+    ``scrapinghub.yml`` files are not modified, and a default stack already
+    configured elsewhere (e.g. in ``~/.scrapinghub.yml``) is respected.
+
 2.18.1 (2026-07-08)
 ==========
 

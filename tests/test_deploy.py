@@ -10,6 +10,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 import requests
+import yaml
 from cleo.testers.command_tester import CommandTester
 from click.testing import CliRunner
 from packaging.version import parse
@@ -43,6 +44,9 @@ VALID_SCRAPY_CFG = """
 [settings]
 default = project.settings
 """
+
+# What the (mocked) stack lookup returns
+LATEST_STACK = "scrapy:2.99-20990101"
 
 
 class DeployTest(AssertInvokeRaisesMixin, unittest.TestCase):
@@ -92,6 +96,43 @@ class DeployTest(AssertInvokeRaisesMixin, unittest.TestCase):
         assert self.conf.endpoints["vagrant"] in url
         assert data == {"project": 456, "version": "version"}
         assert auth == (self.conf.apikeys["vagrant"], "")
+
+    @patch("shub.utils.get_latest_scrapy_stack", return_value=LATEST_STACK)
+    @patch("shub.utils.has_project_access", return_value=True)
+    @patch("shub.deploy.make_deploy_request")
+    def test_new_config_uses_latest_stack(
+        self, mock_deploy_req, mock_access, mock_latest_stack
+    ):
+        self.conf.projects.clear()
+        with self.runner.isolated_filesystem():
+            self._make_project()
+            result = self.runner.invoke(deploy.cli, input="12345\n")
+            sh_yml = yaml.safe_load(Path("scrapinghub.yml").read_text())
+        assert result.exit_code == 0
+        assert sh_yml == {"project": 12345, "stack": LATEST_STACK}
+        # The deploy that generated the config already uses the stack
+        _, data, _, _, _, _ = mock_deploy_req.call_args[0]
+        assert data == {
+            "project": 12345,
+            "version": "version",
+            "stack": LATEST_STACK,
+        }
+
+    @patch("shub.utils.get_latest_scrapy_stack")
+    @patch("shub.deploy.make_deploy_request")
+    def test_existing_config_without_stack_is_untouched(
+        self, mock_deploy_req, mock_latest_stack
+    ):
+        original_sh_yml = "project: 1\n"
+        with self.runner.isolated_filesystem():
+            self._make_project()
+            Path("scrapinghub.yml").write_text(original_sh_yml)
+            result = self.runner.invoke(deploy.cli)
+            assert Path("scrapinghub.yml").read_text() == original_sh_yml
+        assert result.exit_code == 0
+        _, data, _, _, _, _ = mock_deploy_req.call_args[0]
+        assert data == {"project": 1, "version": "version"}
+        mock_latest_stack.assert_not_called()
 
     def test_deploy_list_targets(self):
         with self.runner.isolated_filesystem():

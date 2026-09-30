@@ -69,6 +69,12 @@ include = [
 commit = true
 tag = true
 tag_name = "v{new_version}"
+# Include the latest Scrapy Cloud stack as FALLBACK_SCRAPY_STACK in the
+# release commit.
+pre_commit_hooks = [
+	"uv run --script utils/update_fallback_stack.py",
+	"git add shub/utils.py",
+]
 
 [[tool.bumpversion.files]]
 filename = "shub/__init__.py"
