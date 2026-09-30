@@ -1,6 +1,7 @@
 import click
 
-from shub.config import load_shub_config, GLOBAL_SCRAPINGHUB_YML_PATH
+from shub.config import (load_shub_config, GLOBAL_SCRAPINGHUB_YML_PATH,
+                         _get_apikey_name)
 from shub.utils import update_yaml_dict
 
 
@@ -15,9 +16,11 @@ SHORT_HELP = "Forget saved Scrapinghub API key"
 @click.command(help=HELP, short_help=SHORT_HELP)
 def cli():
     global_conf = load_shub_config(load_local=False, load_env=False)
-    if 'default' not in global_conf.apikeys:
+    endpoint = load_shub_config(load_env=False).endpoints['default']
+    apikey_name = _get_apikey_name(global_conf, endpoint)
+    if apikey_name not in global_conf.apikeys:
         click.echo("You are not logged in.")
         return 0
 
     with update_yaml_dict(GLOBAL_SCRAPINGHUB_YML_PATH) as conf:
-        del conf['apikeys']['default']
+        del conf['apikeys'][apikey_name]

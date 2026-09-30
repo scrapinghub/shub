@@ -6,6 +6,7 @@ import unittest
 from unittest import mock
 from io import StringIO
 
+import pytest
 import yaml
 from click.testing import CliRunner
 from yaml import CLoader as Loader
@@ -958,3 +959,40 @@ apikeys:
 
     conf = load_shub_config(load_global=False, load_local=True, load_env=True)
     assert conf.apikeys['default'] == 'ENVKEY'
+
+
+@pytest.fixture
+def endpoint_confs(tmp_path, monkeypatch):
+    global_yml = tmp_path / 'global.yml'
+    global_yml.write_text("""
+apikeys:
+  default: ZYTEKEY
+  https://example.com/api/: EXAMPLEKEY
+  other: OTHERKEY
+""")
+    (tmp_path / 'scrapinghub.yml').write_text("""
+projects:
+  default: 123
+  explicit:
+    id: 456
+    apikey: other
+endpoint: https://example.com/api/
+""")
+    monkeypatch.setattr('shub.config.GLOBAL_SCRAPINGHUB_YML_PATH',
+                        str(global_yml))
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv('SHUB_APIKEY', raising=False)
+
+
+@pytest.mark.usefixtures('endpoint_confs')
+def test_apikey_by_endpoint_url():
+    conf = load_shub_config()
+    assert conf.get_target_conf('default').apikey == 'EXAMPLEKEY'
+    assert conf.get_target_conf('explicit').apikey == 'OTHERKEY'
+
+
+@pytest.mark.usefixtures('endpoint_confs')
+def test_shub_apikey_env_overrides_apikey_by_endpoint_url(monkeypatch):
+    monkeypatch.setenv('SHUB_APIKEY', 'ENVKEY')
+    conf = load_shub_config()
+    assert conf.get_target_conf('default').apikey == 'ENVKEY'

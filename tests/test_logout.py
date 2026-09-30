@@ -34,3 +34,18 @@ class LogoutTestCase(unittest.TestCase):
         with self.runner.isolated_filesystem():
             self.runner.invoke(logout.cli)
             self.assertFalse(mock_uyd.called)
+
+    def test_remove_key_for_project_endpoint(self):
+        GLOBAL_SH_YML = textwrap.dedent("""
+            apikeys:
+                default: ZYTE_KEY
+                https://example.com/api/: LOGGED_IN_KEY
+        """)
+        with self.runner.isolated_filesystem():
+            with open('.scrapinghub.yml', 'w') as f:
+                f.write(GLOBAL_SH_YML)
+            with open('scrapinghub.yml', 'w') as f:
+                f.write("endpoint: https://example.com/api/\n")
+            self.runner.invoke(logout.cli)
+            conf = config.load_shub_config(load_local=False)
+            self.assertEqual(conf.apikeys, {'default': 'ZYTE_KEY'})

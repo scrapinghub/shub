@@ -98,3 +98,28 @@ class LoginTest(AssertInvokeRaisesMixin, unittest.TestCase):
             self._run(fs=fs)
             self.assertInvokeRaises(AlreadyLoggedInException, login.cli,
                                     input=VALID_KEY)
+
+    def test_write_key_for_project_endpoint(self):
+        PROJECT_SH_YML = textwrap.dedent("""
+            endpoint: https://example.com/api/
+        """)
+        GLOBAL_SH_YML = textwrap.dedent("""
+            apikeys:
+                default: ZYTE_KEY
+        """)
+        with self.runner.isolated_filesystem():
+            for path, content in (('scrapinghub.yml', PROJECT_SH_YML),
+                                  ('.scrapinghub.yml', GLOBAL_SH_YML)):
+                with open(path, 'w') as f:
+                    f.write(content)
+            with patch.object(login, '_is_valid_apikey',
+                              return_value=True) as mock_valid:
+                self.runner.invoke(login.cli, input=VALID_KEY)
+            mock_valid.assert_called_once_with(
+                VALID_KEY, endpoint='https://example.com/api/')
+            with open('.scrapinghub.yml') as f:
+                conf = yaml.load(f, Loader=Loader)
+            self.assertEqual(conf['apikeys'], {
+                'default': 'ZYTE_KEY',
+                'https://example.com/api/': VALID_KEY,
+            })

@@ -265,6 +265,16 @@ as well as different API endpoints::
       default: 0bbf4f0f691e0d9378ae00ca7bcf7f0c
       vagrant: a1aeecc4cd52744730b1ea6cd3e8412a
 
+API keys can also be keyed by endpoint URL, which takes precedence over the
+endpoint name unless a project sets ``apikey``. Running ``shub login`` in a
+project whose ``scrapinghub.yml`` sets a different default endpoint than
+:file:`~/.scrapinghub.yml` saves the API key to :file:`~/.scrapinghub.yml`
+this way::
+
+    apikeys:
+      default: 0bbf4f0f691e0d9378ae00ca7bcf7f0c
+      https://example.com/api/: a1aeecc4cd52744730b1ea6cd3e8412a
+
 Global and project-specific requirements. ``requirements.txt`` is used for projects ``prod`` and ``some``, ``requirements-dev.txt`` and eggs for ``dev``::
 
   projects:

@@ -282,8 +282,12 @@ class ShubConfig:
             raise NotFoundException("Could not find endpoint %s. Please "
                                     "define it in your scrapinghub.yml."
                                     "" % proj['endpoint'])
+        endpoint = self.endpoints[proj['endpoint']]
+        apikey_name = proj['apikey']
+        if apikey_name == proj['endpoint'] and endpoint in self.apikeys:
+            apikey_name = endpoint
         try:
-            apikey = str(self.apikeys[proj['apikey']])
+            apikey = str(self.apikeys[apikey_name])
         except KeyError:
             if auth_required:
                 msg = None
@@ -297,7 +301,7 @@ class ShubConfig:
         eggs = proj_requirements.get('eggs', self.eggs)
         return Target(
             project_id=proj['id'],
-            endpoint=self.endpoints[proj['endpoint']],
+            endpoint=endpoint,
             apikey=apikey,
             stack=(self.stacks.get(proj['stack'], proj['stack'])
                    if 'stack' in proj else self.stacks.get('default')),
@@ -527,7 +531,16 @@ def load_shub_config(load_global=True, load_local=True, load_env=True):
         _load_dotenv_apikey()
         if 'SHUB_APIKEY' in os.environ:
             conf.apikeys['default'] = os.environ['SHUB_APIKEY']
+            conf.apikeys[conf.endpoints['default']] = os.environ['SHUB_APIKEY']
     return conf
+
+
+def _get_apikey_name(global_conf, endpoint):
+    """Return the key of *global_conf* apikeys under which to store the API
+    key for *endpoint*."""
+    if endpoint == global_conf.endpoints['default']:
+        return 'default'
+    return endpoint
 
 
 def get_target(target, auth_required=True):
