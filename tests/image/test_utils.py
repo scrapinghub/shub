@@ -28,7 +28,11 @@ class ReleaseUtilsTest(TestCase):
             add_sh_fake_config(tmpdir)
             assert get_project_dir() == tmpdir
 
+    @mock.patch.dict(os.environ)
+    @mock.patch.dict(sys.modules)
     def test_get_docker_client(self):
+        for name in ('DOCKER_HOST', 'DOCKER_API_VERSION', 'DOCKER_TLS_VERIFY'):
+            os.environ.pop(name, None)
         mocked_docker = mock.Mock()
         sys.modules['docker'] = mocked_docker
         client_mock = mock.Mock()
