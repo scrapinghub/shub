@@ -1,9 +1,7 @@
 import glob
-import json
 import os
 import shutil
 import tempfile
-from typing import AnyStr, Optional, Union
 
 # Not used in code but needed in runtime, don't remove!
 import setuptools
@@ -110,7 +108,7 @@ def deploy_cmd(target, version, debug, egg, build_egg, verbose, keep_log,
 
             _upload_egg(targetconf.endpoint, egg, targetconf.project_id,
                         version, auth, verbose, keep_log, targetconf.stack,
-                        targetconf.requirements_file, targetconf.eggs, tmpdir)
+                        targetconf.requirements_file, targetconf.eggs)
             click.echo("Run your spiders at: "
                        "https://app.zyte.com/p/%s/"
                        "" % targetconf.project_id)
@@ -127,7 +125,7 @@ def _url(endpoint, action):
 
 
 def _upload_egg(endpoint, eggpath, project, version, auth, verbose, keep_log,
-                stack=None, requirements_file=None, eggs=None, tmpdir=None):
+                stack=None, requirements_file=None, eggs=None):
     expanded_eggs = []
     for e in (eggs or []):
         # Expand glob patterns, but make sure we don't swallow non-existing
@@ -148,7 +146,7 @@ def _upload_egg(endpoint, eggpath, project, version, auth, verbose, keep_log,
     try:
         files = [('eggs', open(path, 'rb')) for path in expanded_eggs]
         if _is_pipfile(requirements_file):
-            requirements_file = _get_pipfile_requirements(tmpdir)
+            requirements_file = _get_pipfile_requirements()
         elif _is_poetry(requirements_file):
             requirements_file = _get_poetry_requirements()
         elif requirements_file:
@@ -167,54 +165,15 @@ def _is_pipfile(name):
     return name in ['Pipfile', 'Pipfile.lock']
 
 
-def _get_pipfile_requirements(tmpdir=None):
-    try:
-        # moved in pipenv==2022.4.8
-        from pipenv.utils.dependencies import convert_deps_to_pip
-        from pipenv.utils.indexes import prepare_pip_source_args
-    except ImportError:
-        try:
-            from pipenv.utils import convert_deps_to_pip, prepare_pip_source_args
-        except ImportError:
-            raise ImportError('You need pipenv installed to deploy with Pipfile')
-    try:
-        with open('Pipfile.lock', encoding='utf-8') as f:
-            pipefile = json.load(f)
-            deps = pipefile['default']
-            sources_list = prepare_pip_source_args(pipefile['_meta']['sources'])
-            sources = ' '.join(sources_list)
-    except OSError:
+def _get_pipfile_requirements():
+    executable = shutil.which('pipenv')
+    if executable is None:
+        raise NotFoundException('You need pipenv installed to deploy with Pipfile')
+    if not os.path.exists('Pipfile.lock'):
         raise ShubException('Please lock your Pipfile before deploying')
-    # We must remove any hash from the pipfile before converting to play nice
-    # with vcs packages
-    for k, v in deps.items():
-        if 'hash' in v:
-            del v['hash']
-        if 'hashes' in v:
-            del v['hashes']
-        # Scrapy Cloud also doesn't support editable packages
-        if 'editable' in v:
-            del v['editable']
-    return open(_add_sources(convert_deps_to_pip(deps), _sources=sources.encode(), tmpdir=tmpdir), 'rb')
-
-
-def _add_sources(
-    _requirements: Union[str, list], _sources: bytes, tmpdir: Optional[AnyStr] = None
-) -> str:
-    tmp = tempfile.NamedTemporaryFile(delete=False, suffix="-requirements.txt", dir=tmpdir)
-    tmp.write(_sources + b'\n')
-    # Keep backward compatibility with pipenv<=2022.8.30
-    if isinstance(_requirements, list):
-        tmp.write('\n'.join(_requirements).encode('utf-8'))
-    # Keep compatible with pipenv>=v2023.10.24
-    elif isinstance(_requirements, dict):
-        tmp.write('\n'.join(_requirements.values()).encode('utf-8'))
-    else:
-        with open(_requirements, 'rb') as f:
-            tmp.write(f.read())
-    tmp.flush()
-    tmp.close()
-    return tmp.name
+    requirements = run_cmd([executable, 'requirements'])
+    # Scrapy Cloud does not support editable packages
+    return '\n'.join(line.removeprefix('-e ') for line in requirements.splitlines())
 
 
 def _is_poetry(name):

@@ -5,10 +5,9 @@ import subprocess
 import sys
 import unittest
 import zipfile
-from unittest.mock import patch, Mock
+from unittest.mock import patch
 
 from packaging.version import parse
-from pipenv import __version__ as pipenv_version
 import requests
 import yaml
 from cleo.testers.command_tester import CommandTester
@@ -407,20 +406,6 @@ class DeployFilesTest(unittest.TestCase):
         self.assertEqual(len(files_main['eggs']), 4)
         self.assertIn('main content', files_main['eggs'])
 
-    def test_add_sources(self):
-        convert_deps_to_pip = Mock(
-            side_effect=[
-                './tests/requirements.txt',
-                ['package==0.0.0', 'hash-package==0.0.1', 'hash-package2==0.0.1'],
-            ],
-        )
-        _sources = (
-            b'-i https://pypi.python.org/simple '
-            b'--extra-index-url https://example.external-index.org/simple'
-        )
-        self.assertIsInstance(deploy._add_sources(convert_deps_to_pip(), _sources), str)
-        self.assertIsInstance(deploy._add_sources(convert_deps_to_pip(), _sources), str)
-
     def pipfile_test(self, req_name):
         with self.runner.isolated_filesystem():
             with open('./main.egg', 'w') as f:
@@ -470,17 +455,12 @@ class DeployFilesTest(unittest.TestCase):
 
         reqs = set(files['requirements'][0].split('\n'))
         self.assertEqual(reqs, {
-            '-i https://pypi.python.org/simple --extra-index-url https://example.external-index.org/simple',
+            '-i https://pypi.python.org/simple',
+            '--extra-index-url https://example.external-index.org/simple',
             'package==0.0.0',
             'hash-package==0.0.1',
             'hash-package2==0.0.1',
-            'git+https://github.com/vcs/package.git@master#egg=vcs-package'
-            if sys.version_info < (3, 8)
-            else (
-                'vcs-package@ git+https://github.com/vcs/package.git@master'
-                if parse(pipenv_version) < parse("2024.3.0")
-                else 'vcs-package @ git+https://github.com/vcs/package.git@master'
-            )
+            'git+https://github.com/vcs/package.git@master#egg=vcs-package',
         })
 
     def test_pipfile_names(self):
@@ -502,6 +482,24 @@ class DeployFilesTest(unittest.TestCase):
             self.assertEqual(
                 cm.exception.message,
                 'Please lock your Pipfile before deploying',
+            )
+
+    @patch('shub.deploy.shutil.which', return_value=None)
+    def test_pipenv_missing(self, mock_which):
+        with self.runner.isolated_filesystem():
+            with open('./main.egg', 'w') as f:
+                f.write('main content')
+            with open('./1.egg', 'w') as f:
+                f.write('1.egg content')
+            with open('./2.egg', 'w') as f:
+                f.write('2.egg content')
+
+            with self.assertRaises(NotFoundException) as cm:
+                self._deploy(req='Pipfile')
+
+            self.assertEqual(
+                cm.exception.message,
+                'You need pipenv installed to deploy with Pipfile',
             )
 
     @patch("subprocess.check_output")
