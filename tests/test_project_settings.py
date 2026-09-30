@@ -171,3 +171,32 @@ def test_image_init_no_settings_module():
     assert result.exit_code == BadConfigException.exit_code
     assert 'SCRAPY_SETTINGS_MODULE' in result.output
     assert not os.path.exists('Dockerfile')
+
+
+def _assert_image_init_refused(result):
+    assert result.exit_code == BadConfigException.exit_code, result.output
+    assert not os.path.exists('Dockerfile')
+    assert not os.path.exists('setup.py')
+
+
+def test_image_init_ignores_global_scrapy_cfg(isolated_env):
+    # A [settings] section in a global scrapy.cfg must not make image init
+    # write a Dockerfile and setup.py into an arbitrary directory
+    isolated_env.join('home', 'scrapy.cfg').write(MULTI_PROJECT_CFG)
+    _assert_image_init_refused(CliRunner().invoke(image_init_cli, []))
+
+
+def test_image_init_unimportable_env_var_without_scrapy_cfg(monkeypatch):
+    monkeypatch.setenv('SCRAPY_SETTINGS_MODULE', 'does_not_exist.settings')
+    _assert_image_init_refused(CliRunner().invoke(image_init_cli, []))
+
+
+def test_image_init_importable_env_var_without_scrapy_cfg(isolated_env, monkeypatch):
+    isolated_env.join('envproj', '__init__.py').write('', ensure=True)
+    isolated_env.join('envproj', 'settings.py').write('')
+    monkeypatch.syspath_prepend(str(isolated_env))
+    monkeypatch.setenv('SCRAPY_SETTINGS_MODULE', 'envproj.settings')
+    result = CliRunner().invoke(image_init_cli, [])
+    assert result.exit_code == 0, result.output
+    assert 'ENV SCRAPY_SETTINGS_MODULE envproj.settings' in _read_dockerfile()
+    assert "'settings = envproj.settings'" in _read_setup_py()

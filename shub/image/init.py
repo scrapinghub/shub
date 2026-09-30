@@ -86,6 +86,13 @@ def _deprecate_base_deps_parameter(ctx, param, value):
 @click.option("--requirements", default="requirements.txt",
               help="path to requirements.txt")
 def cli(project, base_image, base_deps, add_deps, requirements):
+    # Require a local scrapy.cfg or an importable SCRAPY_SETTINGS_MODULE, so
+    # that global scrapy.cfg files alone don't make any directory a project
+    if not shub_utils.inside_project():
+        raise shub_exceptions.BadConfigException(
+            'Cannot find a Scrapy project in this location. Run this command '
+            'from a directory containing scrapy.cfg, or set '
+            'SCRAPY_SETTINGS_MODULE to an importable settings module.')
     settings_module = shub_utils._get_project_settings_module(project)
     if not settings_module:
         raise shub_exceptions.BadConfigException(
