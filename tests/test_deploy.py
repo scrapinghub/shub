@@ -322,7 +322,7 @@ class DeployFilesTest(unittest.TestCase):
         for name, file in self.request.call_args[0][2]:
             files.setdefault(name, []).append(
                 file if isinstance(file, str)
-                else file.read().decode('utf-8'))
+                else file.read().decode('utf-8', 'replace'))
 
         return files
 
@@ -710,3 +710,40 @@ class DeployFilesTest(unittest.TestCase):
                         "The Poetry configuration is invalid",
                         cm.exception.message,
                     )
+
+    def egg_requirements_test(self, req_name):
+        with self.runner.isolated_filesystem():
+            with open('./pyproject.toml', 'w') as f:
+                f.write('[project]\nname = "foo"\n')
+            with zipfile.ZipFile('./main.egg', 'w') as egg:
+                egg.writestr('EGG-INFO/PKG-INFO', 'Name: foo\n')
+                egg.writestr(
+                    'EGG-INFO/requires.txt',
+                    'bar>=1\n'
+                    '\n'
+                    '[:python_version < "3.11"]\n'
+                    'baz\n'
+                    '\n'
+                    '[extra]\n'
+                    'qux\n',
+                )
+            files = self._deploy(req=req_name, eggs=[])
+
+        self.assertEqual(
+            files['requirements'][0],
+            'bar>=1\nbaz; python_version < "3.11"',
+        )
+
+    def test_setup_py(self):
+        self.egg_requirements_test('setup.py')
+
+    def test_pyproject_toml(self):
+        self.egg_requirements_test('pyproject.toml')
+
+    def test_egg_without_requirements(self):
+        with self.runner.isolated_filesystem():
+            with zipfile.ZipFile('./main.egg', 'w') as egg:
+                egg.writestr('EGG-INFO/PKG-INFO', 'Name: foo\n')
+            files = self._deploy(req='setup.py', eggs=[])
+
+        self.assertNotIn('requirements', files)

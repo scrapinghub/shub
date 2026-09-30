@@ -63,9 +63,12 @@ available on Scrapy Cloud. You can easily upload these by specifying a
     requirements:
       file: requirements.txt
 
-Note that this requirements file is an *extension* of the `Scrapy Cloud
-stack`_, and therefore should not contain packages that are already part of the
-stack, such as ``scrapy``.
+Your requirements file should also include the packages of your `Scrapy Cloud
+stack`_, pinned to their stack versions, and freeze all indirect dependencies,
+e.g. compiled with `pip-tools`_ from a :file:`requirements.in` file that lists
+your stack packages and your additional packages. That way, your additional
+packages get versions compatible with those of your stack packages. See
+:ref:`scrapy-lint:scp24` and :ref:`scrapy-lint:scp13`.
 
 In case you use `pipenv`_ you may also specify a ``Pipfile``::
 
@@ -86,9 +89,8 @@ environment.
     To install pipenv tool, use ``pip install pipenv`` or check `its documentation
     <https://pipenv.readthedocs.io/>`_.
 
-A requirements.txt file will be created out of the ``Pipfile`` so like the
-requirements file above, it should not contain packages that are already part
-of the stack.
+A requirements.txt file will be created out of the :file:`Pipfile`, so like the
+requirements file above, it should include the packages of your stack.
 
 If you use `Poetry`_ you can specify your ``pyproject.toml``::
 
@@ -111,6 +113,21 @@ If ``poetry.lock`` does not exist yet, it will be created during this process.
 
     `Poetry`_ is a tool for dependency management and packaging in Python.
 
+If you declare your dependencies in :file:`setup.py` (``install_requires``) or
+in the ``[project]`` table of a :file:`pyproject.toml` file without a
+``[tool.poetry]`` table (``dependencies``), you can specify that file instead:
+
+.. versionadded:: VERSION
+
+.. code-block:: yaml
+    :caption: :file:`scrapinghub.yml`
+
+    requirements:
+      file: setup.py
+
+Those dependencies are not frozen, so prefer a requirements file as described
+above.
+
 When your dependencies cannot be specified in a requirements file, e.g.
 because they are not publicly available, you can supply them as Python eggs::
 
@@ -131,6 +148,8 @@ build your own Docker image to be used on Scrapy Cloud. See
 :ref:`deploy-custom-image`.
 
 .. _requirements file: https://pip.pypa.io/en/stable/user_guide/#requirements-files
+
+.. _pip-tools: https://pip-tools.readthedocs.io/en/stable/
 
 .. _pipenv: https://github.com/pypa/pipenv
 

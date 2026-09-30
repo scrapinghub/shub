@@ -3,6 +3,8 @@ import json
 import os
 import shutil
 import tempfile
+import zipfile
+from importlib.metadata import PathDistribution
 from typing import AnyStr, Optional, Union
 
 # Not used in code but needed in runtime, don't remove!
@@ -151,6 +153,8 @@ def _upload_egg(endpoint, eggpath, project, version, auth, verbose, keep_log,
             requirements_file = _get_pipfile_requirements(tmpdir)
         elif _is_poetry(requirements_file):
             requirements_file = _get_poetry_requirements()
+        elif requirements_file in ('setup.py', 'pyproject.toml'):
+            requirements_file = _get_egg_requirements(eggpath)
         elif requirements_file:
             requirements_file = open(requirements_file, 'rb')
         if requirements_file:
@@ -264,6 +268,13 @@ def _get_poetry_requirements():
             return _get_poetry_requirements_fallback()
         except Exception:
             raise original_exception
+
+
+def _get_egg_requirements(eggpath):
+    dist = PathDistribution(zipfile.Path(eggpath, 'EGG-INFO/'))
+    return '\n'.join(
+        req for req in dist.requires or [] if 'extra ==' not in req
+    )
 
 
 def _build_egg():
