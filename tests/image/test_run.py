@@ -121,7 +121,7 @@ LOG {"time": %(ts)d, "level": 30, "message": "Other message"}\
 @mock.patch('sys.stdout', new_callable=StringIO)
 def test_consume_from_fifo(mock_stdout):
     try:
-        # XXX work-around to use NamedTemporaryFile on Windows
+        # Work-around to use NamedTemporaryFile on Windows
         # https://github.com/appveyor/ci/issues/2547
         with tempfile.NamedTemporaryFile(mode='w', delete=False) as temp:
             filename = temp.name

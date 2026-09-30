@@ -1,5 +1,3 @@
-from collections import OrderedDict
-
 import click
 
 from shub import exceptions as shub_exceptions
@@ -122,9 +120,7 @@ class _PushProgress(_LoggedPushProgress):
         # Total bar repesents total progress in terms of amount of layers.
         self.total_bar = self._create_total_bar()
         self.layers = set()
-        # XXX: has to be OrderedDict to make tqdm.write/click.echo work as expected.
-        # Otherwise it writes at random position, usually in the middle of the progress bars.
-        self.layers_bars = OrderedDict()
+        self.layers_bars = {}
 
     def handle_status_event(self, event):
         layer_id = event.get('id')

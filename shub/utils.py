@@ -447,7 +447,7 @@ def get_job_specs(job):
             "".format(job),
             param_hint='job_id',
         )
-    # XXX: Lazy import due to circular dependency
+    # Lazy import due to circular dependency
     from shub.config import get_target_conf
     targetconf = get_target_conf(match.group(2) or 'default')
     return (f"{targetconf.project_id}/{match.group(3)}",
@@ -821,7 +821,7 @@ def _update_conf_file(filename, target, project, repository, stack=None):
     and ``repository``, set ``stack`` as the default stack, then save it. If
     the file does not exist, it will be created."""
     try:
-        # XXX: Runtime import to avoid circular dependency
+        # Runtime import to avoid circular dependency
         from shub.config import ShubConfig
         conf = ShubConfig()
         if os.path.exists(filename):
