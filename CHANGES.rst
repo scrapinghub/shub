@@ -14,17 +14,6 @@ Changes
     a git repository, or where ``git`` isn't available, keep the previous
     behavior of deploying the working directory as-is.
 
--   ``shub deploy`` and ``shub image init`` now honour the
-    ``SCRAPY_SETTINGS_MODULE`` and ``SCRAPY_PROJECT`` environment variables
-    when resolving the project's settings module, matching Scrapy:
-    ``SCRAPY_SETTINGS_MODULE`` takes precedence over ``scrapy.cfg``, and
-    ``SCRAPY_PROJECT`` selects which ``[settings]`` entry is used instead of
-    ``default``. A ``[settings]`` section in ``scrapy.cfg`` is no longer
-    required when ``SCRAPY_SETTINGS_MODULE`` is set.
-
--   Fixed ``shub image init --project`` writing the ``default`` project's
-    settings module to the Dockerfile instead of the requested one.
-
 2.18.1 (2026-07-08)
 ==========
 

@@ -35,35 +35,41 @@ MULTI_PROJECT_CFG = "[settings]\ndefault = proj.settings\nother = other.settings
 
 def test_settings_module_from_scrapy_cfg_default():
     _write_scrapy_cfg(MULTI_PROJECT_CFG)
-    assert utils.get_project_settings_module() == 'proj.settings'
+    assert utils._get_project_settings_module() == 'proj.settings'
 
 
 def test_settings_module_env_var_takes_precedence(monkeypatch):
     _write_scrapy_cfg(MULTI_PROJECT_CFG)
     monkeypatch.setenv('SCRAPY_SETTINGS_MODULE', 'env.settings')
     monkeypatch.setenv('SCRAPY_PROJECT', 'other')
-    assert utils.get_project_settings_module() == 'env.settings'
-    assert utils.get_project_settings_module('other') == 'env.settings'
+    assert utils._get_project_settings_module() == 'env.settings'
+
+
+def test_settings_module_explicit_project_beats_env_var(monkeypatch):
+    _write_scrapy_cfg(MULTI_PROJECT_CFG)
+    monkeypatch.setenv('SCRAPY_SETTINGS_MODULE', 'env.settings')
+    assert utils._get_project_settings_module('other') == 'other.settings'
+    assert utils._get_project_settings_module('missing') is None
 
 
 def test_settings_module_scrapy_project_selects_entry(monkeypatch):
     _write_scrapy_cfg(MULTI_PROJECT_CFG)
     monkeypatch.setenv('SCRAPY_PROJECT', 'other')
-    assert utils.get_project_settings_module() == 'other.settings'
+    assert utils._get_project_settings_module() == 'other.settings'
 
 
 def test_settings_module_explicit_project_beats_scrapy_project(monkeypatch):
     _write_scrapy_cfg(MULTI_PROJECT_CFG)
     monkeypatch.setenv('SCRAPY_PROJECT', 'other')
-    assert utils.get_project_settings_module('default') == 'proj.settings'
+    assert utils._get_project_settings_module('default') == 'proj.settings'
 
 
 def test_settings_module_not_found():
-    assert utils.get_project_settings_module() is None
+    assert utils._get_project_settings_module() is None
     _write_scrapy_cfg("[deploy]\nproject = 123\n")
-    assert utils.get_project_settings_module() is None
+    assert utils._get_project_settings_module() is None
     _write_scrapy_cfg(MULTI_PROJECT_CFG)
-    assert utils.get_project_settings_module('missing') is None
+    assert utils._get_project_settings_module('missing') is None
 
 
 def test_inside_project_with_scrapy_project(monkeypatch):
@@ -75,6 +81,20 @@ def test_inside_project_with_scrapy_project(monkeypatch):
 
 
 def test_inside_project_nothing_configured():
+    assert not utils.inside_project()
+
+
+def test_inside_project_ignores_global_scrapy_cfg(isolated_env):
+    # A [settings] section in a global scrapy.cfg must not turn every
+    # directory into a project
+    xdg_scrapy_cfg = isolated_env.join('home', 'scrapy.cfg')
+    xdg_scrapy_cfg.write(MULTI_PROJECT_CFG)
+    assert utils._get_project_settings_module() == 'proj.settings'
+    assert not utils.inside_project()
+
+
+def test_inside_project_unimportable_env_var(monkeypatch):
+    monkeypatch.setenv('SCRAPY_SETTINGS_MODULE', 'does_not_exist.settings')
     assert not utils.inside_project()
 
 
@@ -133,6 +153,15 @@ def test_image_init_settings_module_env_var(monkeypatch):
     result = CliRunner().invoke(image_init_cli, [])
     assert result.exit_code == 0, result.output
     assert 'ENV SCRAPY_SETTINGS_MODULE env.settings' in _read_dockerfile()
+
+
+def test_image_init_project_option_beats_env_var(monkeypatch):
+    _write_scrapy_cfg(MULTI_PROJECT_CFG)
+    monkeypatch.setenv('SCRAPY_SETTINGS_MODULE', 'env.settings')
+    result = CliRunner().invoke(image_init_cli, ['--project', 'other'])
+    assert result.exit_code == 0, result.output
+    assert 'ENV SCRAPY_SETTINGS_MODULE other.settings' in _read_dockerfile()
+    assert "'settings = other.settings'" in _read_setup_py()
 
 
 def test_image_init_no_settings_module():

@@ -73,8 +73,9 @@ def _deprecate_base_deps_parameter(ctx, param, value):
               help="list recommended python requirements")
 @click.option("--project", default=None,
               help="project name to get settings module from scrapy.cfg "
-                   "(defaults to $SCRAPY_PROJECT or 'default'; ignored if "
-                   "$SCRAPY_SETTINGS_MODULE is set)")
+                   "(overrides $SCRAPY_SETTINGS_MODULE; if not given, "
+                   "$SCRAPY_SETTINGS_MODULE, then $SCRAPY_PROJECT or "
+                   "'default' are used)")
 @click.option("--base-image", default=DEFAULT_BASE_IMAGE,
               help="base docker image name")
 @click.option("--base-deps", default='',
@@ -85,10 +86,10 @@ def _deprecate_base_deps_parameter(ctx, param, value):
 @click.option("--requirements", default="requirements.txt",
               help="path to requirements.txt")
 def cli(project, base_image, base_deps, add_deps, requirements):
-    settings_module = shub_utils.get_project_settings_module(project)
+    settings_module = shub_utils._get_project_settings_module(project)
     if not settings_module:
         raise shub_exceptions.BadConfigException(
-            shub_utils.SETTINGS_MODULE_NOT_FOUND_MSG)
+            shub_utils._SETTINGS_MODULE_NOT_FOUND_MSG)
     closest_scrapy_cfg = shub_utils.closest_file('scrapy.cfg')
     project_dir = os.path.dirname(closest_scrapy_cfg) if closest_scrapy_cfg else os.getcwd()
     dockefile_path = os.path.join(project_dir, 'Dockerfile')
