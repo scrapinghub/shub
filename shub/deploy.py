@@ -1,7 +1,10 @@
 import glob
+import io
 import json
 import os
 import shutil
+import subprocess
+import tarfile
 import tempfile
 from typing import AnyStr, Optional, Union
 
@@ -49,7 +52,9 @@ If the project is inside a git repository, the egg is built from a copy of
 the working directory that leaves out anything git considers ignored (e.g.
 via .gitignore), so build artifacts, local secrets, and stray virtualenvs
 don't end up in the deploy. Uncommitted changes to tracked files are still
-included.
+included. To deploy only what is committed, use:
+
+    shub deploy --from-head
 """
 
 SHORT_HELP = "Deploy Scrapy project to Scrapy Cloud"
@@ -70,15 +75,17 @@ SHORT_HELP = "Deploy Scrapy project to Scrapy Cloud"
 @click.option("-k", "--keep-log", help="Keep the deploy log", is_flag=True)
 @click.option("--ignore-size", help="Ignore deploy request's egg(s) size check",
               is_flag=True)
+@click.option("--from-head", is_flag=True,
+              help="Build the egg from the files committed to git HEAD")
 def cli(target, version, debug, egg, build_egg, verbose, keep_log,
-        ignore_size):
+        ignore_size, from_head):
     conf, image = load_shub_config(), None
     if not build_egg:
         create_scrapinghub_yml_wizard(conf, target=target)
     image = conf.get_target_conf(target).image
     if not image:
         deploy_cmd(target, version, debug, egg, build_egg, verbose, keep_log,
-                   conf=conf)
+                   conf=conf, from_head=from_head)
     elif image.startswith(SH_IMAGES_REGISTRY):
         upload_cmd(target, version)
     else:
@@ -88,11 +95,11 @@ def cli(target, version, debug, egg, build_egg, verbose, keep_log,
 
 
 def deploy_cmd(target, version, debug, egg, build_egg, verbose, keep_log,
-               conf=None):
+               conf=None, from_head=False):
     tmpdir = None
     try:
         if build_egg:
-            egg, tmpdir = _build_egg()
+            egg, tmpdir = _build_egg(from_head)
             click.echo("Writing egg to %s" % build_egg)
             shutil.copyfile(egg, build_egg)
         else:
@@ -106,7 +113,7 @@ def deploy_cmd(target, version, debug, egg, build_egg, verbose, keep_log,
                 egg = egg
             else:
                 click.echo("Packing version %s" % version)
-                egg, tmpdir = _build_egg()
+                egg, tmpdir = _build_egg(from_head)
 
             _upload_egg(targetconf.endpoint, egg, targetconf.project_id,
                         version, auth, verbose, keep_log, targetconf.stack,
@@ -266,10 +273,14 @@ def _get_poetry_requirements():
             raise original_exception
 
 
-def _build_egg():
+def _build_egg(from_head=False):
     if not inside_project():
         raise NotFoundException("No Scrapy project found in this location.")
     git = shutil.which('git')
+    if from_head:
+        if not git:
+            raise NotFoundException("--from-head requires git.")
+        return _build_egg_from_git_head(git)
     if git:
         try:
             return _build_egg_from_git_filtered_files(git)
@@ -317,3 +328,26 @@ def _build_egg_from_git_filtered_files(git):
             return _build_egg_in_cwd()
     finally:
         shutil.rmtree(filtered_dir, ignore_errors=True)
+
+
+def _build_egg_from_git_head(git):
+    """Build the egg from the files under the current directory as committed
+    to git HEAD."""
+    try:
+        archive = subprocess.run(
+            [git, 'archive', 'HEAD'], capture_output=True, check=True,
+        ).stdout
+    except subprocess.CalledProcessError as e:
+        raise SubcommandException(
+            "Error while calling 'git archive HEAD':\n\n"
+            + e.stderr.decode(errors='replace'))
+    head_dir = tempfile.mkdtemp(prefix="shub-deploy-head-")
+    try:
+        with tarfile.open(fileobj=io.BytesIO(archive)) as tar:
+            tar.extraction_filter = getattr(tarfile, 'data_filter', None)
+            tar.extractall(head_dir)
+        with remember_cwd():
+            os.chdir(head_dir)
+            return _build_egg_in_cwd()
+    finally:
+        shutil.rmtree(head_dir, ignore_errors=True)

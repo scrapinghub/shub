@@ -44,6 +44,11 @@ files, and new untracked files that aren't gitignored, are still included.
 Projects that aren't inside a git repository deploy the working directory
 as-is, unchanged from before.
 
+To deploy only the files committed to git ``HEAD``, leaving out uncommitted
+changes and untracked files, use ``--from-head``::
+
+    shub deploy --from-head
+
 
 .. _deploying-dependencies:
 
