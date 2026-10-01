@@ -22,8 +22,13 @@ your ``scrapinghub.yml``, you can leave out the parameter completely::
     {"status": "ok", "project": 12345, "version": "3af023e-master", "spiders": 1}
     Run your spiders at: https://app.zyte.com/p/12345/
 
-You can also deploy your project from a Python egg, or build one without
-deploying::
+You can also build your project's Python egg without deploying it, and
+deploy your project from an existing egg::
+
+    $ shub build-egg egg_name
+    Writing egg to egg_name
+
+::
 
     $ shub deploy --egg egg_name --version 1.0.0
     Using egg: egg_name
@@ -31,10 +36,16 @@ deploying::
     {"status": "ok", "project": 12345, "version": "1.0.0", "spiders": 1}
     Run your spiders at: https://app.zyte.com/p/12345/
 
-::
+``shub build-egg`` builds the egg of your project only. It does not build or
+deploy the libraries your project depends on, see :ref:`deploying-dependencies`
+for that. Unlike ``shub deploy``, it does not need a target or an API key,
+because it does not talk to Scrapy Cloud.
 
-    $ shub deploy --build-egg egg_name
-    Writing egg to egg_name
+.. note::
+
+    Building an egg without deploying it used to be done with
+    ``shub deploy --build-egg egg_name``. That option still works, but it is
+    deprecated: use ``shub build-egg`` instead.
 
 If your project is inside a git repository, the egg is built from a copy of
 the working directory that leaves out anything git considers ignored (e.g.
