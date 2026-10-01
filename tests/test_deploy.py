@@ -323,6 +323,14 @@ class GitFilteredBuildTest(AssertInvokeRaisesMixin, unittest.TestCase):
             with self.assertRaises(SubcommandException):
                 deploy._build_egg(from_head=True)
 
+    @patch('shub.deploy.shutil.which', return_value=None)
+    def test_build_egg_from_head_without_git(self, mock_which):
+        with self.runner.isolated_filesystem():
+            with open('scrapy.cfg', 'w') as f:
+                f.write(VALID_SCRAPY_CFG)
+            with self.assertRaises(NotFoundException):
+                deploy._build_egg(from_head=True)
+
     def test_deploy_from_head_flag(self):
         with self.runner.isolated_filesystem():
             self._make_git_project()
