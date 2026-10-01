@@ -13,12 +13,11 @@ import click
 import toml
 from urllib.parse import urljoin
 
+from shub.build_egg import build_project_egg, remove_build_dir
 from shub.config import SH_IMAGES_REGISTRY, list_targets_callback, load_shub_config
 from shub.exceptions import BadParameterException, NotFoundException, ShubException, SubcommandException
 from shub.image.upload import upload_cmd
-from shub.utils import (create_default_setup_py, create_scrapinghub_yml_wizard,
-                        inside_project, make_deploy_request, remember_cwd,
-                        run_cmd, run_python)
+from shub.utils import create_scrapinghub_yml_wizard, make_deploy_request, run_cmd
 
 HELP = """
 Deploy the current folder's Scrapy project to Scrapy Cloud.
@@ -92,7 +91,7 @@ def deploy_cmd(target, version, debug, egg, build_egg, verbose, keep_log,
     tmpdir = None
     try:
         if build_egg:
-            egg, tmpdir = _build_egg()
+            egg, tmpdir = build_project_egg()
             click.echo("Writing egg to %s" % build_egg)
             shutil.copyfile(egg, build_egg)
         else:
@@ -106,7 +105,7 @@ def deploy_cmd(target, version, debug, egg, build_egg, verbose, keep_log,
                 egg = egg
             else:
                 click.echo("Packing version %s" % version)
-                egg, tmpdir = _build_egg()
+                egg, tmpdir = build_project_egg()
 
             _upload_egg(targetconf.endpoint, egg, targetconf.project_id,
                         version, auth, verbose, keep_log, targetconf.stack,
@@ -115,11 +114,7 @@ def deploy_cmd(target, version, debug, egg, build_egg, verbose, keep_log,
                        "https://app.zyte.com/p/%s/"
                        "" % targetconf.project_id)
     finally:
-        if tmpdir:
-            if debug:
-                click.echo("Output dir not removed: %s" % tmpdir)
-            else:
-                shutil.rmtree(tmpdir, ignore_errors=True)
+        remove_build_dir(tmpdir, debug)
 
 
 def _url(endpoint, action):
@@ -264,56 +259,3 @@ def _get_poetry_requirements():
             return _get_poetry_requirements_fallback()
         except Exception:
             raise original_exception
-
-
-def _build_egg():
-    if not inside_project():
-        raise NotFoundException("No Scrapy project found in this location.")
-    git = shutil.which('git')
-    if git:
-        try:
-            return _build_egg_from_git_filtered_files(git)
-        except SubcommandException:
-            # Not a git repository (or `git ls-files` otherwise failed): fall
-            # back to building from the working directory as-is.
-            pass
-    return _build_egg_in_cwd()
-
-
-def _build_egg_in_cwd():
-    create_default_setup_py()
-    d = tempfile.mkdtemp(prefix="shub-deploy-")
-    run_python(['setup.py', 'clean', '-a', 'bdist_egg', '-d', d])
-    egg = glob.glob(os.path.join(d, '*.egg'))[0]
-    return egg, d
-
-
-def _build_egg_from_git_filtered_files(git):
-    """
-    Copy the working directory into a temporary directory, leaving out
-    anything git considers ignored (via `git ls-files`), then build the egg
-    from there.
-
-    Tracked files are copied with their current, possibly uncommitted,
-    contents, and untracked-but-not-ignored files are included too: this only
-    strips out gitignored cruft (build artifacts, local secrets, stray
-    virtualenvs, etc.), it doesn't require anything to be committed.
-    """
-    paths = run_cmd(
-        [git, 'ls-files', '--cached', '--others', '--exclude-standard'],
-    ).splitlines()
-    filtered_dir = tempfile.mkdtemp(prefix="shub-deploy-filtered-")
-    try:
-        for path in paths:
-            if not os.path.isfile(path):
-                # e.g. a tracked file staged for deletion but not yet removed
-                # from the index
-                continue
-            dest = os.path.join(filtered_dir, path)
-            os.makedirs(os.path.dirname(dest), exist_ok=True)
-            shutil.copy2(path, dest)
-        with remember_cwd():
-            os.chdir(filtered_dir)
-            return _build_egg_in_cwd()
-    finally:
-        shutil.rmtree(filtered_dir, ignore_errors=True)

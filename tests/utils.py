@@ -1,11 +1,18 @@
-import sys
+import os
 import re
+import subprocess
+import sys
 from unittest import mock
 
 from click.testing import CliRunner
 from tqdm.utils import _supports_unicode
 
 from shub import config
+
+VALID_SCRAPY_CFG = """
+[settings]
+default = project.settings
+"""
 
 
 class AssertInvokeRaisesMixin:
@@ -53,6 +60,30 @@ def mock_conf(testcase, target=None, attr=None, conf=None):
     patcher.start()
     testcase.addCleanup(patcher.stop)
     return conf
+
+
+def git(*args):
+    """Run git in the current directory, as a fixed committer."""
+    env = dict(os.environ, GIT_AUTHOR_NAME='shub-tests',
+               GIT_AUTHOR_EMAIL='shub-tests@example.com',
+               GIT_COMMITTER_NAME='shub-tests',
+               GIT_COMMITTER_EMAIL='shub-tests@example.com')
+    subprocess.run(('git',) + args, check=True, env=env,
+                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+
+def make_git_project():
+    """Create a Scrapy project in the current directory and commit it to a new
+    git repository. Files named ``ignored.txt`` are gitignored."""
+    with open('scrapy.cfg', 'w') as f:
+        f.write(VALID_SCRAPY_CFG)
+    os.mkdir('project')
+    open(os.path.join('project', '__init__.py'), 'w').close()
+    with open('.gitignore', 'w') as f:
+        f.write('ignored.txt\n')
+    git('init', '-q')
+    git('add', 'scrapy.cfg', 'project', '.gitignore')
+    git('commit', '-q', '-m', 'initial commit')
 
 
 def _is_tqdm_in_ascii_mode():
