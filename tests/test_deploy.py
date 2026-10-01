@@ -1,8 +1,10 @@
 import os
 import platform
+import re
 import shutil
 import sys
 import unittest
+import zipfile
 from unittest.mock import patch, Mock
 
 from packaging.version import parse
@@ -88,6 +90,101 @@ class DeployTest(AssertInvokeRaisesMixin, unittest.TestCase):
         self.assertIn(self.conf.endpoints['vagrant'], url)
         self.assertEqual(data, {'project': 456, 'version': 'version'})
         self.assertEqual(auth, (self.conf.apikeys['vagrant'], ''))
+
+    @patch('shub.deploy.make_deploy_request')
+    def test_build_egg_flag_builds_egg_without_deploying(self,
+                                                         mock_deploy_req):
+        with self.runner.isolated_filesystem():
+            self._make_project()
+            result = self.runner.invoke(
+                deploy.cli, ('--build-egg', 'built.egg'))
+            self.assertEqual(0, result.exit_code, result.output)
+            self.assertIn('Writing egg to built.egg', result.output)
+            self.assertTrue(zipfile.is_zipfile('built.egg'))
+        mock_deploy_req.assert_not_called()
+
+    def test_build_egg_flag_is_deprecated(self):
+        with self.runner.isolated_filesystem():
+            self._make_project()
+            result = self.runner.invoke(
+                deploy.cli, ('--build-egg', 'built.egg'))
+        self.assertEqual(0, result.exit_code, result.output)
+        self.assertIn(
+            'WARNING: --build-egg parameter is deprecated. '
+            'Please use `shub build-egg FILENAME` instead.', result.output)
+
+    @patch('shub.deploy.make_deploy_request')
+    def test_deploying_does_not_warn_about_build_egg(self, mock_deploy_req):
+        with self.runner.isolated_filesystem():
+            self._make_project()
+            result = self.runner.invoke(deploy.cli)
+        self.assertEqual(0, result.exit_code, result.output)
+        self.assertNotIn('deprecated', result.output)
+
+    @patch('requests.sessions.Session.send')
+    @patch('shub.deploy.upload_cmd')
+    @patch('shub.deploy.deploy_cmd')
+    @patch('shub.deploy.make_deploy_request')
+    @patch('shub.deploy.load_shub_config')
+    @patch('shub.deploy.create_scrapinghub_yml_wizard')
+    def test_build_egg_flag_is_handled_before_deploying(
+            self, mock_wizard, mock_load_conf, mock_deploy_req,
+            mock_deploy_cmd, mock_upload_cmd, mock_send):
+        with self.runner.isolated_filesystem():
+            self._make_project()
+            result = self.runner.invoke(
+                deploy.cli, ('--build-egg', 'built.egg'))
+            self.assertEqual(0, result.exit_code, result.output)
+            self.assertTrue(os.path.isfile('built.egg'))
+            # Neither the wizard nor anything else touches the configuration
+            self.assertFalse(os.path.exists('scrapinghub.yml'))
+        # No target or API key is needed, and nothing is deployed
+        mock_load_conf.assert_not_called()
+        mock_wizard.assert_not_called()
+        mock_deploy_cmd.assert_not_called()
+        mock_deploy_req.assert_not_called()
+        mock_upload_cmd.assert_not_called()
+        mock_send.assert_not_called()
+
+    @patch('shub.deploy.upload_cmd')
+    def test_build_egg_flag_with_custom_image_target(self, mock_upload_cmd):
+        # The flag used to be silently ignored for targets that use a custom
+        # image, and the image was uploaded instead
+        with self.runner.isolated_filesystem():
+            self._make_project()
+            result = self.runner.invoke(
+                deploy.cli, ('custom2', '--build-egg', 'built.egg'))
+            self.assertEqual(0, result.exit_code, result.output)
+            self.assertTrue(zipfile.is_zipfile('built.egg'))
+        mock_upload_cmd.assert_not_called()
+
+    def test_build_egg_flag_debug(self):
+        with self.runner.isolated_filesystem():
+            self._make_project()
+            result = self.runner.invoke(
+                deploy.cli, ('--build-egg', 'built.egg', '--debug'))
+        self.assertEqual(0, result.exit_code, result.output)
+        match = re.search(r'^Output dir not removed: (.+)$', result.output,
+                          re.MULTILINE)
+        self.assertIsNotNone(match, result.output)
+        build_dir = match.group(1)
+        self.addCleanup(shutil.rmtree, build_dir, ignore_errors=True)
+        self.assertTrue(os.path.isdir(build_dir))
+
+    def test_build_egg_flag_requires_a_scrapy_project(self):
+        with self.runner.isolated_filesystem():
+            self.assertInvokeRaises(
+                NotFoundException, deploy.cli, ('--build-egg', 'built.egg'))
+            self.assertFalse(os.path.exists('built.egg'))
+
+    def test_build_egg_flag_filename_must_not_be_a_directory(self):
+        with self.runner.isolated_filesystem():
+            self._make_project()
+            os.mkdir('built.egg')
+            result = self.runner.invoke(
+                deploy.cli, ('--build-egg', 'built.egg'))
+        self.assertEqual(2, result.exit_code)
+        self.assertIn('is a directory', result.output)
 
     @patch('shub.utils.get_latest_scrapy_stack', return_value=LATEST_STACK)
     @patch('shub.utils.has_project_access', return_value=True)
