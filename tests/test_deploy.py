@@ -17,7 +17,7 @@ from click.testing import CliRunner
 from shub import deploy
 from shub.exceptions import (
     NotFoundException, ShubException, BadParameterException,
-    DeployRequestTooLargeException,
+    DeployRequestTooLargeException, SubcommandException,
 )
 from shub.utils import create_default_setup_py, _SETUP_PY_TEMPLATE, STDOUT_ENCODING
 
@@ -297,6 +297,51 @@ class GitFilteredBuildTest(AssertInvokeRaisesMixin, unittest.TestCase):
             self._make_git_project()
             result = self.runner.invoke(deploy.cli)
             self.assertEqual(0, result.exit_code, result.output)
+
+    def test_build_egg_from_head(self):
+        with self.runner.isolated_filesystem():
+            self._make_git_project()
+            with open(os.path.join('project', '__init__.py'), 'w') as f:
+                f.write('MARKER = 1\n')
+            with open(os.path.join('project', 'extra.py'), 'w') as f:
+                f.write('EXTRA = 1\n')
+            egg, tmpdir = deploy._build_egg(from_head=True)
+            try:
+                with zipfile.ZipFile(egg) as z:
+                    names = z.namelist()
+                    member = next(n for n in names if n.endswith('__init__.py'))
+                    content = z.read(member)
+            finally:
+                shutil.rmtree(tmpdir, ignore_errors=True)
+        self.assertNotIn(b'MARKER', content)
+        self.assertFalse(any('extra' in n for n in names))
+
+    def test_build_egg_from_head_without_git_repo(self):
+        with self.runner.isolated_filesystem():
+            with open('scrapy.cfg', 'w') as f:
+                f.write(VALID_SCRAPY_CFG)
+            with self.assertRaises(SubcommandException):
+                deploy._build_egg(from_head=True)
+
+    @patch('shub.deploy.shutil.which', return_value=None)
+    def test_build_egg_from_head_without_git(self, mock_which):
+        with self.runner.isolated_filesystem():
+            with open('scrapy.cfg', 'w') as f:
+                f.write(VALID_SCRAPY_CFG)
+            with self.assertRaises(NotFoundException):
+                deploy._build_egg(from_head=True)
+
+    def test_deploy_from_head_flag(self):
+        with self.runner.isolated_filesystem():
+            self._make_git_project()
+            with open(os.path.join('project', 'extra.py'), 'w') as f:
+                f.write('EXTRA = 1\n')
+            result = self.runner.invoke(
+                deploy.cli, ['--from-head', '--build-egg', 'out.egg'])
+            self.assertEqual(0, result.exit_code, result.output)
+            with zipfile.ZipFile('out.egg') as z:
+                names = z.namelist()
+        self.assertFalse(any('extra' in n for n in names))
 
 
 class DeployFilesTest(unittest.TestCase):
