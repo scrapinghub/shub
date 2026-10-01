@@ -5,9 +5,56 @@ import tempfile
 
 import click
 
-from shub.exceptions import NotFoundException, SubcommandException
+from shub.exceptions import NotFoundException, ShubException, SubcommandException
 from shub.utils import (create_default_setup_py, inside_project, remember_cwd,
                         run_cmd, run_python)
+
+HELP = """
+Build the egg of the current folder's Scrapy project and write it to FILENAME,
+without deploying it:
+
+    shub build-egg myproject.egg
+
+This is the egg that `shub deploy` builds and uploads to Scrapy Cloud. To
+deploy an egg you built this way, run:
+
+    shub deploy --egg myproject.egg
+
+Note that this command is about your project's own egg, not about its
+dependencies. To make third-party libraries available to your project on
+Scrapy Cloud, list them in the `requirements` section of your scrapinghub.yml
+instead.
+
+If the project is inside a git repository, the egg is built from a copy of
+the working directory that leaves out anything git considers ignored (e.g.
+via .gitignore), so build artifacts, local secrets, and stray virtualenvs
+don't end up in the egg. Uncommitted changes to tracked files are still
+included.
+"""
+
+SHORT_HELP = "Build the project egg without deploying it"
+
+
+@click.command(help=HELP, short_help=SHORT_HELP)
+@click.argument("filename", type=click.Path(dir_okay=False, writable=True))
+@click.option("-d", "--debug", help="Debug mode (do not remove build dir)",
+              is_flag=True)
+def cli(filename, debug):
+    build_egg_cmd(filename, debug)
+
+
+def build_egg_cmd(filename, debug=False):
+    tmpdir = None
+    try:
+        egg, tmpdir = build_project_egg()
+        click.echo("Writing egg to %s" % filename)
+        try:
+            shutil.copyfile(egg, filename)
+        except OSError as e:
+            raise ShubException(
+                "Could not write egg to %s: %s" % (filename, e.strerror))
+    finally:
+        remove_build_dir(tmpdir, debug)
 
 
 def build_project_egg():
