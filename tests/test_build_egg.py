@@ -30,8 +30,10 @@ class BuildProjectEggTest(unittest.TestCase):
     def test_build_egg_excludes_gitignored_files(self):
         with self.runner.isolated_filesystem():
             make_git_project()
-            with open('ignored.txt', 'w') as f:
-                f.write('should not be deployed')
+            # A module of the project package, which an unfiltered build
+            # would include
+            with open(os.path.join('project', 'ignored.py'), 'w') as f:
+                f.write('SECRET = 1\n')
             names = self._egg_names(*build_egg.build_project_egg())
         self.assertFalse(any('ignored' in n for n in names))
 
@@ -143,8 +145,8 @@ class BuildEggCommandTest(AssertInvokeRaisesMixin, unittest.TestCase):
             self.skipTest("git executable not found")
         with self.runner.isolated_filesystem():
             make_git_project()
-            with open('ignored.txt', 'w') as f:
-                f.write('should not be in the egg')
+            with open(os.path.join('project', 'ignored.py'), 'w') as f:
+                f.write('SECRET = 1\n')
             result = self.runner.invoke(build_egg.cli, ['built.egg'])
             self.assertEqual(0, result.exit_code, result.output)
             with zipfile.ZipFile('built.egg') as z:

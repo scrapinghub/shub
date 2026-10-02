@@ -74,13 +74,13 @@ def git(*args):
 
 def make_git_project():
     """Create a Scrapy project in the current directory and commit it to a new
-    git repository. Files named ``ignored.txt`` are gitignored."""
+    git repository. Files named ``ignored.py`` are gitignored."""
     with open('scrapy.cfg', 'w') as f:
         f.write(VALID_SCRAPY_CFG)
     os.mkdir('project')
     open(os.path.join('project', '__init__.py'), 'w').close()
     with open('.gitignore', 'w') as f:
-        f.write('ignored.txt\n')
+        f.write('ignored.py\n')
     git('init', '-q')
     git('add', 'scrapy.cfg', 'project', '.gitignore')
     git('commit', '-q', '-m', 'initial commit')
