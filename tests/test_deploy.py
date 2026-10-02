@@ -1,7 +1,7 @@
 import os
 import platform
+import re
 import shutil
-import subprocess
 import sys
 import unittest
 import zipfile
@@ -15,13 +15,15 @@ from cleo.testers.command_tester import CommandTester
 from click.testing import CliRunner
 
 from shub import deploy
+from shub.build_egg import build_project_egg
 from shub.exceptions import (
     NotFoundException, ShubException, BadParameterException,
     DeployRequestTooLargeException,
 )
 from shub.utils import create_default_setup_py, _SETUP_PY_TEMPLATE, STDOUT_ENCODING
 
-from .utils import AssertInvokeRaisesMixin, mock_conf
+from .utils import (AssertInvokeRaisesMixin, VALID_SCRAPY_CFG,
+                    make_git_project, mock_conf)
 
 try:
     from importlib.metadata import version, PackageNotFoundError
@@ -35,11 +37,6 @@ else:
             POETRY_VERSION = parse(version("poetry-core"))
         except PackageNotFoundError:
             POETRY_VERSION = None
-
-VALID_SCRAPY_CFG = """
-[settings]
-default = project.settings
-"""
 
 # What the (mocked) stack lookup returns
 LATEST_STACK = 'scrapy:2.99-20990101'
@@ -94,6 +91,120 @@ class DeployTest(AssertInvokeRaisesMixin, unittest.TestCase):
         self.assertIn(self.conf.endpoints['vagrant'], url)
         self.assertEqual(data, {'project': 456, 'version': 'version'})
         self.assertEqual(auth, (self.conf.apikeys['vagrant'], ''))
+
+    @patch('shub.deploy.build_project_egg')
+    @patch('shub.deploy.make_deploy_request')
+    def test_deploys_given_egg(self, mock_deploy_req, mock_build):
+        with self.runner.isolated_filesystem():
+            self._make_project()
+            with open('given.egg', 'w') as f:
+                f.write('egg content')
+            result = self.runner.invoke(deploy.cli, ('--egg', 'given.egg'))
+            self.assertEqual(0, result.exit_code, result.output)
+            name, egg = mock_deploy_req.call_args[0][2][-1]
+            egg.close()
+        self.assertIn('Using egg: given.egg', result.output)
+        self.assertEqual(('egg', 'given.egg'), (name, egg.name))
+        mock_build.assert_not_called()
+
+    @patch('shub.deploy.make_deploy_request')
+    def test_build_egg_flag_builds_egg_without_deploying(self,
+                                                         mock_deploy_req):
+        with self.runner.isolated_filesystem():
+            self._make_project()
+            result = self.runner.invoke(
+                deploy.cli, ('--build-egg', 'built.egg'))
+            self.assertEqual(0, result.exit_code, result.output)
+            self.assertIn('Writing egg to built.egg', result.output)
+            self.assertTrue(zipfile.is_zipfile('built.egg'))
+        mock_deploy_req.assert_not_called()
+
+    def test_build_egg_flag_is_deprecated(self):
+        with self.runner.isolated_filesystem():
+            self._make_project()
+            result = self.runner.invoke(
+                deploy.cli, ('--build-egg', 'built.egg'))
+        self.assertEqual(0, result.exit_code, result.output)
+        self.assertIn(
+            'WARNING: --build-egg parameter is deprecated. '
+            'Please use `shub build-egg FILENAME` instead.', result.output)
+
+    @patch('shub.deploy.make_deploy_request')
+    def test_deploying_does_not_warn_about_build_egg(self, mock_deploy_req):
+        with self.runner.isolated_filesystem():
+            self._make_project()
+            result = self.runner.invoke(deploy.cli)
+        self.assertEqual(0, result.exit_code, result.output)
+        self.assertNotIn('deprecated', result.output)
+
+    @patch('requests.sessions.Session.send')
+    @patch('shub.deploy.upload_cmd')
+    @patch('shub.deploy.deploy_cmd')
+    @patch('shub.deploy.make_deploy_request')
+    @patch('shub.deploy.load_shub_config')
+    @patch('shub.deploy.create_scrapinghub_yml_wizard')
+    def test_build_egg_flag_is_handled_before_deploying(
+            self, mock_wizard, mock_load_conf, mock_deploy_req,
+            mock_deploy_cmd, mock_upload_cmd, mock_send):
+        with self.runner.isolated_filesystem():
+            self._make_project()
+            result = self.runner.invoke(
+                deploy.cli, ('--build-egg', 'built.egg'))
+            self.assertEqual(0, result.exit_code, result.output)
+            self.assertTrue(os.path.isfile('built.egg'))
+            # Neither the wizard nor anything else touches the configuration
+            self.assertFalse(os.path.exists('scrapinghub.yml'))
+        # No target or API key is needed, and nothing is deployed
+        mock_load_conf.assert_not_called()
+        mock_wizard.assert_not_called()
+        mock_deploy_cmd.assert_not_called()
+        mock_deploy_req.assert_not_called()
+        mock_upload_cmd.assert_not_called()
+        mock_send.assert_not_called()
+
+    @patch('shub.deploy.upload_cmd')
+    def test_build_egg_flag_with_custom_image_target(self, mock_upload_cmd):
+        # The flag used to be silently ignored for targets that use a custom
+        # image, and the image was uploaded instead
+        with self.runner.isolated_filesystem():
+            self._make_project()
+            result = self.runner.invoke(
+                deploy.cli, ('custom2', '--build-egg', 'built.egg'))
+            self.assertEqual(0, result.exit_code, result.output)
+            self.assertTrue(zipfile.is_zipfile('built.egg'))
+        mock_upload_cmd.assert_not_called()
+
+    def test_build_egg_flag_debug(self):
+        with self.runner.isolated_filesystem():
+            self._make_project()
+            result = self.runner.invoke(
+                deploy.cli, ('--build-egg', 'built.egg', '--debug'))
+        self.assertEqual(0, result.exit_code, result.output)
+        match = re.search(r'^Output dir not removed: (.+)$', result.output,
+                          re.MULTILINE)
+        self.assertIsNotNone(match, result.output)
+        build_dir = match.group(1)
+        self.addCleanup(shutil.rmtree, build_dir, ignore_errors=True)
+        self.assertTrue(os.path.isdir(build_dir))
+
+    def test_build_egg_flag_requires_a_scrapy_project(self):
+        with self.runner.isolated_filesystem():
+            self.assertInvokeRaises(
+                NotFoundException, deploy.cli, ('--build-egg', 'built.egg'))
+            self.assertFalse(os.path.exists('built.egg'))
+
+    def test_build_egg_flag_filename_must_not_be_a_directory(self):
+        with self.runner.isolated_filesystem():
+            self._make_project()
+            os.mkdir('built.egg')
+            result = self.runner.invoke(
+                deploy.cli, ('--build-egg', 'built.egg'))
+        self.assertEqual(2, result.exit_code)
+        self.assertIn('is a directory', result.output)
+
+    def test_previous_build_egg_name_still_works(self):
+        # Deploy wrappers built on top of shub import it from shub.deploy
+        self.assertIs(build_project_egg, deploy._build_egg)
 
     @patch('shub.utils.get_latest_scrapy_stack', return_value=LATEST_STACK)
     @patch('shub.utils.has_project_access', return_value=True)
@@ -205,7 +316,7 @@ class DeployTest(AssertInvokeRaisesMixin, unittest.TestCase):
                                     deploy.cli)
 
 
-class GitFilteredBuildTest(AssertInvokeRaisesMixin, unittest.TestCase):
+class GitFilteredBuildTest(unittest.TestCase):
 
     def setUp(self):
         self.runner = CliRunner()
@@ -213,88 +324,10 @@ class GitFilteredBuildTest(AssertInvokeRaisesMixin, unittest.TestCase):
         if shutil.which('git') is None:
             self.skipTest("git executable not found")
 
-    def _git(self, *args):
-        env = dict(os.environ, GIT_AUTHOR_NAME='shub-tests',
-                   GIT_AUTHOR_EMAIL='shub-tests@example.com',
-                   GIT_COMMITTER_NAME='shub-tests',
-                   GIT_COMMITTER_EMAIL='shub-tests@example.com')
-        subprocess.run(('git',) + args, check=True, env=env,
-                       stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-    def _make_git_project(self):
-        with open('scrapy.cfg', 'w') as f:
-            f.write(VALID_SCRAPY_CFG)
-        os.mkdir('project')
-        open(os.path.join('project', '__init__.py'), 'w').close()
-        with open('.gitignore', 'w') as f:
-            f.write('ignored.txt\n')
-        self._git('init', '-q')
-        self._git('add', 'scrapy.cfg', 'project', '.gitignore')
-        self._git('commit', '-q', '-m', 'initial commit')
-
-    def _egg_names(self, egg, tmpdir):
-        try:
-            with zipfile.ZipFile(egg) as z:
-                return z.namelist()
-        finally:
-            shutil.rmtree(tmpdir, ignore_errors=True)
-
-    def test_build_egg_excludes_gitignored_files(self):
-        with self.runner.isolated_filesystem():
-            self._make_git_project()
-            with open('ignored.txt', 'w') as f:
-                f.write('should not be deployed')
-            names = self._egg_names(*deploy._build_egg())
-        self.assertFalse(any('ignored' in n for n in names))
-
-    def test_build_egg_includes_uncommitted_tracked_changes(self):
-        # A gitignore-filtered build should still deploy whatever is
-        # currently on disk for tracked files, not just the last commit.
-        with self.runner.isolated_filesystem():
-            self._make_git_project()
-            with open(os.path.join('project', '__init__.py'), 'w') as f:
-                f.write('MARKER = 1\n')
-            egg, tmpdir = deploy._build_egg()
-            try:
-                with zipfile.ZipFile(egg) as z:
-                    member = next(
-                        n for n in z.namelist() if n.endswith('__init__.py'))
-                    content = z.read(member)
-            finally:
-                shutil.rmtree(tmpdir, ignore_errors=True)
-        self.assertIn(b'MARKER = 1', content)
-
-    def test_build_egg_includes_new_untracked_non_ignored_file(self):
-        with self.runner.isolated_filesystem():
-            self._make_git_project()
-            with open(os.path.join('project', 'extra.py'), 'w') as f:
-                f.write('EXTRA = 1\n')
-            names = self._egg_names(*deploy._build_egg())
-        self.assertTrue(any('extra' in n for n in names))
-
-    def test_build_egg_skips_tracked_file_deleted_on_disk(self):
-        # A file staged for deletion (removed from disk, but the removal not
-        # yet committed) still shows up in `git ls-files --cached`; it should
-        # simply be skipped rather than crash the build.
-        with self.runner.isolated_filesystem():
-            self._make_git_project()
-            os.remove(os.path.join('project', '__init__.py'))
-            egg, tmpdir = deploy._build_egg()
-            shutil.rmtree(tmpdir, ignore_errors=True)
-        self.assertTrue(egg.endswith('.egg'))
-
-    def test_build_egg_falls_back_without_git_repo(self):
-        with self.runner.isolated_filesystem():
-            with open('scrapy.cfg', 'w') as f:
-                f.write(VALID_SCRAPY_CFG)
-            egg, tmpdir = deploy._build_egg()
-            shutil.rmtree(tmpdir, ignore_errors=True)
-        self.assertTrue(egg.endswith('.egg'))
-
     @patch('shub.deploy.make_deploy_request')
     def test_deploy_default_from_git_repo(self, mock_deploy_req):
         with self.runner.isolated_filesystem():
-            self._make_git_project()
+            make_git_project()
             result = self.runner.invoke(deploy.cli)
             self.assertEqual(0, result.exit_code, result.output)
 

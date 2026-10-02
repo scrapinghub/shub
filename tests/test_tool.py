@@ -1,4 +1,5 @@
 import os
+import re
 from unittest import mock
 
 import pytest
@@ -90,3 +91,19 @@ def test_cli_dotenv_path_option(runner, tmp_path, monkeypatch):
 
     assert result.exit_code == 0, result.output
     assert os.environ['SHUB_APIKEY'] == 'CLIKEY'
+
+
+def test_build_egg_is_listed_in_help(runner):
+    result = runner.invoke(cli, ['--help'])
+
+    assert result.exit_code == 0, result.output
+    assert re.search(r'^\s+build-egg\s+Build the project egg', result.output,
+                     re.MULTILINE)
+
+
+def test_build_egg_help(runner):
+    result = runner.invoke(cli, ['build-egg', '--help'])
+
+    assert result.exit_code == 0, result.output
+    assert 'FILENAME' in result.output
+    assert '--debug' in result.output
