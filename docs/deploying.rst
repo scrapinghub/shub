@@ -41,12 +41,6 @@ deploy the libraries your project depends on, see :ref:`deploying-dependencies`
 for that. Unlike ``shub deploy``, it does not need a target or an API key,
 because it does not talk to Scrapy Cloud.
 
-.. note::
-
-    Building an egg without deploying it used to be done with
-    ``shub deploy --build-egg egg_name``. That option still works, but it is
-    deprecated: use ``shub build-egg`` instead.
-
 If your project is inside a git repository, the egg is built from a copy of
 the working directory that leaves out anything git considers ignored (e.g.
 via ``.gitignore``), so build artifacts, local secrets, and stray
