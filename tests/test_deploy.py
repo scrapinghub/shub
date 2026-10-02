@@ -92,6 +92,21 @@ class DeployTest(AssertInvokeRaisesMixin, unittest.TestCase):
         self.assertEqual(data, {'project': 456, 'version': 'version'})
         self.assertEqual(auth, (self.conf.apikeys['vagrant'], ''))
 
+    @patch('shub.deploy.build_project_egg')
+    @patch('shub.deploy.make_deploy_request')
+    def test_deploys_given_egg(self, mock_deploy_req, mock_build):
+        with self.runner.isolated_filesystem():
+            self._make_project()
+            with open('given.egg', 'w') as f:
+                f.write('egg content')
+            result = self.runner.invoke(deploy.cli, ('--egg', 'given.egg'))
+            self.assertEqual(0, result.exit_code, result.output)
+            name, egg = mock_deploy_req.call_args[0][2][-1]
+            egg.close()
+        self.assertIn('Using egg: given.egg', result.output)
+        self.assertEqual(('egg', 'given.egg'), (name, egg.name))
+        mock_build.assert_not_called()
+
     @patch('shub.deploy.make_deploy_request')
     def test_build_egg_flag_builds_egg_without_deploying(self,
                                                          mock_deploy_req):
