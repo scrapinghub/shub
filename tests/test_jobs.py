@@ -14,11 +14,12 @@ from .utils import AssertInvokeRaisesMixin, mock_conf
 JOBS = [
     {'key': '1/2/15', 'spider': 'beta', 'state': 'running',
      'running_time': 1451752715000, 'pending_time': 1451752700000,
-     'elapsed': 500, 'errors': 3, 'spider_args': {'a': '1', 'b': 'x'}},
+     'items': 500, 'errors': 3, 'spider_args': {'a': '1', 'b': 'x'}},
+    # Like Scrapy Cloud, leave out counters that are 0 (here, errors)
     {'key': '1/1/14', 'spider': 'alpha', 'state': 'finished',
      'close_reason': 'success', 'running_time': 1451752615000,
      'pending_time': 1451752600000, 'finished_time': 1451752640000,
-     'elapsed': 9000, 'errors': 0, 'spider_args': {'a': '2'}},
+     'items': 9000, 'spider_args': {'a': '2'}},
     {'key': '1/1/13', 'spider': 'alpha', 'state': 'pending',
      'pending_time': 1451752500000},
 ]
@@ -61,8 +62,8 @@ class JobsTest(AssertInvokeRaisesMixin, unittest.TestCase):
         self.assertEqual(
             ['1/1/14', 'alpha', 'finished', '(success)', '2016-01-02',
              '16:36:55'], lines[2].split())
-        # Not started yet: scheduled time is shown
-        self.assertIn('16:35:00', lines[3])
+        # Not started yet
+        self.assertEqual(['1/1/13', 'alpha', 'pending', '-'], lines[3].split())
 
     def test_project_id(self):
         result = self.invoke('12345')
@@ -101,10 +102,8 @@ class JobsTest(AssertInvokeRaisesMixin, unittest.TestCase):
         self.assertEqual('123', self.iter_kwargs()['spider'])
 
     def test_limit(self):
-        for option in ('--limit',):
-            self.project.jobs.iter.reset_mock()
-            self.invoke(option, '5')
-            self.assertEqual(5, self.iter_kwargs()['count'])
+        self.invoke('--limit', '5')
+        self.assertEqual(5, self.iter_kwargs()['count'])
 
     def test_limit_must_be_positive(self):
         self.assertEqual(2, self.invoke('--limit', '0').exit_code)
@@ -125,7 +124,7 @@ class JobsTest(AssertInvokeRaisesMixin, unittest.TestCase):
                          [line.split()[0] for line in result.output.splitlines()])
         kwargs = self.iter_kwargs()
         # The limit cannot be applied by the server before filtering
-        self.assertNotIn('count', kwargs)
+        self.assertEqual(1000, kwargs['count'])
         self.assertIn('spider_args', kwargs['meta'])
 
     def test_several_spider_args_must_all_match(self):
@@ -144,7 +143,7 @@ class JobsTest(AssertInvokeRaisesMixin, unittest.TestCase):
     def test_invalid_filters(self):
         for bad in ('state', 'state=', 'state=bogus', 'color=red', 'arg.=1'):
             result = self.invoke('--filter', bad)
-            self.assertEqual(2, result.exit_code, bad)
+            self.assertEqual(64, result.exit_code, bad)
             self.assertIn('--filter', result.output)
         self.project.jobs.iter.assert_not_called()
 
@@ -153,9 +152,9 @@ class JobsTest(AssertInvokeRaisesMixin, unittest.TestCase):
 
     def test_orderby(self):
         for orderby, expected in [
-            ('elapsed', ['1/1/14', '1/2/15', '1/1/13']),
-            ('elapsed:desc', ['1/1/14', '1/2/15', '1/1/13']),
-            ('elapsed:asc', ['1/2/15', '1/1/14', '1/1/13']),
+            ('items', ['1/1/14', '1/2/15', '1/1/13']),
+            ('items:desc', ['1/1/14', '1/2/15', '1/1/13']),
+            ('items:asc', ['1/1/13', '1/2/15', '1/1/14']),
             ('errors', ['1/2/15', '1/1/14', '1/1/13']),
             ('spider:asc', ['1/1/14', '1/1/13', '1/2/15']),
             ('spider:desc', ['1/2/15', '1/1/14', '1/1/13']),
@@ -171,14 +170,33 @@ class JobsTest(AssertInvokeRaisesMixin, unittest.TestCase):
         self.assertEqual(['1/1/14', '1/2/15', '1/1/13'],
                          self.keys(self.invoke('--orderby', 'finished:asc')))
 
+    def test_orderby_counts_missing_counters_as_0(self):
+        self.assertEqual(['1/1/14', '1/1/13', '1/2/15'],
+                         self.keys(self.invoke('--orderby', 'errors:asc')))
+
+    def test_null_fields(self):
+        # e.g. requested through meta for --filter arg.NAME=VALUE, but unset
+        self.project.jobs.iter.side_effect = lambda **kw: iter([
+            {'key': '1/1/2', 'spider': None, 'state': None, 'items': None,
+             'running_time': None},
+            {'key': '1/1/1', 'spider': 'alpha', 'state': 'running',
+             'items': 3, 'running_time': 1451752715000},
+        ])
+        result = self.invoke('--orderby', 'items')
+        self.assertEqual(0, result.exit_code, result.output)
+        lines = result.output.splitlines()
+        self.assertEqual('1/1/1', lines[1].split()[0])
+        self.assertEqual(['1/1/2', '-', '-', '-'], lines[2].split())
+
     def test_orderby_is_not_sent_to_the_api(self):
-        self.invoke('--orderby', 'elapsed')
+        self.invoke('--orderby', 'items')
         self.assertNotIn('orderby', self.iter_kwargs())
 
     def test_invalid_orderby(self):
-        for bad in ('bogus', 'elapsed:up', 'key'):
+        # elapsed is the time since the job's last update, not its duration
+        for bad in ('bogus', 'started:up', 'key', 'elapsed'):
             result = self.invoke('--orderby', bad)
-            self.assertEqual(2, result.exit_code, bad)
+            self.assertEqual(64, result.exit_code, bad)
             self.assertIn('--orderby', result.output)
 
     def test_no_jobs(self):
@@ -209,7 +227,7 @@ class JobsTest(AssertInvokeRaisesMixin, unittest.TestCase):
         self.assertInvokeRaises(RemoteErrorException, jobs.cli, [])
 
 
-class MissingAuthTest(unittest.TestCase):
+class UnknownTargetTest(unittest.TestCase):
 
     def test_unknown_target(self):
         mock_conf(self)
