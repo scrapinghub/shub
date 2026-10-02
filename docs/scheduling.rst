@@ -100,7 +100,7 @@ spider is named like that, specify the project as well, e.g.
 ``shub jobs default/123``.
 
 Pending, running, and finished jobs are listed, newest first, up to ``--limit``
-(``-n``) of them, 20 by default. Scrapy Cloud returns at most the latest 1000
+of them, 20 by default. Scrapy Cloud returns at most the latest 1000
 jobs.
 
 ``--filter KEY=VALUE`` can be repeated to narrow the list down:

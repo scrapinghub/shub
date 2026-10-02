@@ -93,7 +93,7 @@ COLUMNS = ('JOB', 'SPIDER', 'STATE', 'STARTED (UTC)')
 
 @click.command(help=HELP, short_help=SHORT_HELP)
 @click.argument('project_or_spider', required=False)
-@click.option('-n', '--limit', type=click.IntRange(min=1),
+@click.option('--limit', type=click.IntRange(min=1),
               default=DEFAULT_LIMIT, show_default=True,
               help='Maximum number of jobs to list')
 @click.option('--filter', 'filters', multiple=True, metavar='KEY=VALUE',

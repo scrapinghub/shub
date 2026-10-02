@@ -101,7 +101,7 @@ class JobsTest(AssertInvokeRaisesMixin, unittest.TestCase):
         self.assertEqual('123', self.iter_kwargs()['spider'])
 
     def test_limit(self):
-        for option in ('--limit', '-n'):
+        for option in ('--limit',):
             self.project.jobs.iter.reset_mock()
             self.invoke(option, '5')
             self.assertEqual(5, self.iter_kwargs()['count'])
