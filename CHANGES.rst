@@ -25,6 +25,11 @@ Changes
     ``scrapinghub.yml`` files are not modified, and a default stack already
     configured elsewhere (e.g. in ``~/.scrapinghub.yml``) is respected.
 
+-   New ``shub jobs`` command to list the latest jobs of a project or of a
+    spider, so that you can find a job key without opening the web interface.
+    It supports ``--limit``, ``--filter`` (by state, tag, or spider
+    argument), and ``--orderby``. See :ref:`scheduling`.
+
 2.18.1 (2026-07-08)
 ==========
 
