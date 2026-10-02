@@ -78,9 +78,10 @@ To find a job key, e.g. to pass it to ``shub log``, list the latest jobs of a
 project, or of a spider, with ``shub jobs``::
 
     $ shub jobs
-    JOB         SPIDER    STATE               STARTED (UTC)
-    12345/2/16  myspider  running             2016-01-02 16:38:35
-    12345/1/14  other     finished (success)  2016-01-02 16:36:55
+    JOB         SPIDER    STATE                 STARTED (UTC)
+    12345/2/16  myspider  running               2016-01-02 16:38:35
+    12345/1/15  other     finished              2016-01-02 16:36:55
+    12345/1/14  other     finished (cancelled)  2016-01-02 16:30:12
 
 ``shub jobs`` takes an optional argument that is resolved like the one of
 ``shub schedule``:
