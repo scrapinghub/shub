@@ -1,3 +1,4 @@
+import json
 import unittest
 from unittest import mock
 
@@ -6,7 +7,7 @@ from click.testing import CliRunner
 from scrapinghub import ScrapinghubAPIError
 from scrapinghub.client.exceptions import NotFound
 
-from shub import jobs
+from shub import config, jobs
 from shub.exceptions import RemoteErrorException
 
 from .utils import AssertInvokeRaisesMixin, mock_conf
@@ -17,12 +18,23 @@ JOBS = [
      'items': 500, 'errors': 3, 'spider_args': {'a': '1', 'b': 'x'}},
     # Like Scrapy Cloud, leave out counters that are 0 (here, errors)
     {'key': '1/1/14', 'spider': 'alpha', 'state': 'finished',
-     'close_reason': 'success', 'running_time': 1451752615000,
+     'close_reason': 'cancelled', 'running_time': 1451752615000,
      'pending_time': 1451752600000, 'finished_time': 1451752640000,
      'items': 9000, 'spider_args': {'a': '2'}},
     {'key': '1/1/13', 'spider': 'alpha', 'state': 'pending',
-     'pending_time': 1451752500000},
+     'pending_time': 1451752500000, 'spider_args': {'a': '2'}},
 ]
+
+
+def iter_jobs(count=None, meta=None, **params):
+    """Return JOBS like project.jobs.iter() does: at most count of them and,
+    with meta, only the requested fields and a few default ones."""
+    summaries = JOBS
+    if meta:
+        fields = {'key', 'state', 'elapsed', 'ts'} | set(meta)
+        summaries = [{k: v for k, v in job.items() if k in fields}
+                     for job in summaries]
+    return iter(summaries[:count])
 
 
 class JobsTest(AssertInvokeRaisesMixin, unittest.TestCase):
@@ -34,7 +46,7 @@ class JobsTest(AssertInvokeRaisesMixin, unittest.TestCase):
         self.mock_client = patcher.start()
         self.addCleanup(patcher.stop)
         self.project = self.mock_client.return_value.get_project.return_value
-        self.project.jobs.iter.side_effect = lambda **kw: iter(JOBS)
+        self.project.jobs.iter.side_effect = iter_jobs
 
     def invoke(self, *args):
         return self.runner.invoke(jobs.cli, args)
@@ -60,10 +72,25 @@ class JobsTest(AssertInvokeRaisesMixin, unittest.TestCase):
             ['1/2/15', 'beta', 'running', '2016-01-02', '16:38:35'],
             lines[1].split())
         self.assertEqual(
-            ['1/1/14', 'alpha', 'finished', '(success)', '2016-01-02',
+            ['1/1/14', 'alpha', 'finished', '(cancelled)', '2016-01-02',
              '16:36:55'], lines[2].split())
         # Not started yet
         self.assertEqual(['1/1/13', 'alpha', 'pending', '-'], lines[3].split())
+
+    def test_normal_close_reason_is_not_repeated(self):
+        self.project.jobs.iter.side_effect = lambda **kw: iter([
+            {'key': '1/1/1', 'spider': 'alpha', 'state': 'finished',
+             'close_reason': 'finished', 'running_time': 1451752715000},
+        ])
+        lines = self.invoke().output.splitlines()
+        self.assertEqual(['1/1/1', 'alpha', 'finished', '2016-01-02',
+                          '16:38:35'], lines[1].split())
+
+    def test_loads_the_configuration_once(self):
+        for args in ((), ('myspider',), ('prod',), ('prod/myspider',)):
+            config.load_shub_config.reset_mock()
+            self.invoke(*args)
+            self.assertEqual(1, config.load_shub_config.call_count, args)
 
     def test_project_id(self):
         result = self.invoke('12345')
@@ -120,25 +147,34 @@ class JobsTest(AssertInvokeRaisesMixin, unittest.TestCase):
 
     def test_spider_args_filter_is_applied_client_side(self):
         result = self.invoke('--filter', 'arg.a=2')
-        self.assertEqual(['JOB', '1/1/14'],
-                         [line.split()[0] for line in result.output.splitlines()])
+        self.assertEqual(['1/1/14', '1/1/13'], self.keys(result))
         kwargs = self.iter_kwargs()
         # The limit cannot be applied by the server before filtering
         self.assertEqual(1000, kwargs['count'])
         self.assertIn('spider_args', kwargs['meta'])
 
+    def test_spider_args_filter_requests_all_shown_fields(self):
+        lines = self.invoke('--filter', 'arg.a=2').output.splitlines()
+        self.assertEqual(
+            ['1/1/14', 'alpha', 'finished', '(cancelled)', '2016-01-02',
+             '16:36:55'], lines[1].split())
+        self.assertEqual(['1/1/13', 'alpha', 'pending', '-'], lines[2].split())
+
     def test_several_spider_args_must_all_match(self):
         result = self.invoke('--filter', 'arg.a=1', '--filter', 'arg.b=x')
-        self.assertIn('1/2/15', result.output)
-        self.assertNotIn('1/1/14', result.output)
+        self.assertEqual(['1/2/15'], self.keys(result))
         result = self.invoke('--filter', 'arg.a=1', '--filter', 'arg.b=y')
         self.assertEqual("No jobs found.\n", result.output)
 
+    def test_repeated_spider_arg_must_all_match(self):
+        for first, second in (('arg.a=1', 'arg.a=2'), ('arg.a=2', 'arg.a=1')):
+            result = self.invoke('--filter', first, '--filter', second)
+            self.assertEqual("No jobs found.\n", result.output)
+
     def test_limit_applies_after_spider_args_filter(self):
-        result = self.invoke('--filter', 'arg.zzz=1', '--limit', '1')
-        self.assertEqual("No jobs found.\n", result.output)
-        result = self.invoke('--filter', 'arg.a=1', '--limit', '1')
-        self.assertEqual(2, len(result.output.splitlines()))
+        # The latest job does not match, the 2 others do
+        result = self.invoke('--filter', 'arg.a=2', '--limit', '1')
+        self.assertEqual(['1/1/14'], self.keys(result))
 
     def test_invalid_filters(self):
         for bad in ('state', 'state=', 'state=bogus', 'color=red', 'arg.=1'):
@@ -224,6 +260,12 @@ class JobsTest(AssertInvokeRaisesMixin, unittest.TestCase):
 
     def test_network_error(self):
         self.project.jobs.iter.side_effect = requests.ConnectionError('down')
+        self.assertInvokeRaises(RemoteErrorException, jobs.cli, [])
+
+    def test_invalid_response(self):
+        # e.g. an HTML page from a proxy
+        self.project.jobs.iter.side_effect = json.JSONDecodeError(
+            'Expecting value', '<html>', 0)
         self.assertInvokeRaises(RemoteErrorException, jobs.cli, [])
 
 

@@ -106,10 +106,11 @@ COLUMNS = ('JOB', 'SPIDER', 'STATE', 'STARTED (UTC)')
               help='Sort the listed jobs by scheduled, started, finished, '
                    'items, errors, or spider')
 def cli(project_or_spider, limit, filters, orderby):
-    target, spider = resolve_target(project_or_spider)
+    conf = config.load_shub_config()
+    target, spider = resolve_target(project_or_spider, conf.projects)
     params, spider_args = parse_filters(filters)
     order_field, descending = parse_orderby(orderby)
-    targetconf = config.get_target_conf(target)
+    targetconf = conf.get_target_conf(target)
     client = get_scrapinghub_client_from_config(targetconf)
     try:
         project = client.get_project(targetconf.project_id)
@@ -124,7 +125,8 @@ def cli(project_or_spider, limit, filters, orderby):
         else:
             kwargs['count'] = limit
         jobs = list(project.jobs.iter(**kwargs))
-    except (ScrapinghubAPIError, requests.RequestException) as e:
+    # ValueError: e.g. a response that is not JSON
+    except (ScrapinghubAPIError, ValueError, requests.RequestException) as e:
         raise RemoteErrorException(str(e))
     if spider_args:
         jobs = [job for job in jobs if matches_args(job, spider_args)]
@@ -138,22 +140,24 @@ def cli(project_or_spider, limit, filters, orderby):
         click.echo(line)
 
 
-def resolve_target(argument):
-    """Return (target, spider name or None) for the command's argument."""
+def resolve_target(argument, targets):
+    """Return (target, spider name or None) for the command's argument, given
+    the targets defined in scrapinghub.yml."""
     if not argument:
         return 'default', None
     if '/' in argument:
         target, spider = argument.rsplit('/', 1)
         return target or 'default', spider or None
-    if argument.isdigit() or argument in config.load_shub_config().projects:
+    if argument.isdigit() or argument in targets:
         return argument, None
     return 'default', argument
 
 
 def parse_filters(filters):
-    """Return (parameters for ``project.jobs.iter``, spider arguments)."""
+    """Return (parameters for ``project.jobs.iter``, (name, value) pairs of
+    spider arguments)."""
     params = {}
-    spider_args = {}
+    spider_args = []
     keys = {'state': 'state', 'tag': 'has_tag', 'no-tag': 'lacks_tag'}
     for item in filters:
         key, sep, value = item.partition('=')
@@ -161,7 +165,7 @@ def parse_filters(filters):
             raise BadParameterException(
                 "%r is not of the form KEY=VALUE" % item, param_hint='--filter')
         if key.startswith(ARG_PREFIX) and len(key) > len(ARG_PREFIX):
-            spider_args[key[len(ARG_PREFIX):]] = value
+            spider_args.append((key[len(ARG_PREFIX):], value))
         elif key in keys:
             if key == 'state' and value not in STATES:
                 raise BadParameterException(
@@ -189,8 +193,8 @@ def parse_orderby(orderby):
 
 def matches_args(job, spider_args):
     job_args = job.get('spider_args') or {}
-    return all(k in job_args and str(job_args[k]) == v
-               for k, v in spider_args.items())
+    return all(name in job_args and str(job_args[name]) == value
+               for name, value in spider_args)
 
 
 def sort_jobs(jobs, field, descending):
@@ -214,8 +218,10 @@ def format_jobs(jobs):
     rows = [COLUMNS]
     for job in jobs:
         state = job.get('state') or '-'
-        if job.get('close_reason'):
-            state = "%s (%s)" % (state, job['close_reason'])
+        reason = job.get('close_reason')
+        # Jobs that finished normally have "finished" as close reason
+        if reason and reason != state:
+            state = "%s (%s)" % (state, reason)
         rows.append((job['key'], job.get('spider') or '-', state,
                      format_time(job.get('running_time'))))
     widths = [max(len(row[i]) for row in rows) for i in range(len(COLUMNS))]
