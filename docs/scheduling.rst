@@ -108,18 +108,21 @@ jobs.
 * ``state=pending``, ``state=running``, ``state=finished`` or
   ``state=deleted``: only jobs in that state (the default is to list pending,
   running and finished jobs)
-* ``tag=TAG`` and ``no-tag=TAG``: only jobs that have, or do not have, that
-  tag. Repeating one of them matches jobs fulfilling any of the repeated
-  values.
-* ``arg.NAME=VALUE``: only jobs that were run with that spider argument.
+* ``tag=TAG``: only jobs that have that tag; if repeated, jobs that have any
+  of the given tags
+* ``no-tag=TAG``: only jobs that do not have that tag; if repeated, jobs that
+  have none of the given tags
+* ``arg.NAME=VALUE``: only jobs that were run with that spider argument; if
+  repeated, all of them must match
 
 Scrapy Cloud does not support filtering by spider argument, so ``arg.*``
 filters are applied by shub to the latest 1000 jobs, and ``--limit`` is
 applied to what remains. The other filters are applied by Scrapy Cloud.
 
-``--orderby FIELD`` sorts the listed jobs by ``scheduled``, ``started``,
-``finished``, ``elapsed``, ``errors``, or ``spider``; append ``:asc`` to sort
-in ascending order (the default is descending, i.e. newest or largest first).
-Scrapy Cloud cannot sort jobs, so shub sorts only the jobs it retrieved, i.e.
-the latest ``--limit`` jobs. Jobs that lack the field (e.g. a job that has not
-finished has no ``finished`` time) are listed last.
+``--orderby FIELD`` sorts the listed jobs by ``scheduled``, ``started``, or
+``finished`` time, by number of scraped ``items`` or logged ``errors``, or by
+``spider`` name; append ``:asc`` to sort in ascending order (the default is
+descending, i.e. newest or largest first). Scrapy Cloud cannot sort jobs, so
+shub sorts only the jobs it retrieved, i.e. the latest ``--limit`` jobs. Jobs
+that lack the time (e.g. a job that has not finished has no ``finished``
+time) are listed last.
