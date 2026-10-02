@@ -88,9 +88,6 @@ def _deprecate_build_egg_parameter(ctx, param, value):
 def cli(target, version, debug, egg, build_egg, verbose, keep_log,
         ignore_size):
     if build_egg is not None:
-        # Deprecated in favor of `shub build-egg`. Building an egg does not
-        # involve the target, so don't load or ask for any configuration, and
-        # don't let a custom image configured for the target take over.
         build_egg_cmd(build_egg, debug)
         return
     conf = load_shub_config()
