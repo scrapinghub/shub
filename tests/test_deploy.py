@@ -15,6 +15,7 @@ from cleo.testers.command_tester import CommandTester
 from click.testing import CliRunner
 
 from shub import deploy
+from shub.build_egg import build_project_egg
 from shub.exceptions import (
     NotFoundException, ShubException, BadParameterException,
     DeployRequestTooLargeException,
@@ -185,6 +186,10 @@ class DeployTest(AssertInvokeRaisesMixin, unittest.TestCase):
                 deploy.cli, ('--build-egg', 'built.egg'))
         self.assertEqual(2, result.exit_code)
         self.assertIn('is a directory', result.output)
+
+    def test_previous_build_egg_name_still_works(self):
+        # Deploy wrappers built on top of shub import it from shub.deploy
+        self.assertIs(build_project_egg, deploy._build_egg)
 
     @patch('shub.utils.get_latest_scrapy_stack', return_value=LATEST_STACK)
     @patch('shub.utils.has_project_access', return_value=True)

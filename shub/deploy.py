@@ -20,6 +20,10 @@ from shub.exceptions import (BadParameterException, NotFoundException, ShubDepre
 from shub.image.upload import upload_cmd
 from shub.utils import create_scrapinghub_yml_wizard, make_deploy_request, run_cmd
 
+# The previous name of build_project_egg(), which deploy wrappers built on top
+# of shub still import from here.
+_build_egg = build_project_egg
+
 HELP = """
 Deploy the current folder's Scrapy project to Scrapy Cloud.
 
