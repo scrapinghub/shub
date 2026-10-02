@@ -205,6 +205,23 @@ class BuildEggCommandTest(AssertInvokeRaisesMixin, unittest.TestCase):
         # The build dir is cleaned up even though the command failed
         self.assertFalse(os.path.exists(tmpdir))
 
+    def test_directory_like_destination_reports_an_error(self):
+        patcher, tmpdir = self._fake_egg_build()
+        with patcher, self.runner.isolated_filesystem():
+            result = self.assertInvokeRaises(
+                ShubException, build_egg.cli, ['no_such_dir/'])
+        self.assertNotIn('None', result.exception.message)
+
+    @unittest.skipIf(os.name == 'nt' or (hasattr(os, 'geteuid') and os.geteuid() == 0),
+                     "permissions are not enforced")
+    def test_overwrites_write_only_destination(self):
+        patcher, tmpdir = self._fake_egg_build()
+        with patcher, self.runner.isolated_filesystem():
+            open('wo.egg', 'w').close()
+            os.chmod('wo.egg', 0o200)
+            result = self.runner.invoke(build_egg.cli, ['wo.egg'])
+            self.assertEqual(0, result.exit_code, result.output)
+
     def test_requires_a_scrapy_project(self):
         with self.runner.isolated_filesystem():
             self.assertInvokeRaises(

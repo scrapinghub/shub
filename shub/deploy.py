@@ -72,7 +72,7 @@ def _deprecate_build_egg_parameter(ctx, param, value):
 @click.option("-d", "--debug", help="Debug mode (do not remove build dir)",
               is_flag=True)
 @click.option("--egg", help="Deploy the given egg, instead of building one")
-@click.option("--build-egg", type=click.Path(dir_okay=False, writable=True),
+@click.option("--build-egg", type=click.Path(dir_okay=False, writable=True, readable=False),
               callback=_deprecate_build_egg_parameter,
               help="[DEPRECATED] Only build the given egg, don't deploy it. "
                    "Use `shub build-egg` instead")

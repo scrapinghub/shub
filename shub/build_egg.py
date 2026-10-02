@@ -36,7 +36,7 @@ SHORT_HELP = "Build the project egg without deploying it"
 
 
 @click.command(help=HELP, short_help=SHORT_HELP)
-@click.argument("filename", type=click.Path(dir_okay=False, writable=True))
+@click.argument("filename", type=click.Path(dir_okay=False, writable=True, readable=False))
 @click.option("-d", "--debug", help="Debug mode (do not remove build dir)",
               is_flag=True)
 def cli(filename, debug):
@@ -52,7 +52,7 @@ def build_egg_cmd(filename, debug=False):
             shutil.copyfile(egg, filename)
         except OSError as e:
             raise ShubException(
-                "Could not write egg to %s: %s" % (filename, e.strerror))
+                "Could not write egg to %s: %s" % (filename, e.strerror or e))
     finally:
         remove_build_dir(tmpdir, debug)
 
