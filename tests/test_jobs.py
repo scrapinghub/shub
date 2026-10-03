@@ -224,6 +224,22 @@ class JobsTest(AssertInvokeRaisesMixin, unittest.TestCase):
             result = self.invoke('--filter', first, '--filter', second)
             self.assertEqual("No jobs found.\n", result.output)
 
+    def test_spider_args_filter_requests_the_fields_to_sort_by(self):
+        self.invoke('--filter', 'arg.a=2')
+        self.assertLessEqual(set(jobs.ORDER_FIELDS.values()),
+                             set(self.iter_kwargs()['meta']))
+
+    def test_spider_args_filter_skips_jobs_without_that_argument(self):
+        self.jobs = JOBS + [
+            {'key': '1/1/12', 'spider': 'alpha', 'state': 'finished'},
+            {'key': '1/1/11', 'spider': 'alpha', 'state': 'finished',
+             'spider_args': None},
+        ]
+        self.assertEqual(['1/1/14', '1/1/13'],
+                         self.keys(self.invoke('--filter', 'arg.a=2')))
+        self.assertEqual(['1/2/15'],
+                         self.keys(self.invoke('--filter', 'arg.b=x')))
+
     def test_spider_args_filter_pages_through_the_jobs(self):
         # Only the 100 oldest of 2500 jobs match
         self.many_jobs(2500, lambda n: {'a': 'x'} if n <= 100 else {})
@@ -288,6 +304,11 @@ class JobsTest(AssertInvokeRaisesMixin, unittest.TestCase):
         result = self.invoke('--filter', 'arg.a=2', '--limit', '1')
         self.assertEqual(['1/1/14'], self.keys(result))
 
+    def test_orderby_applies_after_limit(self):
+        result = self.invoke('--filter', 'arg.a=2', '--limit', '1',
+                             '--orderby', 'items:asc')
+        self.assertEqual(['1/1/14'], self.keys(result))
+
     def test_invalid_filters(self):
         for bad in ('state', 'state=', 'state=bogus', 'color=red', 'arg.=1'):
             result = self.invoke('--filter', bad)
@@ -308,6 +329,7 @@ class JobsTest(AssertInvokeRaisesMixin, unittest.TestCase):
             ('spider:desc', ['1/2/15', '1/1/14', '1/1/13']),
             ('scheduled:asc', ['1/1/13', '1/1/14', '1/2/15']),
             ('started', ['1/2/15', '1/1/14', '1/1/13']),
+            ('started:asc', ['1/1/14', '1/2/15', '1/1/13']),
         ]:
             self.assertEqual(expected, self.keys(self.invoke('--orderby', orderby)), orderby)
 
