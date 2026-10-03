@@ -334,7 +334,33 @@ class JobsTest(AssertInvokeRaisesMixin, unittest.TestCase):
         self.assertEqual(0, result.exit_code, result.output)
         lines = result.output.splitlines()
         self.assertEqual('1/1/1', lines[1].split()[0])
-        self.assertEqual(['1/1/2', '-', '-', '-'], lines[2].split())
+        self.assertEqual(['1/1/2', '-', '-', '-', '0'], lines[2].split())
+
+    def test_orderby_adds_a_column_for_a_field_that_is_not_shown(self):
+        self.assertEqual([
+            'JOB     SPIDER  STATE                 STARTED (UTC)        ITEMS',
+            '1/1/14  alpha   finished (cancelled)  2016-01-02 16:36:55  9000',
+            '1/2/15  beta    running               2016-01-02 16:38:35  500',
+            '1/1/13  alpha   pending               -                    0',
+        ], self.invoke('--orderby', 'items').output.splitlines())
+        for orderby, heading, values in [
+            ('errors', 'ERRORS', ['3', '0', '0']),
+            ('scheduled', 'SCHEDULED (UTC)',
+             ['2016-01-02 16:38:20', '2016-01-02 16:36:40',
+              '2016-01-02 16:35:00']),
+            ('finished:asc', 'FINISHED (UTC)',
+             ['2016-01-02 16:37:20', '-', '-']),
+        ]:
+            lines = self.invoke('--orderby', orderby).output.splitlines()
+            self.assertTrue(lines[0].endswith('  ' + heading), orderby)
+            for line, value in zip(lines[1:], values):
+                self.assertTrue(line.endswith('  ' + value), (orderby, line))
+
+    def test_orderby_adds_no_column_for_a_field_that_is_shown(self):
+        header = self.invoke().output.splitlines()[0]
+        for orderby in ('spider', 'started:asc'):
+            lines = self.invoke('--orderby', orderby).output.splitlines()
+            self.assertEqual(header, lines[0], orderby)
 
     def test_orderby_is_not_sent_to_the_api(self):
         self.invoke('--orderby', 'items')

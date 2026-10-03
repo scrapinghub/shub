@@ -59,9 +59,10 @@ by page, until --limit of them match, and searches the latest 10000 at most.
 
 Use --orderby FIELD[:asc|:desc] to sort the listed jobs (descending, i.e.
 largest or newest first, unless :asc is given). FIELD is one of scheduled,
-started, finished, items, errors, spider. Scrapy Cloud cannot sort jobs, so
-only the jobs retrieved by --limit are sorted; to rank all recent jobs, use
-a large --limit.
+started, finished, items, errors, spider; a column with it is added to the
+table unless it is shown anyway. Scrapy Cloud cannot sort jobs, so only the
+jobs retrieved by --limit are sorted; to rank more jobs, use a larger
+--limit.
 """
 
 SHORT_HELP = "List the latest jobs of a project or spider"
@@ -93,6 +94,13 @@ SUMMARY_META = ['spider', 'state', 'close_reason', 'spider_args',
                 'items', 'errors']
 
 COLUMNS = ('JOB', 'SPIDER', 'STATE', 'STARTED (UTC)')
+# Heading of the column that --orderby adds for a field that is not shown
+ORDER_COLUMNS = {
+    'pending_time': 'SCHEDULED (UTC)',
+    'finished_time': 'FINISHED (UTC)',
+    'items': 'ITEMS',
+    'errors': 'ERRORS',
+}
 
 
 @click.command(help=HELP, short_help=SHORT_HELP)
@@ -131,7 +139,7 @@ def cli(project_or_spider, limit, filters, orderby):
     if not jobs:
         click.echo("No jobs found.")
     else:
-        for line in format_jobs(jobs):
+        for line in format_jobs(jobs, order_field):
             click.echo(line)
     if truncated:
         click.echo("Only the latest %d jobs were searched." % MAX_JOBS,
@@ -232,16 +240,22 @@ def format_time(timestamp):
     return dt.strftime('%Y-%m-%d %H:%M:%S')
 
 
-def format_jobs(jobs):
-    rows = [COLUMNS]
+def format_jobs(jobs, order_field=None):
+    extra = ORDER_COLUMNS.get(order_field)
+    rows = [COLUMNS + (extra,) if extra else COLUMNS]
     for job in jobs:
         state = job.get('state') or '-'
         reason = job.get('close_reason')
         # Jobs that finished normally have "finished" as close reason
         if reason and reason != state:
             state = "%s (%s)" % (state, reason)
-        rows.append((job['key'], job.get('spider') or '-', state,
-                     format_time(job.get('running_time'))))
-    widths = [max(len(row[i]) for row in rows) for i in range(len(COLUMNS))]
+        row = (job['key'], job.get('spider') or '-', state,
+               format_time(job.get('running_time')))
+        if extra:
+            value = job.get(order_field)
+            row += (str(value or 0) if order_field in COUNTERS
+                    else format_time(value),)
+        rows.append(row)
+    widths = [max(len(row[i]) for row in rows) for i in range(len(rows[0]))]
     for row in rows:
         yield '  '.join(cell.ljust(w) for cell, w in zip(row, widths)).rstrip()
