@@ -12,7 +12,7 @@ from shub.utils import get_scrapinghub_client_from_config
 HELP = """
 List the most recent jobs of a project or of a spider on Scrapy Cloud, one
 per line, newest first. The first column is the job key, which you can pass
-to other commands, e.g. `shub log 12345/2/15`.
+to `shub log`, `shub items` or `shub requests`, e.g. `shub log 12345/2/15`.
 
 By default, the jobs of your default project (as defined in scrapinghub.yml)
 are listed:
