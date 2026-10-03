@@ -54,8 +54,8 @@ Use --filter KEY=VALUE (repeatable) to narrow down the jobs:
 
 Repeated state or tag filters match jobs that fulfil any of them, while
 repeated no-tag and arg.* filters must all be fulfilled. The arg.* filters
-are applied by shub, not by Scrapy Cloud, to the (up to 1000) latest jobs,
-before --limit is applied.
+are applied by shub, not by Scrapy Cloud: shub retrieves the latest jobs, page
+by page, until --limit of them match, and searches the latest 10000 at most.
 
 Use --orderby FIELD[:asc|:desc] to sort the listed jobs (descending, i.e.
 largest or newest first, unless :asc is given). FIELD is one of scheduled,
@@ -67,7 +67,8 @@ a large --limit.
 SHORT_HELP = "List the latest jobs of a project or spider"
 
 DEFAULT_LIMIT = 20
-MAX_JOBS = 1000  # what Scrapy Cloud returns at most per request
+PAGE_SIZE = 1000  # the most jobs that Scrapy Cloud returns by default
+MAX_JOBS = 10 * PAGE_SIZE
 DEFAULT_STATES = ['pending', 'running', 'finished']
 STATES = DEFAULT_STATES + ['deleted']
 ARG_PREFIX = 'arg.'
@@ -96,7 +97,7 @@ COLUMNS = ('JOB', 'SPIDER', 'STATE', 'STARTED (UTC)')
 
 @click.command(help=HELP, short_help=SHORT_HELP)
 @click.argument('project_or_spider', required=False)
-@click.option('--limit', type=click.IntRange(min=1),
+@click.option('--limit', type=click.IntRange(min=1, max=MAX_JOBS),
               default=DEFAULT_LIMIT, show_default=True,
               help='Maximum number of jobs to list')
 @click.option('--filter', 'filters', multiple=True, metavar='KEY=VALUE',
@@ -120,24 +121,41 @@ def cli(project_or_spider, limit, filters, orderby):
         if spider:
             kwargs['spider'] = spider
         if spider_args:
-            # Filtered below, so --limit cannot be applied by Scrapy Cloud
-            kwargs.update(meta=SUMMARY_META, count=MAX_JOBS)
-        else:
-            kwargs['count'] = limit
-        jobs = list(project.jobs.iter(**kwargs))
+            kwargs['meta'] = SUMMARY_META
+        jobs, truncated = get_jobs(project, limit, spider_args, **kwargs)
     # ValueError: e.g. a response that is not JSON
     except (ScrapinghubAPIError, ValueError, requests.RequestException) as e:
         raise RemoteErrorException(str(e))
-    if spider_args:
-        jobs = [job for job in jobs if matches_args(job, spider_args)]
-        jobs = jobs[:limit]
     if order_field:
         jobs = sort_jobs(jobs, order_field, descending)
     if not jobs:
         click.echo("No jobs found.")
-        return
-    for line in format_jobs(jobs):
-        click.echo(line)
+    else:
+        for line in format_jobs(jobs):
+            click.echo(line)
+    if truncated:
+        click.echo("Only the latest %d jobs were searched." % MAX_JOBS,
+                   err=True)
+
+
+def get_jobs(project, limit, spider_args, **kwargs):
+    """Return the latest ``limit`` jobs that were run with the spider
+    arguments, if any, and whether the search stopped at MAX_JOBS jobs."""
+    jobs = {}  # by key, as jobs added or changed meanwhile shift the others
+    start = 0
+    while len(jobs) < limit:
+        if start >= MAX_JOBS:
+            return list(jobs.values()), True
+        # Matching jobs may be rare, so retrieve as many as possible
+        count = PAGE_SIZE if spider_args else min(limit - len(jobs), PAGE_SIZE)
+        page = list(project.jobs.iter(start=start, count=count, **kwargs))
+        if not page:
+            break
+        for job in page:
+            if matches_args(job, spider_args):
+                jobs.setdefault(job['key'], job)
+        start += len(page)
+    return list(jobs.values())[:limit], False
 
 
 def resolve_target(argument, targets):

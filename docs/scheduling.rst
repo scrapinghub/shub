@@ -101,8 +101,7 @@ spider is named like that, specify the project as well, e.g.
 ``shub jobs default/123``.
 
 Pending, running, and finished jobs are listed, newest first, up to ``--limit``
-of them, 20 by default. Scrapy Cloud returns at most the latest 1000
-jobs.
+of them, 20 by default and 10000 at most.
 
 ``--filter KEY=VALUE`` can be repeated to narrow the list down:
 
@@ -117,8 +116,9 @@ jobs.
   repeated, all of them must match
 
 Scrapy Cloud does not support filtering by spider argument, so ``arg.*``
-filters are applied by shub to the latest 1000 jobs, and ``--limit`` is
-applied to what remains. The other filters are applied by Scrapy Cloud.
+filters are applied by shub: it retrieves the latest jobs, 1000 at a time,
+until ``--limit`` of them match, and searches the latest 10000 jobs at most (it
+tells you when it stops there). The other filters are applied by Scrapy Cloud.
 
 ``--orderby FIELD`` sorts the listed jobs by ``scheduled``, ``started``, or
 ``finished`` time, by number of scraped ``items`` or logged ``errors``, or by
