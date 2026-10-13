@@ -6,7 +6,7 @@ from scrapinghub import ScrapinghubAPIError
 
 from shub import config
 from shub.exceptions import BadParameterException, RemoteErrorException
-from shub.utils import get_scrapinghub_client_from_config
+from shub.utils import get_scrapinghub_client_from_config, has_project_access
 
 
 HELP = """
@@ -39,6 +39,9 @@ An argument consisting only of digits is taken as a project ID, and an
 argument that is a target defined in scrapinghub.yml is taken as that target.
 To list the jobs of a spider whose name is of either kind, add the project
 before the slash: `shub jobs default/123`.
+
+If the project does not exist, or your account has no access to it, shub
+reports an error instead of listing no jobs.
 
 Pending, running, and finished jobs are listed; at most --limit of them
 (20 by default).
@@ -122,6 +125,15 @@ def cli(project_or_spider, limit, filters, orderby):
     targetconf = conf.get_target_conf(target)
     client = get_scrapinghub_client_from_config(targetconf)
     try:
+        # Scrapy Cloud lists no jobs, instead of failing, for a project that
+        # does not exist or that the account cannot access, which would make a
+        # mistyped project ID look like a project without jobs
+        if not has_project_access(targetconf.project_id, targetconf.endpoint,
+                                  targetconf.apikey):
+            raise RemoteErrorException(
+                "Project %s does not exist, or the account you logged in to "
+                "has no access to it. Please double-check the project ID."
+                % targetconf.project_id)
         project = client.get_project(targetconf.project_id)
         if spider:
             project.spiders.get(spider)  # fail early if there is no such spider

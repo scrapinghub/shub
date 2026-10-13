@@ -38,7 +38,8 @@ Changes
 -   New ``shub jobs`` command to list the latest jobs of a project or of a
     spider, so that you can find a job key without opening the web interface.
     It supports ``--limit``, ``--filter`` (by state, tag, or spider
-    argument), and ``--orderby``.
+    argument), and ``--orderby``. It fails with an error, instead of listing
+    no jobs, if the project does not exist or your account cannot access it.
 
 2.18.1 (2026-07-08)
 ==========

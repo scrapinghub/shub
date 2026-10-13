@@ -8,7 +8,7 @@ from scrapinghub import ScrapinghubAPIError
 from scrapinghub.client.exceptions import BadRequest, NotFound
 
 from shub import config, jobs
-from shub.exceptions import RemoteErrorException
+from shub.exceptions import InvalidAuthException, RemoteErrorException
 
 from .utils import AssertInvokeRaisesMixin, mock_conf
 
@@ -35,6 +35,10 @@ class JobsTest(AssertInvokeRaisesMixin, unittest.TestCase):
         self.mock_client = patcher.start()
         self.addCleanup(patcher.stop)
         self.project = self.mock_client.return_value.get_project.return_value
+        # By default, the account has access to the project
+        patcher = mock.patch('shub.jobs.has_project_access', return_value=True)
+        self.mock_access = patcher.start()
+        self.addCleanup(patcher.stop)
         self.jobs = JOBS
         self.project.jobs.iter.side_effect = self.iter_jobs
 
@@ -405,6 +409,49 @@ class JobsTest(AssertInvokeRaisesMixin, unittest.TestCase):
         self.project.spiders.get.side_effect = NotFound("Spider x doesn't exist.")
         result = self.assertInvokeRaises(RemoteErrorException, jobs.cli, ['x'])
         self.assertIn("doesn't exist", result.exception.message)
+        self.project.jobs.iter.assert_not_called()
+
+    def test_access_to_the_project_is_checked_once(self):
+        # Like shub deploy does, with the target's project, endpoint and key
+        for args, target in (([], 'default'), (['prod'], 'prod'),
+                             (['prod/myspider'], 'prod'),
+                             (['vagrant', '--limit', '1'], 'vagrant')):
+            self.mock_access.reset_mock()
+            self.assertEqual(0, self.invoke(*args).exit_code, args)
+            self.mock_access.assert_called_once_with(
+                *self.conf.get_target_conf(target)[:3])
+
+    def test_unknown_project(self):
+        # Scrapy Cloud lists no jobs for a project that does not exist or
+        # that the account cannot access
+        self.mock_access.return_value = False
+        self.project.jobs.iter.side_effect = lambda **kw: iter([])
+        for args in (['999999999'], ['999999999/myspider'],
+                     ['prod', '--filter', 'state=running']):
+            result = self.assertInvokeRaises(RemoteErrorException, jobs.cli,
+                                             args)
+            self.assertIn("does not exist, or the account you logged in to "
+                          "has no access to it", result.exception.message)
+        # The project is checked before the spider and before the jobs
+        self.project.spiders.get.assert_not_called()
+        self.project.jobs.iter.assert_not_called()
+
+    def test_unknown_project_names_the_project(self):
+        self.mock_access.return_value = False
+        result = self.invoke('999999999')
+        self.assertEqual(76, result.exit_code)
+        self.assertIn('Project 999999999 does not exist', result.output)
+
+    def test_invalid_api_key(self):
+        self.mock_access.side_effect = InvalidAuthException
+        self.assertInvokeRaises(InvalidAuthException, jobs.cli, [])
+        self.project.jobs.iter.assert_not_called()
+
+    def test_errors_while_checking_the_project(self):
+        for error in (RemoteErrorException('Server error'),
+                      requests.ConnectionError('down')):
+            self.mock_access.side_effect = error
+            self.assertInvokeRaises(RemoteErrorException, jobs.cli, [])
         self.project.jobs.iter.assert_not_called()
 
     def test_api_error(self):
