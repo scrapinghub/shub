@@ -27,7 +27,7 @@ packaging==26.0
     #   sphinx-scrapy
 pygments==2.19.2
     # via sphinx
-requests==2.32.5
+requests==2.33.0
     # via sphinx
 roman-numerals==4.1.0
     # via sphinx
@@ -51,9 +51,9 @@ sphinx-llms-txt @ git+https://github.com/zytedata/sphinx-llms-txt.git@5e8866cb0c
 sphinx-markdown-builder @ git+https://github.com/zytedata/sphinx-markdown-builder.git@cfe4c0bfd7b4542f7e6b65a58cdf9ec765829940
     # via sphinx-scrapy
 sphinx-rtd-theme==3.1.0
-    # via -r docs/requirements.in
-sphinx-scrapy @ git+https://github.com/scrapy/sphinx-scrapy.git@eef1f8c3ab3b74b6891752b8f4624373345bae26
-    # via -r docs/requirements.in
+    # via -r requirements.in
+sphinx-scrapy @ git+https://github.com/scrapy/sphinx-scrapy.git@0.8.4
+    # via -r requirements.in
 sphinx-sitemap==2.9.0
     # via sphinx-scrapy
 sphinxcontrib-applehelp==2.0.0
