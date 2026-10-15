@@ -62,12 +62,17 @@ def push_cmd(target, version, username, password, email, apikey, insecure,
         username=username, password=password, insecure=insecure,
         apikey=apikey, target_apikey=config.get_apikey(target))
 
+    auth_config = None
     if username:
         _execute_push_login(
             client, image, username, password, email, reauth)
+        # Passing the credentials to push() keeps the Docker credential store,
+        # where a stale entry for the registry may exist, out of the picture.
+        auth_config = {'username': username, 'password': password}
     image_name = utils.format_image_name(image, version)
     click.echo(f"Pushing {image_name} to the registry.")
-    events = client.push(image_name, stream=True, decode=True)
+    events = client.push(image_name, stream=True, decode=True,
+                         auth_config=auth_config)
     if utils.is_verbose():
         push_progress_cls = _LoggedPushProgress
     else:
