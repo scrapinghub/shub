@@ -14,16 +14,18 @@ class JobResourceTest(unittest.TestCase):
         self.runner = CliRunner()
 
     def _test_prints_objects(self, cmd_mod, resource_name):
-        objects = ['Object 1', 'Object 2']
+        objects = [{'_key': '1/2/3/0'}, {'_key': '1/2/3/1', 'a': 'jarzębina'}]
         jobid = '1/2/3'
         with mock.patch.object(cmd_mod, 'get_job', autospec=True) as mock_gj:
-            # Patch job.items.iter_json() to return our objects
             mock_gj.return_value._metadata_updated = time.time()
             mock_resource = getattr(mock_gj.return_value, resource_name)
-            mock_resource.iter_json.return_value = objects
+            mock_resource.iter.return_value = objects
             result = self.runner.invoke(cmd_mod.cli, (jobid,))
             mock_gj.assert_called_once_with(jobid)
-            self.assertIn("\n".join(objects), result.output)
+            self.assertIn(
+                "\n".join(json.dumps(x, ensure_ascii=False) for x in objects),
+                result.output,
+            )
 
     def _test_forwards_follow(self, cmd_mod):
         with mock.patch.object(cmd_mod, 'get_job'), \
@@ -44,13 +46,14 @@ class JobResourceTest(unittest.TestCase):
 
     def test_log(self):
         objects = [
-            {'time': 0, 'level': 20, 'message': 'message 1'},
-            {'time': 1450874471000, 'level': 50, 'message': 'message 2'},
+            {'_key': '1/2/3/0', 'time': 0, 'level': 20, 'message': 'message 1'},
+            {'_key': '1/2/3/1', 'time': 1450874471000, 'level': 50,
+             'message': 'message 2'},
         ]
         jobid = '1/2/3'
         with mock.patch.object(log, 'get_job', autospec=True) as mock_gj:
             mock_gj.return_value._metadata_updated = time.time()
-            mock_gj.return_value.logs.iter_values.return_value = objects
+            mock_gj.return_value.logs.iter.return_value = objects
             result = self.runner.invoke(log.cli, (jobid,))
             mock_gj.assert_called_once_with(jobid)
             self.assertIn('1970-01-01 00:00:00 INFO message 1', result.output)
@@ -66,12 +69,12 @@ class JobResourceTest(unittest.TestCase):
 
     def test_log_unicode(self):
         objects = [
-            {'time': 0, 'level': 20, 'message': 'jarzębina'}
+            {'_key': '1/2/3/0', 'time': 0, 'level': 20, 'message': 'jarzębina'}
         ]
         jobid = '1/2/3'
         with mock.patch.object(log, 'get_job', autospec=True) as mock_gj:
             mock_gj.return_value._metadata_updated = time.time()
-            mock_gj.return_value.logs.iter_values.return_value = objects
+            mock_gj.return_value.logs.iter.return_value = objects
             result = self.runner.invoke(log.cli, (jobid,))
             mock_gj.assert_called_once_with(jobid)
             self.assertIn('1970-01-01 00:00:00 INFO jarzębina', result.output)

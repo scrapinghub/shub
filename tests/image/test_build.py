@@ -193,3 +193,26 @@ def test_cli_missing_custom_dockerfile(docker_client_mock, file_param):
     runner = CliRunner()
     result = runner.invoke(cli, ["dev", file_param, "Dockerfile-missing"])
     assert result.exit_code == shub_exceptions.NotFoundException.exit_code
+
+
+def test_cli_dockerfile_setting(docker_client_mock, project_dir, test_mock):
+    config_path = os.path.join(project_dir, 'scrapinghub.yml')
+    with open(config_path) as f:
+        config = f.read()
+    with open(config_path, 'w') as f:
+        f.write(config.replace(
+            "image: registry.io/user/project\n",
+            "image: registry.io/user/project\n    dockerfile: Dockerfile-dev\n",
+        ))
+    with open(os.path.join(project_dir, 'Dockerfile-dev'), 'w') as f:
+        f.write("FROM python:3.10")
+    docker_client_mock.build.return_value = [
+        {"stream": "Successfully built 12345"}
+    ]
+    runner = CliRunner()
+    result = runner.invoke(cli, ["dev"])
+    assert result.exit_code == 0
+    assert docker_client_mock.build.call_args.kwargs['dockerfile'] == 'Dockerfile-dev'
+    result = runner.invoke(cli, ["dev", "-f", "Dockerfile"])
+    assert result.exit_code == 0
+    assert docker_client_mock.build.call_args.kwargs['dockerfile'] == 'Dockerfile'
