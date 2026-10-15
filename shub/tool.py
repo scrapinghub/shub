@@ -57,6 +57,7 @@ commands = [
     "image",
     "cancel",
     "find_jobs",
+    "list_stacks",
 ]
 
 for command in commands:
