@@ -1,3 +1,4 @@
+import os
 from functools import wraps
 from unittest import mock
 
@@ -12,7 +13,7 @@ except ImportError:
     from inspect import getargspec as get_args
 
 from .utils import (
-    FakeProjectDirectory, add_scrapy_fake_config, add_sh_fake_config,
+    SH_CONFIG_FILE, FakeProjectDirectory, add_scrapy_fake_config, add_sh_fake_config,
     add_fake_dockerfile, add_fake_setup_py,
 )
 
@@ -35,6 +36,18 @@ def project_dir():
         add_fake_dockerfile(tmpdir)
         add_fake_setup_py(tmpdir)
         yield tmpdir
+
+
+@pytest.fixture
+def logged_out(project_dir, monkeypatch):
+    """Remove every API key source from the fake project directory"""
+    with open(os.path.join(project_dir, 'scrapinghub.yml'), 'w') as f:
+        f.write(SH_CONFIG_FILE.split('apikeys:')[0])
+    monkeypatch.setattr('shub.config.GLOBAL_SCRAPINGHUB_YML_PATH',
+                        os.path.join(project_dir, 'global.yml'))
+    monkeypatch.setattr('shub.config.NETRC_PATH',
+                        os.path.join(project_dir, 'netrc'))
+    monkeypatch.delenv('SHUB_APIKEY', raising=False)
 
 
 @pytest.fixture
