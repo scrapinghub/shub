@@ -3,7 +3,7 @@ import requests
 from urllib.parse import urljoin
 
 from shub.config import (load_shub_config, GLOBAL_SCRAPINGHUB_YML_PATH,
-                         ShubConfig)
+                         ShubConfig, _get_apikey_name)
 from shub.exceptions import AlreadyLoggedInException
 from shub.utils import update_yaml_dict
 
@@ -23,17 +23,19 @@ SHORT_HELP = "Save your Scrapinghub API key"
 @click.command(help=HELP, short_help=SHORT_HELP)
 def cli():
     global_conf = load_shub_config(load_local=False, load_env=False)
-    if 'default' in global_conf.apikeys:
+    conf = load_shub_config()
+    endpoint = conf.endpoints['default']
+    apikey_name = _get_apikey_name(global_conf, endpoint)
+    if apikey_name in global_conf.apikeys:
         raise AlreadyLoggedInException
 
-    conf = load_shub_config()
     key = _get_apikey(
         suggestion=conf.apikeys.get('default'),
-        endpoint=global_conf.endpoints.get('default'),
+        endpoint=endpoint,
     )
     with update_yaml_dict(GLOBAL_SCRAPINGHUB_YML_PATH) as conf:
         conf.setdefault('apikeys', {})
-        conf['apikeys']['default'] = key
+        conf['apikeys'][apikey_name] = key
 
 
 def _get_apikey(suggestion='', endpoint=None):

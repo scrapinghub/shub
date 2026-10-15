@@ -19,36 +19,21 @@ from tempfile import NamedTemporaryFile, TemporaryFile
 from urllib.parse import urljoin
 
 import click
-import pip
 import requests
 import yaml
 from click import ParamType
+from pip import main as pip_main
 
-# https://github.com/scrapinghub/shub/pull/309#pullrequestreview-113977920
-try:
-    from pip import main as pip_main
-except:  # noqa
-    try:
-        # For pip v20: https://tinyurl.com/pip20-error
-        from pip._internal.cli.main import pip_main
-    except ImportError:
-        try:
-            # For pip v9 and v10: https://tinyurl.com/y8mvl8rb
-            from pip._internal.main import main as pip_main
-        except ImportError:
-            from pip._internal import main as pip_main
-
-from scrapinghub import ScrapinghubClient, ScrapinghubAPIError, HubstorageClient
+from scrapinghub import ScrapinghubClient, ScrapinghubAPIError
 
 import shub
 from shub.compat import to_native_str
 from shub.exceptions import (
-    BadParameterException, InvalidAuthException, NotFoundException,
+    BadConfigException, BadParameterException, InvalidAuthException, NotFoundException,
     RemoteErrorException, SubcommandException, DeployRequestTooLargeException,
     print_warning,
 )
 
-SCRAPY_CFG_FILE = os.path.expanduser("~/.scrapy.cfg")
 FALLBACK_ENCODING = 'utf-8'
 STDOUT_ENCODING = sys.stdout.encoding or FALLBACK_ENCODING
 LAST_N_LOGS = 30
@@ -90,13 +75,25 @@ def get_scrapinghub_client_from_config(conf):
     )
 
 
+_SETTINGS_MODULE_NOT_FOUND_MSG = (
+    "Cannot find the Scrapy settings module of your project. Set the "
+    "SCRAPY_SETTINGS_MODULE environment variable, or add a [settings] section "
+    "to scrapy.cfg (the entry used is 'default', or the one named by the "
+    "SCRAPY_PROJECT environment variable), see "
+    "https://docs.scrapy.org/en/latest/topics/commands.html#default-structure-of-scrapy-projects"
+)
+
+
 def create_default_setup_py(**kwargs):
     closest = closest_file('scrapy.cfg')
     with remember_cwd():
-        os.chdir(os.path.dirname(closest))
+        if closest:
+            os.chdir(os.path.dirname(closest))
         if not os.path.exists('setup.py'):
             if 'settings' not in kwargs:
-                kwargs['settings'] = get_config().get('settings', 'default')
+                kwargs['settings'] = _get_project_settings_module()
+                if not kwargs['settings']:
+                    raise BadConfigException(_SETTINGS_MODULE_NOT_FOUND_MSG)
             with open('setup.py', 'w') as f:
                 f.write(_SETUP_PY_TEMPLATE % kwargs)
             click.echo(f"Created setup.py at {os.getcwd()}")
@@ -276,8 +273,11 @@ def pwd_version():
                 ver = _last_line_of(run_python([setuppy, '--version']))
     if not ver:
         ver = str(int(time.time()))
-    ver = re.sub(r'[^\w.-]+', '', ver)
-    return ver
+    return _clean_version(ver)
+
+
+def _clean_version(ver):
+    return re.sub(r'[^\w.-]+', '', ver)
 
 
 def pwd_git_version():
@@ -292,7 +292,7 @@ def pwd_git_version():
         except SubcommandException:
             return None
     branch = run_cmd([git, 'rev-parse', '--abbrev-ref', 'HEAD'])
-    return f'{commit_id}-{branch}'
+    return _clean_version(f'{commit_id}-{branch}')
 
 
 def pwd_hg_version():
@@ -304,7 +304,7 @@ def pwd_hg_version():
     except SubcommandException:
         return None
     branch = run_cmd([hg, 'branch'])
-    return f'r{commit_id}-{branch}'
+    return _clean_version(f'r{commit_id}-{branch}')
 
 
 def pwd_bzr_version():
@@ -327,24 +327,9 @@ def run_python(cmd, *args, **kwargs):
 
 
 def decompress_egg_files(directory=None):
-    try:
-        EXTS = pip.utils.ARCHIVE_EXTENSIONS
-    except AttributeError:
-        try:
-            EXTS = pip._internal.utils.misc.ARCHIVE_EXTENSIONS
-        except AttributeError:
-            EXTS = ('.zip', '.whl', '.tar', '.tar.gz', '.tar.bz2')
-    try:
-        unpack_file = pip.utils.unpack_file
-    except AttributeError:
-        # XXX a work-around for pip >= 10.0
-        try:
-            unpack_file = pip.util.unpack_file
-        except AttributeError:
-            try:
-                unpack_file = pip._internal.utils.misc.unpack_file
-            except AttributeError:
-                from pip._internal.utils.unpacking import unpack_file
+    from pip._internal.utils.unpacking import unpack_file
+
+    EXTS = ('.zip', '.whl', '.tar', '.tar.gz', '.tar.bz2')
     pathname = "*"
     if directory is not None:
         pathname = os.path.join(directory, pathname)
@@ -358,10 +343,7 @@ def decompress_egg_files(directory=None):
         click.echo("Uncompressing: %s" % egg)
         egg_ext = EXTS[list(egg.endswith(ext) for ext in EXTS).index(True)]
         decompress_location = egg[:-len(egg_ext)]
-        try:
-            unpack_file(egg, decompress_location, None)
-        except TypeError:
-            unpack_file(egg, decompress_location, None, None)
+        unpack_file(egg, decompress_location)
 
 
 def build_and_deploy_eggs(project, endpoint, apikey):
@@ -447,7 +429,7 @@ def get_job_specs(job):
             "".format(job),
             param_hint='job_id',
         )
-    # XXX: Lazy import due to circular dependency
+    # Lazy import due to circular dependency
     from shub.config import get_target_conf
     targetconf = get_target_conf(match.group(2) or 'default')
     return (f"{targetconf.project_id}/{match.group(3)}",
@@ -456,10 +438,15 @@ def get_job_specs(job):
 
 def get_job(job):
     jobid, apikey = get_job_specs(job)
-    hsc = HubstorageClient(auth=apikey)
-    job = hsc.get_job(jobid)
-    if not job.metadata:
+    job = ScrapinghubClient(apikey).get_job(jobid)
+    try:
+        metadata = dict(job.metadata.iter())
+    except StopIteration:
+        metadata = {}
+    if not metadata:
         raise NotFoundException(f'Job {jobid} does not exist')
+    job._state = metadata.get('state')
+    job._metadata_updated = time.time()
     return job
 
 
@@ -490,6 +477,27 @@ def inside_project():
     return bool(closest_file('scrapy.cfg'))
 
 
+def _get_project_settings_module(project=None):
+    """Return the Scrapy settings module path of the current project, or
+    ``None`` if it cannot be determined.
+
+    An explicit ``project`` is always looked up in the ``[settings]`` section
+    of scrapy.cfg. Otherwise this mirrors Scrapy's own resolution: the
+    ``SCRAPY_SETTINGS_MODULE`` environment variable takes precedence, then
+    the ``[settings]`` entry named by the ``SCRAPY_PROJECT`` environment
+    variable, or ``default``.
+    """
+    if project is None:
+        env_module = os.environ.get('SCRAPY_SETTINGS_MODULE')
+        if env_module:
+            return env_module
+        project = os.environ.get('SCRAPY_PROJECT', 'default')
+    cfg = get_config()
+    if cfg.has_option('settings', project):
+        return cfg.get('settings', project)
+    return None
+
+
 def get_config(use_closest=True):
     """Get Scrapy config file as a ConfigParser"""
     sources = get_sources(use_closest)
@@ -511,51 +519,22 @@ def get_sources(use_closest=True):
     return sources
 
 
-def get_scrapycfg_targets(cfgfiles=None):
-    cfg = ConfigParser()
-    cfg.read(cfgfiles or [])
-    baset = dict(cfg.items('deploy')) if cfg.has_section('deploy') else {}
-    targets = {}
-    targets['default'] = baset
-    for x in cfg.sections():
-        if x.startswith('deploy:'):
-            t = baset.copy()
-            t.update(cfg.items(x))
-            targets[x[7:]] = t
-    for tname, t in list(targets.items()):
-        try:
-            int(t.get('project', 0))
-        except ValueError:
-            # Don't import non-numeric project IDs, and also throw away the
-            # URL and credentials associated with these projects (since the
-            # project ID does not belong to SH, neither do the endpoint or the
-            # auth information)
-            del targets[tname]
-        if t.get('url', "").endswith('scrapyd/'):
-            t['url'] = t['url'][:-8]
-    targets.setdefault('default', {})
-    return targets
-
-
 def job_live(job, refresh_meta_after=60):
     """
     Check whether job is in 'pending' or 'running' state. If job metadata was
     fetched longer than `refresh_meta_after` seconds ago, refresh it.
     """
-    if not hasattr(job, '_metadata_updated'):
-        # Assume just loaded
+    if (not hasattr(job, '_state')
+            or time.time() - job._metadata_updated > refresh_meta_after):
+        job._state = job.metadata.get('state')
         job._metadata_updated = time.time()
-    if time.time() - job._metadata_updated > refresh_meta_after:
-        job.metadata.expire()
-        # Fetching actually happens on job.metadata['state'], but close enough
-        job._metadata_updated = time.time()
-    return job.metadata['state'] in ('pending', 'running')
+    return job._state in ('pending', 'running')
 
 
 def job_resource_iter(job, resource, output_json=False, follow=True,
                       tail=None):
     """
-    Given a python-hubstorage job and resource (e.g. job.items), return a
+    Given a python-scrapinghub job and resource (e.g. job.items), return a
     generator that periodically checks the job resource and yields its items.
     The generator will exit when the job has finished.
 
@@ -569,21 +548,12 @@ def job_resource_iter(job, resource, output_json=False, follow=True,
         last_item = total_nr_items - tail - 1
         if last_item >= 0:
             last_item_key = f'{job.key}/{last_item}'
-    if not job_live(job):
-        follow = False
-    resource_iter = resource.iter_json if output_json else resource.iter_values
-    if not follow:
-        for item in resource_iter(startafter=last_item_key):
-            yield item
-        return
+    follow = follow and job_live(job)
     while True:
-        # XXX: Always use iter_json until Kumo team fixes iter_values to also
-        # return '_key'
-        for json_line in resource.iter_json(startafter=last_item_key):
-            item = json.loads(json_line)
+        for item in resource.iter(startafter=last_item_key, meta=['_key']):
             last_item_key = item['_key']
-            yield json_line if output_json else item
-        if not job_live(job):
+            yield json.dumps(item, ensure_ascii=False) if output_json else item
+        if not follow or not job_live(job):
             break
         # Workers only upload data to hubstorage every 15 seconds
         time.sleep(15)
@@ -707,19 +677,10 @@ def download_from_pypi(dest, pkg=None, reqfile=None, extra_args=None):
     if (not pkg and not reqfile) or (pkg and reqfile):
         raise ValueError('Call with either pkg or reqfile')
     extra_args = extra_args or []
-    pip_version = Version(getattr(pip, '__version__', '1.0'))
-    cmd = 'install'
-    no_wheel = []
     target = [pkg] if pkg else ['-r', reqfile]
-    if pip_version >= Version('1.4'):
-        no_wheel = ['--no-use-wheel']
-    if pip_version >= Version('7'):
-        no_wheel = ['--no-binary=:all:']
-    if pip_version >= Version('8'):
-        cmd = 'download'
     with patch_sys_executable():
-        pip_main([cmd, '-d', dest, '--no-deps'] + no_wheel + extra_args +
-                 target)
+        pip_main(['download', '-d', dest, '--no-deps', '--no-binary=:all:'] +
+                 extra_args + target)
 
 
 @contextlib.contextmanager
@@ -837,7 +798,7 @@ def _update_conf_file(filename, target, project, repository, stack=None):
     and ``repository``, set ``stack`` as the default stack, then save it. If
     the file does not exist, it will be created."""
     try:
-        # XXX: Runtime import to avoid circular dependency
+        # Runtime import to avoid circular dependency
         from shub.config import ShubConfig
         conf = ShubConfig()
         if os.path.exists(filename):

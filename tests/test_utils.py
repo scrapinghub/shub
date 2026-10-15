@@ -4,8 +4,8 @@ import re
 import stat
 import sys
 import unittest
+import zipfile
 import textwrap
-import time
 from io import StringIO
 from unittest.mock import Mock, MagicMock, patch
 
@@ -93,6 +93,16 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
         with patch('shub.utils.which', return_value=None):
             self.assertIsNone(utils.pwd_git_version())
 
+    @patch('shub.utils.which', return_value='vcs')
+    @patch('shub.utils.run_cmd', side_effect=['1a2b3c', 'user/feature'])
+    def test_pwd_git_version_clean(self, mock_run_cmd, mock_which):
+        self.assertEqual(utils.pwd_git_version(), '1a2b3c-userfeature')
+
+    @patch('shub.utils.which', return_value='vcs')
+    @patch('shub.utils.run_cmd', side_effect=['42', 'user/feature'])
+    def test_pwd_hg_version_clean(self, mock_run_cmd, mock_which):
+        self.assertEqual(utils.pwd_hg_version(), 'r42-userfeature')
+
     @patch('shub.utils.pwd_git_version', return_value='ver_GIT')
     @patch('shub.utils.pwd_hg_version', return_value='ver_HG')
     @patch('shub.utils.pwd_bzr_version', return_value='ver_BZR')
@@ -164,22 +174,22 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
             with self.assertRaises(BadParameterException):
                 utils.get_job_specs(job_id)
 
-    @patch('shub.utils.HubstorageClient', autospec=True)
-    def test_get_job(self, mock_HSC):
-        class MockJob:
-            metadata = {'some': 'val'}
-        mockjob = MockJob()
-        mock_HSC.return_value.get_job.return_value = mockjob
+    @patch('shub.utils.ScrapinghubClient', autospec=True)
+    def test_get_job(self, mock_SC):
+        mockjob = mock_SC.return_value.get_job.return_value
+        mockjob.metadata.iter.return_value = iter([('state', 'running')])
         conf = mock_conf(self)
 
         self.assertIs(utils.get_job('1/1/1'), mockjob)
-        mock_HSC.assert_called_once_with(auth=conf.apikeys['default'])
+        mock_SC.assert_called_once_with(conf.apikeys['default'])
+        self.assertTrue(utils.job_live(mockjob))
+        self.assertFalse(mockjob.metadata.get.called)
 
         with self.assertRaises(BadParameterException):
             utils.get_job('1/1/')
 
         # Non-existent job
-        mockjob.metadata = None
+        mockjob.metadata.iter.side_effect = StopIteration
         with self.assertRaises(NotFoundException):
             utils.get_job('1/1/1')
 
@@ -208,28 +218,28 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
         assert utils._is_deploy_successful(last_logs)
 
     def test_job_live(self):
-        job = MagicMock()
-        job._metadata_updated = time.time()
+        job = MagicMock(spec=['metadata'])
         for live_value in ('pending', 'running'):
-            job.metadata.__getitem__.return_value = live_value
-            self.assertTrue(utils.job_live(job))
+            job.metadata.get.return_value = live_value
+            self.assertTrue(utils.job_live(job, refresh_meta_after=-1))
         for dead_value in ('finished', 'deleted'):
-            job.metadata.__getitem__.return_value = dead_value
-            self.assertFalse(utils.job_live(job))
+            job.metadata.get.return_value = dead_value
+            self.assertFalse(utils.job_live(job, refresh_meta_after=-1))
+        job.metadata.get.assert_called_with('state')
 
     def test_job_live_updates_metadata(self):
         job = MagicMock(spec=['metadata'])
         with patch('shub.utils.time.time') as mock_time:
             mock_time.return_value = 0
             utils.job_live(job)
+            self.assertEqual(job.metadata.get.call_count, 1)
             mock_time.return_value = 10
             utils.job_live(job, refresh_meta_after=20)
-            self.assertFalse(job.metadata.expire.called)
+            self.assertEqual(job.metadata.get.call_count, 1)
             utils.job_live(job, refresh_meta_after=5)
-            self.assertTrue(job.metadata.expire.called)
-            job.metadata.expire.reset_mock()
+            self.assertEqual(job.metadata.get.call_count, 2)
             utils.job_live(job, refresh_meta_after=5)
-            self.assertFalse(job.metadata.expire.called)
+            self.assertEqual(job.metadata.get.call_count, 2)
 
     @patch('shub.utils.time.sleep')
     def test_job_resource_iter(self, mock_sleep):
@@ -238,7 +248,10 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
         job.metadata = {'state': 'running'}
 
         def make_items(iterable):
-            return [json.dumps({'_key': x}) for x in iterable]
+            return [{'_key': x} for x in iterable]
+
+        def make_lines(iterable):
+            return [json.dumps(x) for x in make_items(iterable)]
 
         def magic_iter(*args, **kwargs):
             """
@@ -253,7 +266,7 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
             elif magic_iter.stage == 1:
                 self.assertEqual(kwargs['startafter'], 3)
                 magic_iter.stage = 0
-                job.metadata = {'state': 'finished'}
+                job._state = 'finished'
                 return iter(make_items([4, 5, 6]))
             elif magic_iter.stage == 2:
                 self.assertEqual(kwargs['startafter'], 'jobkey/996')
@@ -268,19 +281,19 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
                 output_json=True,
             ))
 
-        job.resource.iter_json = magic_iter
+        job.resource.iter = magic_iter
 
         magic_iter.stage = 0
-        self.assertEqual(jri_result(False), make_items([1, 2, 3]))
+        self.assertEqual(jri_result(False), make_lines([1, 2, 3]))
         self.assertFalse(mock_sleep.called)
 
         magic_iter.stage = 0
-        self.assertEqual(jri_result(True), make_items([1, 2, 3, 4, 5, 6]))
+        self.assertEqual(jri_result(True), make_lines([1, 2, 3, 4, 5, 6]))
         self.assertTrue(mock_sleep.called)
 
         magic_iter.stage = 0
-        job.metadata = {'state': 'finished'}
-        self.assertEqual(jri_result(True), make_items([1, 2, 3]))
+        job._state = 'finished'
+        self.assertEqual(jri_result(True), make_lines([1, 2, 3]))
 
         magic_iter.stage = 2
         job.resource.stats.return_value = {'totals': {'input_values': 1000}}
@@ -413,8 +426,7 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
                                 _stack_release(utils.FALLBACK_SCRAPY_STACK))
 
     @patch('shub.utils.pip_main', autospec=True)
-    @patch('shub.utils.pip', autospec=True)
-    def test_download_from_pypi(self, mock_pip, mock_pip_main):
+    def test_download_from_pypi(self, mock_pip_main):
         def _call(*args, **kwargs):
             utils.download_from_pypi(*args, **kwargs)
             return mock_pip_main.call_args[0][0]
@@ -425,31 +437,27 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
             utils.download_from_pypi('tmpdir', pkg='shub', reqfile='req.txt')
         self.assertFalse(mock_pip_main.called)
 
-        # 1.0 (Ubuntu Precise)
-        del mock_pip.__version__
-        pipargs = _call('tmpdir', pkg='shub')
-        self.assertNotIn('--no-use-wheel', pipargs)
-
-        # 1.5.4 (Ubuntu Trusty)
-        mock_pip.__version__ = '1.5.4'
         pipargs = _call('tmpdir', pkg='shub', extra_args=['--x'])
-        self.assertEqual(pipargs[0], 'install')
-        for expected_arg in ['--no-use-wheel', '--no-deps', 'shub', '--x']:
+        self.assertEqual(pipargs[0], 'download')
+        for expected_arg in ['--no-binary=:all:', '--no-deps', 'shub', '--x']:
             self.assertIn(expected_arg, pipargs)
         # Make sure list contains '-d' followed by 'tmpdir'
         self.assertEqual(pipargs.index('-d') + 1, pipargs.index('tmpdir'))
+
         pipargs = _call('tmpdir', reqfile='req.txt')
         self.assertEqual(pipargs.index('-r') + 1, pipargs.index('req.txt'))
 
-        # Replace deprecated commands in newer versions
-        mock_pip.__version__ = '7.1.2.dev0'
-        pipargs = _call('tmpdir', pkg='shub')
-        self.assertEqual(pipargs[0], 'install')
-        self.assertIn('--no-binary=:all:', pipargs)
-        mock_pip.__version__ = '8.0.2'
-        pipargs = _call('tmpdir', pkg='shub')
-        self.assertEqual(pipargs[0], 'download')
-        self.assertIn('--no-binary=:all:', pipargs)
+    def test_decompress_egg_files(self):
+        with self.runner.isolated_filesystem():
+            with zipfile.ZipFile('mypkg.whl', 'w') as f:
+                f.writestr('mypkg/__init__.py', '')
+            utils.decompress_egg_files()
+            self.assertTrue(os.path.isfile('mypkg/mypkg/__init__.py'))
+
+    def test_decompress_egg_files_without_eggs(self):
+        with self.runner.isolated_filesystem():
+            with self.assertRaises(NotFoundException):
+                utils.decompress_egg_files()
 
     def test_echo_short_log_if_deployed(self):
         last_logs = ["last log line"]
