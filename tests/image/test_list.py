@@ -10,6 +10,8 @@ from shub.image.list import cli, list_cmd
 from shub.image.list import _run_cmd_in_docker_container
 from shub.image.list import _extract_metadata_from_image_info_output
 
+from .utils import with_docker_platform
+
 
 def _mock_docker_client(wait_code=0, logs=None):
     client_mock = mock.Mock()
@@ -116,8 +118,11 @@ def test_run_cmd_in_docker_container(get_docker_client_mock):
     result = _run_cmd_in_docker_container('image', 'test-cmd', test_env)
     assert result[0] == 0
     assert result[1] == 'abc\ndef\ndsd'
-    docker_client.create_container.assert_called_with(
-        command=['test-cmd'], environment=test_env, image='image')
+    docker_client.create_container.assert_called_with(**with_docker_platform({
+        'command': ['test-cmd'],
+        'environment': test_env,
+        'image': 'image',
+    }))
     docker_client.start.assert_called_with({'Id': '1234'})
     docker_client.wait.assert_called_with(container="1234")
     docker_client.logs.assert_called_with(

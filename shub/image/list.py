@@ -105,7 +105,8 @@ def _get_project_settings(project, endpoint, apikey):
 def _run_cmd_in_docker_container(image_name, command, environment):
     """Run a command inside the image container."""
     client = utils.get_docker_client()
-    container = client.create_container(
+    container = utils.call_docker_with_platform(
+        client.create_container,
         image=image_name,
         command=[command],
         environment=environment,

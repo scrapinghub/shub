@@ -3,6 +3,8 @@ import shutil
 import tempfile
 from contextlib import contextmanager
 
+from shub.image import utils as image_utils
+
 
 SH_CONFIG_FILE = """
 projects:
@@ -73,3 +75,12 @@ def add_fake_setup_py(tmpdir):
     setup_path = os.path.join(tmpdir, 'setup.py')
     with open(setup_path, 'w') as setup_file:
         setup_file.write(SH_SETUP_FILE)
+
+
+def with_docker_platform(kwargs):
+    """Add platform argument if shub selected one for Docker operations."""
+    call_kwargs = dict(kwargs)
+    docker_platform = image_utils.get_docker_platform()
+    if docker_platform:
+        call_kwargs['platform'] = docker_platform
+    return call_kwargs

@@ -1,4 +1,5 @@
 import os
+import platform
 import re
 import sys
 import shutil
@@ -42,6 +43,8 @@ should not contain any errors.
 
 You can learn about Docker at https://www.docker.com/.
 """
+
+DOCKER_PLATFORM = 'linux/amd64'
 
 
 def is_verbose():
@@ -112,6 +115,28 @@ def get_docker_client(validate=True):
     if validate:
         validate_connection_with_docker_daemon(client)
     return client
+
+
+def get_docker_platform():
+    """Return Docker platform for hosts that need amd64 emulation."""
+    host_arch = platform.machine().lower()
+    if host_arch in ('arm64', 'aarch64'):
+        return DOCKER_PLATFORM
+    return None
+
+
+def call_docker_with_platform(method, **kwargs):
+    """Call a Docker SDK method with auto-selected platform when available.
+
+    For older Docker SDK versions, some methods may not accept `platform`.
+    In that case, retry transparently without passing it.
+    """
+    docker_platform = get_docker_platform()
+    if not docker_platform:
+        return method(**kwargs)
+
+    debug_log(f"Using Docker platform emulation: {docker_platform}")
+    return method(platform=docker_platform, **kwargs)
 
 
 def validate_connection_with_docker_daemon(client):
