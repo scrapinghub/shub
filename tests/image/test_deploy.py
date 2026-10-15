@@ -94,6 +94,20 @@ def test_cli_insecure_registry(list_mocked, post_mocked, get_mocked):
     get_mocked.assert_called_with('https://status-url', timeout=300)
 
 
+@pytest.mark.usefixtures('logged_out')
+@mock.patch('requests.get')
+@mock.patch('requests.post')
+@mock.patch('shub.image.list.list_cmd')
+def test_cli_apikey_logged_out(list_mocked, post_mocked, get_mocked):
+    list_mocked.return_value = {'project_type': 'scrapy', 'spiders': []}
+    post_mocked.return_value.headers = {'location': 'https://status-url'}
+
+    result = CliRunner().invoke(
+        cli, ["dev", "--version", "test", "--apikey", "xyz"])
+    assert result.exit_code == 0, result.output
+    assert post_mocked.call_args.kwargs['auth'] == ('xyz', '')
+
+
 # Tests for progress logic
 
 
