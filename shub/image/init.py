@@ -71,8 +71,11 @@ def _deprecate_base_deps_parameter(ctx, param, value):
 @click.option("--list-recommended-reqs", is_flag=True, is_eager=True,
               expose_value=False, callback=list_recommended_python_reqs,
               help="list recommended python requirements")
-@click.option("--project", default="default",
-              help="project name to get settings module from scrapy.cfg")
+@click.option("--project", default=None,
+              help="project name to get settings module from scrapy.cfg "
+                   "(overrides $SCRAPY_SETTINGS_MODULE; if not given, "
+                   "$SCRAPY_SETTINGS_MODULE, then $SCRAPY_PROJECT or "
+                   "'default' are used)")
 @click.option("--base-image", default=DEFAULT_BASE_IMAGE,
               help="base docker image name")
 @click.option("--base-deps", default='',
@@ -83,18 +86,22 @@ def _deprecate_base_deps_parameter(ctx, param, value):
 @click.option("--requirements", default="requirements.txt",
               help="path to requirements.txt")
 def cli(project, base_image, base_deps, add_deps, requirements):
-    closest_scrapy_cfg = shub_utils.closest_file('scrapy.cfg')
-    scrapy_config = shub_utils.get_config()
-    if not closest_scrapy_cfg or not scrapy_config.has_option('settings', project):
+    # Require a local scrapy.cfg or an importable SCRAPY_SETTINGS_MODULE, so
+    # that global scrapy.cfg files alone don't make any directory a project
+    if not shub_utils.inside_project():
         raise shub_exceptions.BadConfigException(
-            'Cannot find Scrapy project settings. Please ensure that current directory '
-            'contains scrapy.cfg with settings section, see example at '
-            'https://doc.scrapy.org/en/latest/topics/commands.html#default-structure-of-scrapy-projects')  # NOQA
-    project_dir = os.path.dirname(closest_scrapy_cfg)
+            'Cannot find a Scrapy project in this location. Run this command '
+            'from a directory containing scrapy.cfg, or set '
+            'SCRAPY_SETTINGS_MODULE to an importable settings module.')
+    settings_module = shub_utils._get_project_settings_module(project)
+    if not settings_module:
+        raise shub_exceptions.BadConfigException(
+            shub_utils._SETTINGS_MODULE_NOT_FOUND_MSG)
+    closest_scrapy_cfg = shub_utils.closest_file('scrapy.cfg')
+    project_dir = os.path.dirname(closest_scrapy_cfg) if closest_scrapy_cfg else os.getcwd()
     dockefile_path = os.path.join(project_dir, 'Dockerfile')
     if os.path.exists(dockefile_path):
         raise shub_exceptions.ShubException('Found a Dockerfile in the project directory, aborting')
-    settings_module = scrapy_config.get('settings', 'default')
     shub_utils.create_default_setup_py(settings=settings_module)
     values = {
         'base_image':   base_image,

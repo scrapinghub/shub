@@ -19,9 +19,16 @@ sys.path.insert(0, os.path.abspath('..'))
 
 
 from shub import __version__  # noqa
+from shub.utils import get_latest_scrapy_stack  # noqa
 
 YEAR = datetime.now().year
 VERSION = __version__.rsplit('.', 1)[0]
+
+# Stack that shub sets in newly generated scrapinghub.yml files, looked up at
+# build time so that the docs do not need an update for each new stack.
+rst_epilog = f"""
+.. |latest-scrapy-stack| replace:: {get_latest_scrapy_stack()}
+"""
 
 # -- General configuration ------------------------------------------------
 
