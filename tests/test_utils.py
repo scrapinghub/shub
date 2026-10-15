@@ -1,14 +1,16 @@
 import json
 import os
+import re
 import stat
 import sys
 import unittest
+import zipfile
 import textwrap
-import time
 from io import StringIO
 from unittest.mock import Mock, MagicMock, patch
 
 import click
+import requests
 import yaml
 from click.testing import CliRunner
 from collections import deque
@@ -23,35 +25,30 @@ from shub.exceptions import (
 
 from .utils import AssertInvokeRaisesMixin, mock_conf
 
+# What the (mocked) stack lookup returns in the wizard tests
+LATEST_STACK = 'scrapy:2.99-20990101'
+
+
+def _tags_response(names, next_url=None):
+    """Mock a page of GitHub's list of repository tags."""
+    response = Mock()
+    response.json.return_value = [{'name': name} for name in names]
+    response.links = {'next': {'url': next_url}} if next_url else {}
+    return response
+
+
+def _stack_release(stack):
+    """Return a date-frozen stack, e.g. scrapy:2.18-20260824, as a
+    (major, minor, date) tuple, so that stacks can be compared."""
+    major, minor, date = re.fullmatch(
+        r'scrapy:(\d+)\.(\d+)-(\d{8})', stack).groups()
+    return int(major), int(minor), date
+
 
 class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
 
     def setUp(self):
         self.runner = CliRunner()
-
-    @patch('shub.utils.sys.frozen', new=True, create=True)
-    @patch('shub.utils.find_exe', return_value='/my/python')
-    def test_patch_sys_executable(self, mock_find_exe):
-        original_exe = sys.executable
-        with patch('shub.utils.sys.frozen', new=False):
-            with utils.patch_sys_executable():
-                self.assertEqual(sys.executable, original_exe)
-        with utils.patch_sys_executable():
-            self.assertEqual(sys.executable, '/my/python')
-        # Make sure we properly cleaned up after ourselves
-        self.assertEqual(sys.executable, original_exe)
-        mock_find_exe.side_effect = NotFoundException
-        with self.assertRaises(NotFoundException):
-            with utils.patch_sys_executable():
-                pass
-
-    @patch('shub.utils.which')
-    def test_find_exe(self, mock_fe):
-        mock_fe.return_value = '/usr/bin/python'
-        self.assertEqual(utils.find_exe('python'), '/usr/bin/python')
-        mock_fe.return_value = None
-        with self.assertRaises(NotFoundException):
-            utils.find_exe('python')
 
     def test_run_cmd_captures_stderr(self):
         cmd = [
@@ -71,6 +68,16 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
         self.assertIsNotNone(utils.pwd_git_version())
         with patch('shub.utils.which', return_value=None):
             self.assertIsNone(utils.pwd_git_version())
+
+    @patch('shub.utils.which', return_value='vcs')
+    @patch('shub.utils.run_cmd', side_effect=['1a2b3c', 'user/feature'])
+    def test_pwd_git_version_clean(self, mock_run_cmd, mock_which):
+        self.assertEqual(utils.pwd_git_version(), '1a2b3c-userfeature')
+
+    @patch('shub.utils.which', return_value='vcs')
+    @patch('shub.utils.run_cmd', side_effect=['42', 'user/feature'])
+    def test_pwd_hg_version_clean(self, mock_run_cmd, mock_which):
+        self.assertEqual(utils.pwd_hg_version(), 'r42-userfeature')
 
     @patch('shub.utils.pwd_git_version', return_value='ver_GIT')
     @patch('shub.utils.pwd_hg_version', return_value='ver_HG')
@@ -143,22 +150,22 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
             with self.assertRaises(BadParameterException):
                 utils.get_job_specs(job_id)
 
-    @patch('shub.utils.HubstorageClient', autospec=True)
-    def test_get_job(self, mock_HSC):
-        class MockJob:
-            metadata = {'some': 'val'}
-        mockjob = MockJob()
-        mock_HSC.return_value.get_job.return_value = mockjob
+    @patch('shub.utils.ScrapinghubClient', autospec=True)
+    def test_get_job(self, mock_SC):
+        mockjob = mock_SC.return_value.get_job.return_value
+        mockjob.metadata.iter.return_value = iter([('state', 'running')])
         conf = mock_conf(self)
 
         self.assertIs(utils.get_job('1/1/1'), mockjob)
-        mock_HSC.assert_called_once_with(auth=conf.apikeys['default'])
+        mock_SC.assert_called_once_with(conf.apikeys['default'])
+        self.assertTrue(utils.job_live(mockjob))
+        self.assertFalse(mockjob.metadata.get.called)
 
         with self.assertRaises(BadParameterException):
             utils.get_job('1/1/')
 
         # Non-existent job
-        mockjob.metadata = None
+        mockjob.metadata.iter.side_effect = StopIteration
         with self.assertRaises(NotFoundException):
             utils.get_job('1/1/1')
 
@@ -187,28 +194,28 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
         assert utils._is_deploy_successful(last_logs)
 
     def test_job_live(self):
-        job = MagicMock()
-        job._metadata_updated = time.time()
+        job = MagicMock(spec=['metadata'])
         for live_value in ('pending', 'running'):
-            job.metadata.__getitem__.return_value = live_value
-            self.assertTrue(utils.job_live(job))
+            job.metadata.get.return_value = live_value
+            self.assertTrue(utils.job_live(job, refresh_meta_after=-1))
         for dead_value in ('finished', 'deleted'):
-            job.metadata.__getitem__.return_value = dead_value
-            self.assertFalse(utils.job_live(job))
+            job.metadata.get.return_value = dead_value
+            self.assertFalse(utils.job_live(job, refresh_meta_after=-1))
+        job.metadata.get.assert_called_with('state')
 
     def test_job_live_updates_metadata(self):
         job = MagicMock(spec=['metadata'])
         with patch('shub.utils.time.time') as mock_time:
             mock_time.return_value = 0
             utils.job_live(job)
+            self.assertEqual(job.metadata.get.call_count, 1)
             mock_time.return_value = 10
             utils.job_live(job, refresh_meta_after=20)
-            self.assertFalse(job.metadata.expire.called)
+            self.assertEqual(job.metadata.get.call_count, 1)
             utils.job_live(job, refresh_meta_after=5)
-            self.assertTrue(job.metadata.expire.called)
-            job.metadata.expire.reset_mock()
+            self.assertEqual(job.metadata.get.call_count, 2)
             utils.job_live(job, refresh_meta_after=5)
-            self.assertFalse(job.metadata.expire.called)
+            self.assertEqual(job.metadata.get.call_count, 2)
 
     @patch('shub.utils.time.sleep')
     def test_job_resource_iter(self, mock_sleep):
@@ -217,7 +224,10 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
         job.metadata = {'state': 'running'}
 
         def make_items(iterable):
-            return [json.dumps({'_key': x}) for x in iterable]
+            return [{'_key': x} for x in iterable]
+
+        def make_lines(iterable):
+            return [json.dumps(x) for x in make_items(iterable)]
 
         def magic_iter(*args, **kwargs):
             """
@@ -232,7 +242,7 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
             elif magic_iter.stage == 1:
                 self.assertEqual(kwargs['startafter'], 3)
                 magic_iter.stage = 0
-                job.metadata = {'state': 'finished'}
+                job._state = 'finished'
                 return iter(make_items([4, 5, 6]))
             elif magic_iter.stage == 2:
                 self.assertEqual(kwargs['startafter'], 'jobkey/996')
@@ -247,19 +257,19 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
                 output_json=True,
             ))
 
-        job.resource.iter_json = magic_iter
+        job.resource.iter = magic_iter
 
         magic_iter.stage = 0
-        self.assertEqual(jri_result(False), make_items([1, 2, 3]))
+        self.assertEqual(jri_result(False), make_lines([1, 2, 3]))
         self.assertFalse(mock_sleep.called)
 
         magic_iter.stage = 0
-        self.assertEqual(jri_result(True), make_items([1, 2, 3, 4, 5, 6]))
+        self.assertEqual(jri_result(True), make_lines([1, 2, 3, 4, 5, 6]))
         self.assertTrue(mock_sleep.called)
 
         magic_iter.stage = 0
-        job.metadata = {'state': 'finished'}
-        self.assertEqual(jri_result(True), make_items([1, 2, 3]))
+        job._state = 'finished'
+        self.assertEqual(jri_result(True), make_lines([1, 2, 3]))
 
         magic_iter.stage = 2
         job.resource.stats.return_value = {'totals': {'input_values': 1000}}
@@ -337,44 +347,95 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
         with self.assertRaises(MockException):
             utils.update_available(silent_fail=False)
 
-    @patch('shub.utils.pip_main', autospec=True)
-    @patch('shub.utils.pip', autospec=True)
-    def test_download_from_pypi(self, mock_pip, mock_pip_main):
+    @patch('shub.utils.requests.get', autospec=True)
+    def test_get_latest_scrapy_stack(self, mock_get):
+        mock_get.side_effect = [
+            _tags_response(
+                ['2.19-rc1', '2.18-20260801', '2.10-20230901', '2.9-20230720',
+                 '2.14'],
+                next_url='https://api.github.com/page2',
+            ),
+            _tags_response(['2.18-20260824', '1.8-py3-20191203']),
+        ]
+        # 2.18 > 2.10 > 2.9, the newest 2.18 release wins, and 2.19 has no
+        # release yet
+        self.assertEqual(utils.get_latest_scrapy_stack(),
+                         'scrapy:2.18-20260824')
+        self.assertEqual(mock_get.call_count, 2)
+        self.assertEqual(mock_get.call_args[0][0],
+                         'https://api.github.com/page2')
+
+    @patch('shub.utils.requests.get', autospec=True)
+    def test_get_latest_scrapy_stack_fallback(self, mock_get):
+        http_error = _tags_response([])
+        http_error.raise_for_status.side_effect = requests.HTTPError
+        unexpected_json = _tags_response([])
+        unexpected_json.json.return_value = {'message': 'Not Found'}
+        for name, side_effect in (
+            ('offline', requests.ConnectionError),
+            ('HTTP error, e.g. rate limit', [http_error]),
+            ('unexpected JSON', [unexpected_json]),
+            ('no released stacks', [_tags_response(['2.19-rc1'])]),
+        ):
+            with self.subTest(name):
+                mock_get.side_effect = side_effect
+                self.assertEqual(utils.get_latest_scrapy_stack(),
+                                 utils.FALLBACK_SCRAPY_STACK)
+
+    def test_fetch_latest_scrapy_stack_online(self):
+        # Unlike the tests above, reach the actual GitHub API, so that
+        # upstream changes, e.g. in the format of its responses or of the
+        # stack tags, which would make get_latest_scrapy_stack() silently fall
+        # back to FALLBACK_SCRAPY_STACK, make this test fail.
+        try:
+            stack = utils._fetch_latest_scrapy_stack()
+        except (requests.ConnectionError, requests.Timeout) as e:
+            self.skipTest("Cannot reach GitHub: %s" % e)
+        except requests.HTTPError as e:
+            # Anonymous requests are rate-limited per IP address, which may be
+            # shared, e.g. by macOS CI runners
+            if e.response.headers.get('X-RateLimit-Remaining') == '0':
+                self.skipTest("GitHub API rate limit exceeded")
+            raise
+        # FALLBACK_SCRAPY_STACK was the latest stack when it was last bumped
+        self.assertGreaterEqual(_stack_release(stack),
+                                _stack_release(utils.FALLBACK_SCRAPY_STACK))
+
+    @patch('shub.utils.subprocess.call', autospec=True)
+    def test_download_from_pypi(self, mock_call):
         def _call(*args, **kwargs):
             utils.download_from_pypi(*args, **kwargs)
-            return mock_pip_main.call_args[0][0]
+            cmd = mock_call.call_args[0][0]
+            self.assertEqual(cmd[:3], [sys.executable, '-m', 'pip'])
+            return cmd[3:]
 
         with self.assertRaises(ValueError):
             utils.download_from_pypi('tmpdir')
         with self.assertRaises(ValueError):
             utils.download_from_pypi('tmpdir', pkg='shub', reqfile='req.txt')
-        self.assertFalse(mock_pip_main.called)
+        self.assertFalse(mock_call.called)
 
-        # 1.0 (Ubuntu Precise)
-        del mock_pip.__version__
-        pipargs = _call('tmpdir', pkg='shub')
-        self.assertNotIn('--no-use-wheel', pipargs)
-
-        # 1.5.4 (Ubuntu Trusty)
-        mock_pip.__version__ = '1.5.4'
         pipargs = _call('tmpdir', pkg='shub', extra_args=['--x'])
-        self.assertEqual(pipargs[0], 'install')
-        for expected_arg in ['--no-use-wheel', '--no-deps', 'shub', '--x']:
+        self.assertEqual(pipargs[0], 'download')
+        for expected_arg in ['--no-binary=:all:', '--no-deps', 'shub', '--x']:
             self.assertIn(expected_arg, pipargs)
         # Make sure list contains '-d' followed by 'tmpdir'
         self.assertEqual(pipargs.index('-d') + 1, pipargs.index('tmpdir'))
+
         pipargs = _call('tmpdir', reqfile='req.txt')
         self.assertEqual(pipargs.index('-r') + 1, pipargs.index('req.txt'))
 
-        # Replace deprecated commands in newer versions
-        mock_pip.__version__ = '7.1.2.dev0'
-        pipargs = _call('tmpdir', pkg='shub')
-        self.assertEqual(pipargs[0], 'install')
-        self.assertIn('--no-binary=:all:', pipargs)
-        mock_pip.__version__ = '8.0.2'
-        pipargs = _call('tmpdir', pkg='shub')
-        self.assertEqual(pipargs[0], 'download')
-        self.assertIn('--no-binary=:all:', pipargs)
+    def test_decompress_egg_files(self):
+        with self.runner.isolated_filesystem():
+            with zipfile.ZipFile('mypkg.whl', 'w') as f:
+                f.writestr('mypkg/__init__.py', '')
+            utils.decompress_egg_files()
+            self.assertTrue(os.path.isfile('mypkg/mypkg/__init__.py'))
+
+    def test_decompress_egg_files_without_eggs(self):
+        with self.runner.isolated_filesystem():
+            with self.assertRaises(NotFoundException):
+                utils.decompress_egg_files()
 
     def test_echo_short_log_if_deployed(self):
         last_logs = ["last log line"]
@@ -492,6 +553,10 @@ class OnboardingWizardTestCase(unittest.TestCase):
     def setUp(self):
         self.runner = CliRunner()
         self.has_project_access = True
+        patcher = patch('shub.utils.get_latest_scrapy_stack',
+                        return_value=LATEST_STACK)
+        self.get_latest_scrapy_stack = patcher.start()
+        self.addCleanup(patcher.stop)
 
     @patch('shub.utils.has_project_access')
     def _test_wizard(self, mock_project_access, conf=None, target='default',
@@ -539,7 +604,13 @@ class OnboardingWizardTestCase(unittest.TestCase):
         result, conf, sh_yml = self._test_wizard(input='12345\n')
         assert result.exit_code == 0
         assert conf.projects == {'default': 12345}
-        assert sh_yml == {'project': 12345}
+        assert conf.stacks == {'default': LATEST_STACK}
+        assert sh_yml == {
+            'project': 12345,
+            'stack': LATEST_STACK,
+        }
+        assert LATEST_STACK in result.output
+        self.get_latest_scrapy_stack.assert_called_once_with()
 
     def test_custom_project(self):
         result, conf, sh_yml = self._test_wizard(
@@ -548,6 +619,7 @@ class OnboardingWizardTestCase(unittest.TestCase):
         assert conf.projects == {'default': 12345}
         assert conf.images == {'default': True}
         assert sh_yml == {'project': 12345, 'image': True}
+        self.get_latest_scrapy_stack.assert_not_called()
 
     def test_custom_repository(self):
         result, conf, sh_yml = self._test_wizard(
@@ -562,7 +634,10 @@ class OnboardingWizardTestCase(unittest.TestCase):
         assert result.exit_code == 0
         assert conf.projects == {'default': 12345}
         assert not conf.images
-        assert sh_yml == {'project': 12345}
+        assert sh_yml == {
+            'project': 12345,
+            'stack': LATEST_STACK,
+        }
 
     def test_ambiguous_project_custom(self):
         result, conf, sh_yml = self._test_wizard(
@@ -592,7 +667,9 @@ class OnboardingWizardTestCase(unittest.TestCase):
         assert result.exit_code == 0
         assert not result.output
         assert not conf.images
+        assert not conf.stacks
         assert sh_yml == {'project': 12345}
+        self.get_latest_scrapy_stack.assert_not_called()
 
     def test_add_image_for_existing_default_target(self):
         original_sh_yml = 'projects:\n  default: 12345\n  prod: 33333\n'
@@ -645,7 +722,10 @@ class OnboardingWizardTestCase(unittest.TestCase):
         result, conf, sh_yml = self._test_wizard(target='12345')
         assert result.exit_code == 0
         assert conf.projects == {'default': 12345}
-        assert sh_yml == {'project': 12345}
+        assert sh_yml == {
+            'project': 12345,
+            'stack': LATEST_STACK,
+        }
 
     def test_custom_project_with_numeric_target(self):
         result, conf, sh_yml = self._test_wizard(
@@ -663,7 +743,10 @@ class OnboardingWizardTestCase(unittest.TestCase):
         assert result.exit_code == 0
         assert conf.projects == {'default': 12345, 'prod': 33333}
         assert conf.apikeys == {'default': 'abc'}
-        assert sh_yml == {'project': 12345}
+        assert sh_yml == {
+            'project': 12345,
+            'stack': LATEST_STACK,
+        }
 
     def test_dont_leak_global_config_on_image(self):
         conf = ShubConfig()
@@ -677,3 +760,33 @@ class OnboardingWizardTestCase(unittest.TestCase):
         assert conf.apikeys == {'default': 'abc'}
         assert conf.images == {'default': 'repo'}
         assert sh_yml == {'project': 12345, 'image': 'repo'}
+
+    def test_dont_set_stack_for_globally_defined_project(self):
+        conf = ShubConfig()
+        conf.projects = {'default': 12345}
+        conf.apikeys = {'default': 'abc'}
+        result, conf, sh_yml = self._test_wizard(conf=conf)
+        assert result.exit_code == 0
+        assert not conf.stacks
+        assert not sh_yml
+        self.get_latest_scrapy_stack.assert_not_called()
+
+    def test_dont_override_global_default_stack(self):
+        conf = ShubConfig()
+        conf.apikeys = {'default': 'abc'}
+        conf.stacks = {'default': 'scrapy:2.11'}
+        result, conf, sh_yml = self._test_wizard(conf=conf, input='12345\n')
+        assert result.exit_code == 0
+        assert conf.stacks == {'default': 'scrapy:2.11'}
+        assert sh_yml == {'project': 12345}
+        self.get_latest_scrapy_stack.assert_not_called()
+
+    def test_dont_set_stack_with_global_default_image(self):
+        conf = ShubConfig()
+        conf.apikeys = {'default': 'abc'}
+        conf.images = {'default': True}
+        result, conf, sh_yml = self._test_wizard(conf=conf, input='12345\n')
+        assert result.exit_code == 0
+        assert not conf.stacks
+        assert sh_yml == {'project': 12345}
+        self.get_latest_scrapy_stack.assert_not_called()

@@ -22,8 +22,13 @@ your ``scrapinghub.yml``, you can leave out the parameter completely::
     {"status": "ok", "project": 12345, "version": "3af023e-master", "spiders": 1}
     Run your spiders at: https://app.zyte.com/p/12345/
 
-You can also deploy your project from a Python egg, or build one without
-deploying::
+You can also build your project's Python egg without deploying it, and
+deploy your project from an existing egg::
+
+    $ shub build-egg egg_name
+    Writing egg to egg_name
+
+::
 
     $ shub deploy --egg egg_name --version 1.0.0
     Using egg: egg_name
@@ -31,10 +36,10 @@ deploying::
     {"status": "ok", "project": 12345, "version": "1.0.0", "spiders": 1}
     Run your spiders at: https://app.zyte.com/p/12345/
 
-::
-
-    $ shub deploy --build-egg egg_name
-    Writing egg to egg_name
+``shub build-egg`` builds the egg of your project only. It does not build or
+deploy the libraries your project depends on, see :ref:`deploying-dependencies`
+for that. Unlike ``shub deploy``, it does not need a target or an API key,
+because it does not talk to Scrapy Cloud.
 
 If your project is inside a git repository, the egg is built from a copy of
 the working directory that leaves out anything git considers ignored (e.g.
@@ -159,5 +164,20 @@ It is also possible to define the stack per project for advanced use cases::
         id: 12345
         stack: scrapy:1.3-py3
       prod: 33333  # will use Scrapinghub's default stack
+
+Run ``shub list-stacks`` to see the available stacks.
+
+Projects without a configured stack use Scrapy Cloud's default stack, which
+can be much older than the latest one. That is why, when ``shub deploy``
+creates a new ``scrapinghub.yml`` for a project that does not use a
+:ref:`custom Docker image <deploy-custom-image>`, it sets ``stack`` to the
+latest Scrapy stack released in the `scrapinghub-stack-scrapy
+<https://github.com/scrapinghub/scrapinghub-stack-scrapy/tags>`__ repository,
+unless a default stack is already configured, e.g. in ``~/.scrapinghub.yml``.
+The stack is frozen to its release date, e.g. |latest-scrapy-stack|, so that
+your deploys keep using the same environment until you change it. If the list
+of stacks cannot be fetched, e.g. while offline, the latest stack at the time
+your version of shub was released is used instead. shub never adds a stack to
+an existing ``scrapinghub.yml``.
 
 .. _`Scrapy Cloud stack`: https://helpdesk.scrapinghub.com/support/solutions/articles/22000200402-scrapy-cloud-stacks

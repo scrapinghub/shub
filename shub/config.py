@@ -1,4 +1,3 @@
-import netrc
 import os
 from collections import namedtuple
 from urllib.parse import urlparse, urlunparse
@@ -7,14 +6,13 @@ import click
 import yaml
 from dotenv import dotenv_values, find_dotenv
 
-from shub import DOCS_LINK, CONFIG_DOCS_LINK
+from shub import CONFIG_DOCS_LINK
 from shub.exceptions import (BadParameterException, BadConfigException,
                              ConfigParseException, MissingAuthException,
                              NotFoundException, ShubDeprecationWarning,
                              print_warning)
-from shub.utils import (closest_file, get_scrapycfg_targets, get_sources,
-                        pwd_hg_version, pwd_git_version, pwd_version,
-                        update_yaml_dict)
+from shub.utils import (closest_file, pwd_hg_version, pwd_git_version,
+                        pwd_version, update_yaml_dict)
 
 APIKEY_SHOW_N_CHARS = 6
 SH_IMAGES_REGISTRY = 'images.scrapinghub.com'
@@ -22,7 +20,6 @@ SH_IMAGES_REPOSITORY = SH_IMAGES_REGISTRY + '/project/{project}'
 GLOBAL_SCRAPINGHUB_YML_PATH = os.path.expanduser(
     os.environ.get('SHUB_GLOBAL_CONFIG', '~/.scrapinghub.yml')
 )
-NETRC_PATH = os.path.expanduser('~/_netrc' if os.name == 'nt' else '~/.netrc')
 
 
 class ShubConfig:
@@ -115,36 +112,6 @@ class ShubConfig:
                 "Unable to parse configuration file %s. Maybe a missing "
                 "colon?" % filename
             )
-
-    def _load_scrapycfg_target(self, tname, t):
-        default_endpoint = ('url' not in t or
-                            t['url'] == self.endpoints['default'])
-        default_user = ('username' not in t or
-                        t['username'] == self.apikeys.get('default'))
-        if 'project' in t:
-            if tname == 'default' or (default_endpoint and default_user):
-                self.projects[tname] = t['project']
-            elif default_endpoint and not default_user:
-                self.projects[tname] = {
-                    'id': t['project'], 'apikey': tname,
-                }
-            else:
-                self.projects[tname] = tname + '/' + t['project']
-        if not default_endpoint:
-            self.endpoints[tname] = t['url']
-        if not default_user or (not default_endpoint and 'username' in t):
-            self.apikeys[tname] = t['username']
-        if 'version' in t:
-            self.version = t['version']
-
-    def load_scrapycfg(self, sources):
-        """Load configuration from a list of scrapy.cfg-like sources."""
-        targets = get_scrapycfg_targets(sources)
-        self._load_scrapycfg_target('default', targets['default'])
-        del targets['default']
-        for tname, t in targets.items():
-            self._load_scrapycfg_target(tname, t)
-        self._check_endpoints()
 
     def save(self, path=None, options=None):
         if path is None:
@@ -270,8 +237,12 @@ class ShubConfig:
             raise NotFoundException("Could not find endpoint %s. Please "
                                     "define it in your scrapinghub.yml."
                                     "" % proj['endpoint'])
+        endpoint = self.endpoints[proj['endpoint']]
+        apikey_name = proj['apikey']
+        if apikey_name == proj['endpoint'] and endpoint in self.apikeys:
+            apikey_name = endpoint
         try:
-            apikey = str(self.apikeys[proj['apikey']])
+            apikey = str(self.apikeys[apikey_name])
         except KeyError:
             if auth_required:
                 msg = None
@@ -285,7 +256,7 @@ class ShubConfig:
         eggs = proj_requirements.get('eggs', self.eggs)
         return Target(
             project_id=proj['id'],
-            endpoint=self.endpoints[proj['endpoint']],
+            endpoint=endpoint,
             apikey=apikey,
             stack=(self.stacks.get(proj['stack'], proj['stack'])
                    if 'stack' in proj else self.stacks.get('default')),
@@ -293,6 +264,7 @@ class ShubConfig:
             requirements_file=requirements,
             version=self.get_version(),
             eggs=eggs,
+            dockerfile=proj.get('dockerfile'),
         )
 
     def _select_image_for_project(self, project):
@@ -347,7 +319,8 @@ class ShubConfig:
 
 _Target = namedtuple('Target', ['project_id', 'endpoint', 'apikey', 'stack',
                                 'image', 'requirements_file', 'version',
-                                'eggs'])
+                                'eggs', 'dockerfile'],
+                     defaults=(None,))
 
 
 class APIkey(str):
@@ -375,94 +348,6 @@ class Target(_Target):
         return cls._inst
 
 
-MIGRATION_BANNER = """
--------------------------------------------------------------------------------
-Welcome to shub version 2!
-
-This release contains major updates to how shub is configured, as well as
-updates to the commands and shub's look & feel.
-
-Run 'shub' to get an overview over all available commands, and
-'shub command --help' to get detailed help on a command. Definitely try the
-new 'shub items -f [JOBID]' to see items live as they are being scraped!
-
-From now on, shub configuration should be done in a file called
-'scrapinghub.yml', living next to the previously used 'scrapy.cfg' in your
-Scrapy project directory. Global configuration, for example API keys, should be
-done in a file called '.scrapinghub.yml' in your home directory.
-
-But no worries, shub has automatically migrated your global settings to
-~/.scrapinghub.yml, and will also automatically migrate your project settings
-when you run a command within a Scrapy project.
-
-Visit {docs_link} for more information on the new configuration format and
-its benefits.
-
-Happy scraping!
--------------------------------------------------------------------------------
-""".format(docs_link=DOCS_LINK)
-
-
-def _migrate_to_global_scrapinghub_yml():
-    conf = ShubConfig()
-    conf.load_scrapycfg(get_sources(use_closest=False))
-    try:
-        info = netrc.netrc(NETRC_PATH)
-        netrc_key, _, _ = info.authenticators("scrapinghub.com")
-    except (OSError, TypeError):
-        netrc_key = None
-    if netrc_key:
-        conf.apikeys['default'] = netrc_key
-    conf.save(GLOBAL_SCRAPINGHUB_YML_PATH)
-    default_conf = ShubConfig()
-    migrated_data = any(getattr(conf, attr) != getattr(default_conf, attr)
-                        for attr in ('projects', 'endpoints', 'apikeys',
-                                     'version'))
-    if migrated_data:
-        click.echo(MIGRATION_BANNER, err=True)
-
-
-PROJECT_MIGRATION_OK_BANNER = """
-INFO: Your deploy configuration has been migrated to scrapinghub.yml.
-shub will no longer read from scrapy.cfg (but Scrapy will, so don't delete it).
-Visit {docs_link} for more information.
-""".format(docs_link=DOCS_LINK)
-
-
-PROJECT_MIGRATION_FAILED_BANNER = """
-WARNING: shub failed to convert your scrapy.cfg to scrapinghub.yml. Please
-visit {docs_link} for help on how to use the new configuration format. We
-would be grateful if you could also file a bug report at
-https://github.com/scrapinghub/shub/issues
-
-For now, shub fell back to reading from scrapy.cfg, everything should work as
-expected.
-""".format(docs_link=DOCS_LINK)
-
-
-def _migrate_and_load_scrapy_cfg(conf):
-    # Load from closest scrapy.cfg
-    closest_scrapycfg = closest_file('scrapy.cfg')
-    if not closest_scrapycfg:
-        return
-    targets = get_scrapycfg_targets([closest_scrapycfg])
-    if targets == get_scrapycfg_targets():
-        # No deploy configuration in scrapy.cfg
-        return
-    conf.load_scrapycfg([closest_scrapycfg])
-    # Migrate to scrapinghub.yml
-    closest_sh_yml = os.path.join(os.path.dirname(closest_scrapycfg),
-                                  'scrapinghub.yml')
-    temp_conf = ShubConfig()
-    temp_conf.load_scrapycfg([closest_scrapycfg])
-    try:
-        temp_conf.save(closest_sh_yml)
-    except Exception:
-        click.echo(PROJECT_MIGRATION_FAILED_BANNER, err=True)
-    else:
-        click.echo(PROJECT_MIGRATION_OK_BANNER, err=True)
-
-
 def _load_dotenv_apikey(dotenv_path: str | None = None) -> None:
     """Load SHUB_APIKEY from a .env file into the environment.
 
@@ -484,21 +369,26 @@ def load_shub_config(load_global=True, load_local=True, load_env=True):
     scrapinghub.yml already loaded
     """
     conf = ShubConfig()
-    if load_global:
-        if not os.path.exists(GLOBAL_SCRAPINGHUB_YML_PATH):
-            _migrate_to_global_scrapinghub_yml()
+    if load_global and os.path.exists(GLOBAL_SCRAPINGHUB_YML_PATH):
         conf.load_file(GLOBAL_SCRAPINGHUB_YML_PATH)
     if load_local:
         closest_sh_yml = closest_file('scrapinghub.yml')
         if closest_sh_yml:
             conf.load_file(closest_sh_yml)
-        else:
-            _migrate_and_load_scrapy_cfg(conf)
     if load_env:
         _load_dotenv_apikey()
         if 'SHUB_APIKEY' in os.environ:
             conf.apikeys['default'] = os.environ['SHUB_APIKEY']
+            conf.apikeys[conf.endpoints['default']] = os.environ['SHUB_APIKEY']
     return conf
+
+
+def _get_apikey_name(global_conf, endpoint):
+    """Return the key of *global_conf* apikeys under which to store the API
+    key for *endpoint*."""
+    if endpoint == global_conf.endpoints['default']:
+        return 'default'
+    return endpoint
 
 
 def get_target_conf(target, auth_required=True):
