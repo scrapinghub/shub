@@ -12,7 +12,7 @@ from shub.migrate_eggs import main
 
 
 class MigrateEggsTest(unittest.TestCase):
-    REQ_LIST = [
+    REQ_LIST = (
         "boto==2.38.0",
         "dateparser==0.3.3",
         "decorator==4.0.10",
@@ -27,7 +27,7 @@ class MigrateEggsTest(unittest.TestCase):
         "urllib3==1.11",
         "wheel==0.24.0",
         "wsgiref==0.1.2",
-    ]
+    )
 
     def run(self, *a, **kw):
         runner = CliRunner()
@@ -65,7 +65,7 @@ class MigrateEggsTest(unittest.TestCase):
             content = f.read()
             assert "DISABLE_DASH_EGGS" in content
             requirements = [line for line in content.split("\n") if "==" in line]
-            assert requirements == self.REQ_LIST
+            assert requirements == list(self.REQ_LIST)
 
     def test_full(self):
         migrate_zip = self.curr_dir / "samples/migrate-eggs.zip"
@@ -91,8 +91,7 @@ class MigrateEggsTest(unittest.TestCase):
 
         self._assert_requirements_content()
 
-        for i in range(1, 4):
-            i = str(i)
+        for i in ("1", "2", "3"):
             with Path(f"./eggs/{i}.egg").open() as f:
                 assert f.read().strip() == i
 

@@ -102,9 +102,6 @@ class CancelTest(AssertInvokeRaisesMixin, unittest.TestCase):
 
     @mock.patch("shub.cancel.get_scrapinghub_client_from_config")
     def test_cancel_abort(self, mock_client):
-        client = mock_client.return_value
-        client.get_project.return_value
-
         result = self.runner.invoke(
             cancel.cli,
             (

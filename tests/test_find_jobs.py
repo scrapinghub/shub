@@ -49,7 +49,7 @@ class FindJobsTest(AssertInvokeRaisesMixin, unittest.TestCase):
         assert result.output == "1/1/3\n1/1/1\n"
         project.jobs.iter.assert_called_once_with(
             spider="amazon",
-            startts=int(datetime(2026, 9, 1).timestamp() * 1000),  # noqa: DTZ001
+            startts=int(datetime(2026, 9, 1).timestamp() * 1000),
             endts=None,
             count=101,
         )
