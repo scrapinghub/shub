@@ -291,7 +291,7 @@ def create_progress_bar(total, desc, **kwargs):
     return ProgressBar(
         total=total,
         desc=desc,
-        # XXX: click.get_text_stream or click.get_binary_stream don't
+        # click.get_text_stream or click.get_binary_stream don't
         # work well with tqdm on Windows and Python 3
         file=sys.stdout,
         # helps to update bars on resizing terminal
