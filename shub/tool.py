@@ -48,6 +48,7 @@ def cli(dotenv_path: str | None) -> None:
 commands = [
     "bootstrap",
     "deploy",
+    "build_egg",
     "login",
     "deploy_egg",
     "fetch_eggs",
@@ -62,6 +63,8 @@ commands = [
     "migrate_eggs",
     "image",
     "cancel",
+    "find_jobs",
+    "list_stacks",
 ]
 
 for command in commands:

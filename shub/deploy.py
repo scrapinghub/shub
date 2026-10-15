@@ -1,36 +1,27 @@
 import glob
-import json
-import os
 import shutil
-import tempfile
 from pathlib import Path
-from typing import AnyStr
 from urllib.parse import urljoin
 
 import click
-
-# Not used in code but needed in runtime, don't remove!
-import setuptools
-import setuptools.msvc  # noqa: F401
 import toml
 
+from shub.build_egg import build_egg_cmd, build_project_egg, remove_build_dir
 from shub.config import SH_IMAGES_REGISTRY, list_targets_callback, load_shub_config
 from shub.exceptions import (
     BadParameterException,
     NotFoundException,
+    ShubDeprecationWarning,
     ShubException,
     SubcommandException,
+    print_warning,
 )
 from shub.image.upload import upload_cmd
-from shub.utils import (
-    create_default_setup_py,
-    create_scrapinghub_yml_wizard,
-    inside_project,
-    make_deploy_request,
-    remember_cwd,
-    run_cmd,
-    run_python,
-)
+from shub.utils import create_scrapinghub_yml_wizard, make_deploy_request, run_cmd
+
+# The previous name of build_project_egg(), which deploy wrappers built on top
+# of shub still import from here.
+_build_egg = build_project_egg
 
 HELP = """
 Deploy the current folder's Scrapy project to Scrapy Cloud.
@@ -53,9 +44,9 @@ You can also deploy an existing project egg:
 
     shub deploy --egg egg_name
 
-Or build an egg without deploying:
+To build an egg without deploying it, use `shub build-egg`:
 
-    shub deploy --build-egg egg_name
+    shub build-egg egg_name
 
 If the project is inside a git repository, the egg is built from a copy of
 the working directory that leaves out anything git considers ignored (e.g.
@@ -65,6 +56,16 @@ included.
 """
 
 SHORT_HELP = "Deploy Scrapy project to Scrapy Cloud"
+
+
+def _deprecate_build_egg_parameter(ctx, param, value):
+    if value is not None:
+        print_warning(
+            "--build-egg parameter is deprecated. "
+            "Please use `shub build-egg FILENAME` instead.",
+            ShubDeprecationWarning,
+        )
+    return value
 
 
 @click.command(help=HELP, short_help=SHORT_HELP)
@@ -83,19 +84,27 @@ SHORT_HELP = "Deploy Scrapy project to Scrapy Cloud"
     "-d", "--debug", help="Debug mode (do not remove build dir)", is_flag=True
 )
 @click.option("--egg", help="Deploy the given egg, instead of building one")
-@click.option("--build-egg", help="Only build the given egg, don't deploy it")
+@click.option(
+    "--build-egg",
+    type=click.Path(dir_okay=False, writable=True, readable=False),
+    callback=_deprecate_build_egg_parameter,
+    help="[DEPRECATED] Only build the given egg, don't deploy it. "
+    "Use `shub build-egg` instead",
+)
 @click.option("-v", "--verbose", help="Stream deploy logs to console", is_flag=True)
 @click.option("-k", "--keep-log", help="Keep the deploy log", is_flag=True)
 @click.option(
     "--ignore-size", help="Ignore deploy request's egg(s) size check", is_flag=True
 )
 def cli(target, version, debug, egg, build_egg, verbose, keep_log, ignore_size):
-    conf, image = load_shub_config(), None
-    if not build_egg:
-        create_scrapinghub_yml_wizard(conf, target=target)
+    if build_egg is not None:
+        build_egg_cmd(build_egg, debug)
+        return
+    conf = load_shub_config()
+    create_scrapinghub_yml_wizard(conf, target=target)
     image = conf.get_target_conf(target).image
     if not image:
-        deploy_cmd(target, version, debug, egg, build_egg, verbose, keep_log, conf=conf)
+        deploy_cmd(target, version, debug, egg, verbose, keep_log, conf=conf)
     elif image.startswith(SH_IMAGES_REGISTRY):
         upload_cmd(target, version)
     else:
@@ -105,47 +114,37 @@ def cli(target, version, debug, egg, build_egg, verbose, keep_log, ignore_size):
         )
 
 
-def deploy_cmd(target, version, debug, egg, build_egg, verbose, keep_log, conf=None):
+def deploy_cmd(target, version, debug, egg, verbose, keep_log, conf=None):
     tmpdir = None
     try:
-        if build_egg:
-            egg, tmpdir = _build_egg()
-            click.echo(f"Writing egg to {build_egg}")
-            shutil.copyfile(egg, build_egg)
+        conf = conf or load_shub_config()
+        targetconf = conf.get_target_conf(target)
+        version = version or targetconf.version
+        auth = (targetconf.apikey, "")
+
+        if egg:
+            click.echo(f"Using egg: {egg}")
         else:
-            conf = conf or load_shub_config()
-            targetconf = conf.get_target_conf(target)
-            version = version or targetconf.version
-            auth = (targetconf.apikey, "")
+            click.echo(f"Packing version {version}")
+            egg, tmpdir = build_project_egg()
 
-            if egg:
-                click.echo(f"Using egg: {egg}")
-            else:
-                click.echo(f"Packing version {version}")
-                egg, tmpdir = _build_egg()
-
-            _upload_egg(
-                targetconf.endpoint,
-                egg,
-                targetconf.project_id,
-                version,
-                auth,
-                verbose,
-                keep_log,
-                targetconf.stack,
-                targetconf.requirements_file,
-                targetconf.eggs,
-                tmpdir,
-            )
-            click.echo(
-                f"Run your spiders at: https://app.zyte.com/p/{targetconf.project_id}/"
-            )
+        _upload_egg(
+            targetconf.endpoint,
+            egg,
+            targetconf.project_id,
+            version,
+            auth,
+            verbose,
+            keep_log,
+            targetconf.stack,
+            targetconf.requirements_file,
+            targetconf.eggs,
+        )
+        click.echo(
+            f"Run your spiders at: https://app.zyte.com/p/{targetconf.project_id}/"
+        )
     finally:
-        if tmpdir:
-            if debug:
-                click.echo(f"Output dir not removed: {tmpdir}")
-            else:
-                shutil.rmtree(tmpdir, ignore_errors=True)
+        remove_build_dir(tmpdir, debug)
 
 
 def _url(endpoint, action):
@@ -163,7 +162,6 @@ def _upload_egg(
     stack=None,
     requirements_file=None,
     eggs=None,
-    tmpdir=None,
 ):
     expanded_eggs = []
     for e in eggs or []:
@@ -189,7 +187,7 @@ def _upload_egg(
     try:
         files = [("eggs", open(path, "rb")) for path in expanded_eggs]  # noqa: PTH123
         if _is_pipfile(requirements_file):
-            requirements_file = _get_pipfile_requirements(tmpdir)
+            requirements_file = _get_pipfile_requirements()
         elif _is_poetry(requirements_file):
             requirements_file = _get_poetry_requirements()
         elif requirements_file:
@@ -208,62 +206,15 @@ def _is_pipfile(name):
     return name in ["Pipfile", "Pipfile.lock"]
 
 
-def _get_pipfile_requirements(tmpdir=None):
-    try:
-        # moved in pipenv==2022.4.8
-        from pipenv.utils.dependencies import convert_deps_to_pip  # noqa: PLC0415
-        from pipenv.utils.indexes import prepare_pip_source_args  # noqa: PLC0415
-    except ImportError:
-        try:
-            from pipenv.utils import (  # noqa: PLC0415
-                convert_deps_to_pip,
-                prepare_pip_source_args,
-            )
-        except ImportError as e:
-            raise ImportError("You need pipenv installed to deploy with Pipfile") from e
-    try:
-        with Path("Pipfile.lock").open(encoding="utf-8") as f:
-            pipefile = json.load(f)
-            deps = pipefile["default"]
-            sources_list = prepare_pip_source_args(pipefile["_meta"]["sources"])
-            sources = " ".join(sources_list)
-    except OSError as e:
-        raise ShubException("Please lock your Pipfile before deploying") from e
-    # We must remove any hash from the pipfile before converting to play nice
-    # with vcs packages
-    for v in deps.values():
-        if "hash" in v:
-            del v["hash"]
-        if "hashes" in v:
-            del v["hashes"]
-        # Scrapy Cloud also doesn't support editable packages
-        if "editable" in v:
-            del v["editable"]
-    return Path(
-        _add_sources(
-            convert_deps_to_pip(deps), _sources=sources.encode(), tmpdir=tmpdir
-        )
-    ).open("rb")
-
-
-def _add_sources(
-    _requirements: str | list, _sources: bytes, tmpdir: AnyStr | None = None
-) -> str:
-    tmp = tempfile.NamedTemporaryFile(
-        delete=False, suffix="-requirements.txt", dir=tmpdir
-    )
-    tmp.write(_sources + b"\n")
-    # Keep backward compatibility with pipenv<=2022.8.30
-    if isinstance(_requirements, list):
-        tmp.write("\n".join(_requirements).encode("utf-8"))
-    # Keep compatible with pipenv>=v2023.10.24
-    elif isinstance(_requirements, dict):
-        tmp.write("\n".join(_requirements.values()).encode("utf-8"))
-    else:
-        tmp.write(Path(_requirements).read_bytes())
-    tmp.flush()
-    tmp.close()
-    return tmp.name
+def _get_pipfile_requirements():
+    executable = shutil.which("pipenv")
+    if executable is None:
+        raise NotFoundException("You need pipenv installed to deploy with Pipfile")
+    if not Path("Pipfile.lock").exists():
+        raise ShubException("Please lock your Pipfile before deploying")
+    requirements = run_cmd([executable, "requirements"])
+    # Scrapy Cloud does not support editable packages
+    return "\n".join(line.removeprefix("-e ") for line in requirements.splitlines())
 
 
 def _is_poetry(name):
@@ -315,56 +266,3 @@ def _get_poetry_requirements():
             return _get_poetry_requirements_fallback()
         except Exception as fallback_exception:
             raise original_exception from fallback_exception
-
-
-def _build_egg():
-    if not inside_project():
-        raise NotFoundException("No Scrapy project found in this location.")
-    git = shutil.which("git")
-    if git:
-        try:
-            return _build_egg_from_git_filtered_files(git)
-        except SubcommandException:
-            # Not a git repository (or `git ls-files` otherwise failed): fall
-            # back to building from the working directory as-is.
-            pass
-    return _build_egg_in_cwd()
-
-
-def _build_egg_in_cwd():
-    create_default_setup_py()
-    d = tempfile.mkdtemp(prefix="shub-deploy-")
-    run_python(["setup.py", "clean", "-a", "bdist_egg", "-d", d])
-    egg = str(next(Path(d).glob("*.egg")))
-    return egg, d
-
-
-def _build_egg_from_git_filtered_files(git):
-    """
-    Copy the working directory into a temporary directory, leaving out
-    anything git considers ignored (via `git ls-files`), then build the egg
-    from there.
-
-    Tracked files are copied with their current, possibly uncommitted,
-    contents, and untracked-but-not-ignored files are included too: this only
-    strips out gitignored cruft (build artifacts, local secrets, stray
-    virtualenvs, etc.), it doesn't require anything to be committed.
-    """
-    paths = run_cmd(
-        [git, "ls-files", "--cached", "--others", "--exclude-standard"],
-    ).splitlines()
-    filtered_dir = tempfile.mkdtemp(prefix="shub-deploy-filtered-")
-    try:
-        for path in paths:
-            if not Path(path).is_file():
-                # e.g. a tracked file staged for deletion but not yet removed
-                # from the index
-                continue
-            dest = Path(filtered_dir, path)
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(path, dest)
-        with remember_cwd():
-            os.chdir(filtered_dir)
-            return _build_egg_in_cwd()
-    finally:
-        shutil.rmtree(filtered_dir, ignore_errors=True)

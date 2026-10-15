@@ -38,3 +38,8 @@ class ShubEndToEndTests(unittest.TestCase):
         output = self.run_subcmd("fetch-eggs")
         error = f"Unexpected output: {output}"
         assert "specify target" in output, error
+
+    def test_build_egg_isnt_broken(self):
+        output = self.run_subcmd("build-egg")
+        error = f"Unexpected output: {output}"
+        assert "Missing argument 'FILENAME'" in output, error

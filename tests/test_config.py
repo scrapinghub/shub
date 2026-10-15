@@ -249,108 +249,6 @@ class ShubConfigTest(unittest.TestCase):
         shutil.rmtree(tmpdir)
         assert {"external": "ext_endpoint"} == conf.apikeys
 
-    def test_load_scrapycfg(self):
-        tmpdir = tempfile.mkdtemp()
-        tmpfilepath = Path(tmpdir, "scrapy.cfg")
-
-        def _get_conf(scrapycfg_default_target):
-            with tmpfilepath.open("w") as f:
-                f.write(textwrap.dedent(scrapycfg_default_target))
-                f.write(
-                    textwrap.dedent(
-                        """
-                    [deploy:prod]
-                    project = 222
-
-                    [deploy:otheruser]
-                    project = 333
-                    username = otherkey
-
-                    [deploy:otherurl]
-                    project = 444
-                    url = http://app.zyte.com/api/scrapyd/
-
-                    [deploy:external]
-                    project = 555
-                    url = external_endpoint
-                    username = externalkey
-
-                    [deploy:invalid_external]
-                    project = non-numeric
-                    url = external_endpoint
-                    username = externalkey
-                    """
-                    )
-                )
-            conf = ShubConfig()
-            conf.load_scrapycfg([tmpfilepath])
-            return conf
-
-        expected_projects = {
-            "prod": "222",
-            "otheruser": {
-                "id": "333",
-                "apikey": "otheruser",
-            },
-            "otherurl": "otherurl/444",
-            "external": "external/555",
-        }
-        expected_endpoints = {
-            "default": ShubConfig.DEFAULT_ENDPOINT,
-            "external": "external_endpoint",
-            "otherurl": "http://app.zyte.com/api/",
-        }
-        expected_apikeys = {
-            "otheruser": "otherkey",
-            "external": "externalkey",
-        }
-
-        def _test_conf(scrapycfg_default_target):
-            conf = _get_conf(scrapycfg_default_target)
-            assert conf.projects == expected_projects
-            assert conf.endpoints == expected_endpoints
-            assert conf.apikeys == expected_apikeys
-
-        # Default with invalid project
-        _test_conf(
-            """
-            [deploy]
-            project = non-numeric
-            """
-        )
-
-        # Default with valid project
-        expected_projects["default"] = "111"
-        _test_conf(
-            """
-            [deploy]
-            project = 111
-            """
-        )
-
-        # Default with URL
-        del expected_projects["default"]
-        expected_endpoints["default"] = "http://default_url"
-        _test_conf(
-            """
-            [deploy]
-            url = http://default_url
-            """
-        )
-
-        # Default with key
-        expected_endpoints["default"] = ShubConfig.DEFAULT_ENDPOINT
-        expected_apikeys["default"] = "key"
-        expected_apikeys["otherurl"] = "key"
-        _test_conf(
-            """
-            [deploy]
-            username = key
-            """
-        )
-
-        shutil.rmtree(tmpdir)
-
     def test_deprecated_reqfile_syntax(self):
         assert self.conf.requirements_file == "requirements.txt"
         self.conf.load("""
@@ -763,52 +661,24 @@ LOCAL_SCRAPINGHUB_YML = """
         external: key_ext
 """
 
-GLOBAL_SCRAPY_CFG = textwrap.dedent("""
-    [deploy]
-    url = dotsc_endpoint
-    username = dotsc_key
-
-    [deploy:ext2]
-    url = ext2_endpoint
-    project = 333
-    username = ext2_key
-""")
-
-NETRC = 'machine scrapinghub.com login netrc_key password ""'
-
 
 class LoadShubConfigTest(unittest.TestCase):
     def setUp(self):
         self.tmpdir = Path(tempfile.mkdtemp())
         self.globalpath = self.tmpdir / ".scrapinghub.yml"
         self.localpath = self.tmpdir / "scrapinghub.yml"
-        self.globalscrapycfgpath = self.tmpdir / ".scrapy.cfg"
-        self.localscrapycfgpath = self.tmpdir / "scrapy.cfg"
-        self.netrcpath = self.tmpdir / ".netrc"
         with self.globalpath.open("w") as f:
             f.write(VALID_YAML_CFG)
         with self.localpath.open("w") as f:
             f.write(LOCAL_SCRAPINGHUB_YML)
-        with self.globalscrapycfgpath.open("w") as f:
-            f.write(GLOBAL_SCRAPY_CFG)
-        with self.netrcpath.open("w") as f:
-            f.write(NETRC)
         self._old_dir = Path.cwd()
         os.chdir(self.tmpdir)
 
         patcher_gsyp = mock.patch(
             "shub.config.GLOBAL_SCRAPINGHUB_YML_PATH", new=str(self.globalpath)
         )
-        patcher_nrcp = mock.patch("shub.config.NETRC_PATH", new=str(self.netrcpath))
-        patcher_gs = mock.patch(
-            "shub.config.get_sources", return_value=[str(self.globalscrapycfgpath)]
-        )
         self.addCleanup(patcher_gsyp.stop)
-        self.addCleanup(patcher_nrcp.stop)
-        self.addCleanup(patcher_gs.stop)
         patcher_gsyp.start()
-        patcher_nrcp.start()
-        patcher_gs.start()
 
     def tearDown(self):
         os.chdir(self._old_dir)
@@ -851,70 +721,6 @@ class LoadShubConfigTest(unittest.TestCase):
         os.environ.clear()
         os.environ.update(_old_environ)
 
-    def test_autocreate_empty_global_scrapinghub_yml(self):
-        self.globalpath.unlink()
-        self.globalscrapycfgpath.unlink()
-        self.netrcpath.unlink()
-        load_shub_config()
-        assert self.globalpath.is_file()
-        with self.globalpath.open() as f:
-            assert f.read() == ""
-
-    def test_automigrate_to_global_scrapinghub_yml(self):
-        def _check_conf():
-            conf = load_shub_config()
-            assert conf.get_target("123") == (123, "dotsc_endpoint", "netrc_key")
-            assert conf.projects["ext2"] == "ext2/333"
-            assert conf.get_target("ext2") == (333, "ext2_endpoint", "ext2_key")
-
-        self.globalpath.unlink()
-        _check_conf()
-        assert self.globalpath.is_file()
-        self.netrcpath.unlink()
-        Path(".scrapy.cfg").unlink()
-        _check_conf()
-
-    def test_automigrate_project_scrapy_cfg(self):
-        def _check_conf():
-            conf = load_shub_config()
-            assert conf.get_target("default") == (222, "scrapycfg_endpoint/", "key")
-            assert conf.get_target("ext2") == (333, "ext2_endpoint/", "ext2_key")
-            assert conf.get_target("ext3") == (333, "scrapycfg_endpoint/", "key")
-            assert conf.get_target("ext4") == (444, "scrapycfg_endpoint/", "ext4_key")
-            assert conf.get_version() == "ext2_ver"
-
-        scrapycfg = """
-            [deploy]
-            project = 222
-            url = scrapycfg_endpoint/scrapyd/
-
-            [deploy:ext2]
-            url = ext2_endpoint/scrapyd/
-            project = 333
-            username = ext2_key
-            version = ext2_ver
-
-            [deploy:ext3]
-            project = 333
-
-            [deploy:ext4]
-            project = 444
-            username = ext4_key
-        """
-        with Path(self.localscrapycfgpath).open("w") as f:
-            f.write(textwrap.dedent(scrapycfg))
-        Path("project").mkdir()
-        os.chdir("project")
-        conf = load_shub_config()
-        with pytest.raises(BadParameterException):
-            conf.get_target("ext2")
-        self.localpath.unlink()
-        # Loaded from scrapy.cfg
-        _check_conf()
-        # Same config should now be loaded from scrapinghub.yml
-        assert self.localpath.is_file()
-        _check_conf()
-
 
 class ConfigHelpersTest(unittest.TestCase):
     @mock.patch("shub.config.load_shub_config")
@@ -942,3 +748,39 @@ apikeys:
 
     conf = load_shub_config(load_global=False, load_local=True, load_env=True)
     assert conf.apikeys["default"] == "ENVKEY"
+
+
+@pytest.fixture
+def endpoint_confs(tmp_path, monkeypatch):
+    global_yml = tmp_path / "global.yml"
+    global_yml.write_text("""
+apikeys:
+  default: ZYTEKEY
+  https://example.com/api/: EXAMPLEKEY
+  other: OTHERKEY
+""")
+    (tmp_path / "scrapinghub.yml").write_text("""
+projects:
+  default: 123
+  explicit:
+    id: 456
+    apikey: other
+endpoint: https://example.com/api/
+""")
+    monkeypatch.setattr("shub.config.GLOBAL_SCRAPINGHUB_YML_PATH", str(global_yml))
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv("SHUB_APIKEY", raising=False)
+
+
+@pytest.mark.usefixtures("endpoint_confs")
+def test_apikey_by_endpoint_url():
+    conf = load_shub_config()
+    assert conf.get_target_conf("default").apikey == "EXAMPLEKEY"
+    assert conf.get_target_conf("explicit").apikey == "OTHERKEY"
+
+
+@pytest.mark.usefixtures("endpoint_confs")
+def test_shub_apikey_env_overrides_apikey_by_endpoint_url(monkeypatch):
+    monkeypatch.setenv("SHUB_APIKEY", "ENVKEY")
+    conf = load_shub_config()
+    assert conf.get_target_conf("default").apikey == "ENVKEY"

@@ -79,7 +79,7 @@ def cli(
 
 def deploy_cmd(target, version, username, password, email, apikey, insecure, async_):
     config = load_shub_config()
-    target_conf = config.get_target_conf(target)
+    target_conf = config.get_target_conf(target, auth_required=not apikey)
     endpoint, target_apikey = target_conf.endpoint, target_conf.apikey
     image = config.get_image(target)
     version = version or config.get_version()

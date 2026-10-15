@@ -61,8 +61,8 @@ Obviously it accepts all the options for the commands above.
     "-f",
     "--file",
     "filename",
-    default="Dockerfile",
-    help="Name of the Dockerfile (Default is 'PATH/Dockerfile')",
+    help="Name of the Dockerfile (Default is the project's "
+    "'dockerfile' setting, or 'PATH/Dockerfile')",
 )
 def cli(
     target,
@@ -111,7 +111,7 @@ def upload_cmd(
     reauth=False,
     no_cache=False,
     build_arg=(),
-    filename="Dockerfile",
+    filename=None,
 ):
     build.build_cmd(target, version, skip_tests, no_cache, build_arg, filename=filename)
     # skip tests for push command anyway because they run in build command if not skipped
