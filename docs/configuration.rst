@@ -27,14 +27,18 @@ Defining target projects
 ------------------------
 
 A very basic ``scrapinghub.yml``, as generated when you first run ``shub
-deploy``, could look like this::
+deploy``, could look like this:
+
+.. parsed-literal::
 
     project: 12345
+    stack: |latest-scrapy-stack|
 
 This tells shub to deploy to the Scrapy Cloud project ``12345`` when you run
-``shub deploy``.  Often, you will have multiple projects on Scrapy Cloud, e.g.
-one for development and one for production. For these cases, you can replace
-the ``project`` option with a ``projects`` dictionary::
+``shub deploy``, using the latest `Scrapy Cloud stack`_ (see
+:ref:`choose-custom-stack`).  Often, you will have multiple projects on Scrapy
+Cloud, e.g. one for development and one for production. For these cases, you
+can replace the ``project`` option with a ``projects`` dictionary::
 
     projects:
       default: 12345
@@ -91,6 +95,9 @@ Option            Description                                   Scope
 ``image``         Whether to use a custom Docker image on       global default
                   deploy. See :ref:`deploy-custom-image`.       and project-\
                                                                 specific
+``dockerfile``    Path to the Dockerfile to build the custom    project-\
+                  Docker image from. Defaults to                specific
+                  :file:`Dockerfile`.
 ``version``       Version tag to use when deploying. This can   global only
                   be an arbitrary string or one of the magic
                   keywords ``AUTO`` (default), ``GIT``, or
@@ -260,6 +267,16 @@ as well as different API endpoints::
     apikeys:
       default: 0bbf4f0f691e0d9378ae00ca7bcf7f0c
       vagrant: a1aeecc4cd52744730b1ea6cd3e8412a
+
+API keys can also be keyed by endpoint URL, which takes precedence over the
+endpoint name unless a project sets ``apikey``. Running ``shub login`` in a
+project whose ``scrapinghub.yml`` sets a different default endpoint than
+:file:`~/.scrapinghub.yml` saves the API key to :file:`~/.scrapinghub.yml`
+this way::
+
+    apikeys:
+      default: 0bbf4f0f691e0d9378ae00ca7bcf7f0c
+      https://example.com/api/: a1aeecc4cd52744730b1ea6cd3e8412a
 
 Global and project-specific requirements. ``requirements.txt`` is used for projects ``prod`` and ``some``, ``requirements-dev.txt`` and eggs for ``dev``::
 

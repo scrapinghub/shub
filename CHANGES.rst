@@ -5,6 +5,16 @@ Changes
 (unreleased)
 ============
 
+-   ``shub deploy --build-egg`` is deprecated in favor of the new
+    ``shub build-egg`` command: ``shub build-egg FILENAME`` builds the
+    project's egg and writes it to ``FILENAME``, without deploying it. The
+    deprecated option keeps working, and now behaves like the new command. In
+    particular, it no longer requires a configured target and API key, and,
+    if the target uses a custom Docker image, it no longer uploads that image
+    instead of building an egg. As a consequence, the target argument is
+    ignored when ``--build-egg`` is used. Also, ``deploy_cmd()`` no longer
+    has a ``build_egg`` parameter.
+
 -   ``shub deploy`` now builds the egg from a copy of the working directory
     that leaves out anything git considers ignored (e.g. via
     ``.gitignore``), when run inside a git repository. This keeps build
@@ -13,6 +23,17 @@ Changes
     that aren't gitignored, are still included. Projects that aren't inside
     a git repository, or where ``git`` isn't available, keep the previous
     behavior of deploying the working directory as-is.
+
+-   When ``shub deploy`` creates a new ``scrapinghub.yml`` for a project that
+    does not use a custom Docker image, it now sets ``stack`` to the latest
+    Scrapy stack released in the `scrapinghub-stack-scrapy
+    <https://github.com/scrapinghub/scrapinghub-stack-scrapy/tags>`__
+    repository, frozen to its release date (e.g. ``scrapy:2.18-20260824``).
+    If that repository cannot be reached, e.g. while offline, the latest stack
+    at the time of this release is used instead. Previously, no stack was set,
+    so Scrapy Cloud used its default stack, which can be much older. Existing
+    ``scrapinghub.yml`` files are not modified, and a default stack already
+    configured elsewhere (e.g. in ``~/.scrapinghub.yml``) is respected.
 
 2.18.1 (2026-07-08)
 ==========
