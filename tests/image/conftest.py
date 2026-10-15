@@ -45,8 +45,6 @@ def logged_out(project_dir, monkeypatch):
         f.write(SH_CONFIG_FILE.split('apikeys:')[0])
     monkeypatch.setattr('shub.config.GLOBAL_SCRAPINGHUB_YML_PATH',
                         os.path.join(project_dir, 'global.yml'))
-    monkeypatch.setattr('shub.config.NETRC_PATH',
-                        os.path.join(project_dir, 'netrc'))
     monkeypatch.delenv('SHUB_APIKEY', raising=False)
 
 
