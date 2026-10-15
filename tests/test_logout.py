@@ -8,7 +8,6 @@ from shub import config, logout
 
 
 @mock.patch('shub.config.GLOBAL_SCRAPINGHUB_YML_PATH', new='.scrapinghub.yml')
-@mock.patch('shub.config.NETRC_PATH', new='.netrc')
 @mock.patch('shub.logout.GLOBAL_SCRAPINGHUB_YML_PATH', new='.scrapinghub.yml')
 class LogoutTestCase(unittest.TestCase):
 
