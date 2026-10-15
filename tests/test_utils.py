@@ -4,6 +4,7 @@ import re
 import stat
 import sys
 import unittest
+import zipfile
 import textwrap
 import time
 from io import StringIO
@@ -413,8 +414,7 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
                                 _stack_release(utils.FALLBACK_SCRAPY_STACK))
 
     @patch('shub.utils.pip_main', autospec=True)
-    @patch('shub.utils.pip', autospec=True)
-    def test_download_from_pypi(self, mock_pip, mock_pip_main):
+    def test_download_from_pypi(self, mock_pip_main):
         def _call(*args, **kwargs):
             utils.download_from_pypi(*args, **kwargs)
             return mock_pip_main.call_args[0][0]
@@ -425,31 +425,27 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
             utils.download_from_pypi('tmpdir', pkg='shub', reqfile='req.txt')
         self.assertFalse(mock_pip_main.called)
 
-        # 1.0 (Ubuntu Precise)
-        del mock_pip.__version__
-        pipargs = _call('tmpdir', pkg='shub')
-        self.assertNotIn('--no-use-wheel', pipargs)
-
-        # 1.5.4 (Ubuntu Trusty)
-        mock_pip.__version__ = '1.5.4'
         pipargs = _call('tmpdir', pkg='shub', extra_args=['--x'])
-        self.assertEqual(pipargs[0], 'install')
-        for expected_arg in ['--no-use-wheel', '--no-deps', 'shub', '--x']:
+        self.assertEqual(pipargs[0], 'download')
+        for expected_arg in ['--no-binary=:all:', '--no-deps', 'shub', '--x']:
             self.assertIn(expected_arg, pipargs)
         # Make sure list contains '-d' followed by 'tmpdir'
         self.assertEqual(pipargs.index('-d') + 1, pipargs.index('tmpdir'))
+
         pipargs = _call('tmpdir', reqfile='req.txt')
         self.assertEqual(pipargs.index('-r') + 1, pipargs.index('req.txt'))
 
-        # Replace deprecated commands in newer versions
-        mock_pip.__version__ = '7.1.2.dev0'
-        pipargs = _call('tmpdir', pkg='shub')
-        self.assertEqual(pipargs[0], 'install')
-        self.assertIn('--no-binary=:all:', pipargs)
-        mock_pip.__version__ = '8.0.2'
-        pipargs = _call('tmpdir', pkg='shub')
-        self.assertEqual(pipargs[0], 'download')
-        self.assertIn('--no-binary=:all:', pipargs)
+    def test_decompress_egg_files(self):
+        with self.runner.isolated_filesystem():
+            with zipfile.ZipFile('mypkg.whl', 'w') as f:
+                f.writestr('mypkg/__init__.py', '')
+            utils.decompress_egg_files()
+            self.assertTrue(os.path.isfile('mypkg/mypkg/__init__.py'))
+
+    def test_decompress_egg_files_without_eggs(self):
+        with self.runner.isolated_filesystem():
+            with self.assertRaises(NotFoundException):
+                utils.decompress_egg_files()
 
     def test_echo_short_log_if_deployed(self):
         last_logs = ["last log line"]
