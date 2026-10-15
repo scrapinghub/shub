@@ -50,30 +50,6 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
     def setUp(self):
         self.runner = CliRunner()
 
-    @patch('shub.utils.sys.frozen', new=True, create=True)
-    @patch('shub.utils.find_exe', return_value='/my/python')
-    def test_patch_sys_executable(self, mock_find_exe):
-        original_exe = sys.executable
-        with patch('shub.utils.sys.frozen', new=False):
-            with utils.patch_sys_executable():
-                self.assertEqual(sys.executable, original_exe)
-        with utils.patch_sys_executable():
-            self.assertEqual(sys.executable, '/my/python')
-        # Make sure we properly cleaned up after ourselves
-        self.assertEqual(sys.executable, original_exe)
-        mock_find_exe.side_effect = NotFoundException
-        with self.assertRaises(NotFoundException):
-            with utils.patch_sys_executable():
-                pass
-
-    @patch('shub.utils.which')
-    def test_find_exe(self, mock_fe):
-        mock_fe.return_value = '/usr/bin/python'
-        self.assertEqual(utils.find_exe('python'), '/usr/bin/python')
-        mock_fe.return_value = None
-        with self.assertRaises(NotFoundException):
-            utils.find_exe('python')
-
     def test_run_cmd_captures_stderr(self):
         cmd = [
             'python', '-c',
@@ -425,17 +401,19 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
         self.assertGreaterEqual(_stack_release(stack),
                                 _stack_release(utils.FALLBACK_SCRAPY_STACK))
 
-    @patch('shub.utils.pip_main', autospec=True)
-    def test_download_from_pypi(self, mock_pip_main):
+    @patch('shub.utils.subprocess.call', autospec=True)
+    def test_download_from_pypi(self, mock_call):
         def _call(*args, **kwargs):
             utils.download_from_pypi(*args, **kwargs)
-            return mock_pip_main.call_args[0][0]
+            cmd = mock_call.call_args[0][0]
+            self.assertEqual(cmd[:3], [sys.executable, '-m', 'pip'])
+            return cmd[3:]
 
         with self.assertRaises(ValueError):
             utils.download_from_pypi('tmpdir')
         with self.assertRaises(ValueError):
             utils.download_from_pypi('tmpdir', pkg='shub', reqfile='req.txt')
-        self.assertFalse(mock_pip_main.called)
+        self.assertFalse(mock_call.called)
 
         pipargs = _call('tmpdir', pkg='shub', extra_args=['--x'])
         self.assertEqual(pipargs[0], 'download')
