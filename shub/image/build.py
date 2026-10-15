@@ -43,18 +43,22 @@ BUILD_SUCCESS_REGEX = re.compile(r'Successfully built ([0-9a-f]+)')
               help="Do not use cache when building the image")
 @click.option("-b", "--build-arg", multiple=True,
               help="Allow to pass build arguments to docker client.")
-@click.option("-f", "--file", "filename", default='Dockerfile',
-              help="Name of the Dockerfile (Default is 'PATH/Dockerfile')")
+@click.option("-f", "--file", "filename",
+              help="Name of the Dockerfile (Default is the project's "
+                   "'dockerfile' setting, or 'PATH/Dockerfile')")
 def cli(target, debug, verbose, version, skip_tests, no_cache, build_arg, filename):
     build_cmd(target, version, skip_tests, no_cache, build_arg, filename=filename)
 
 
-def build_cmd(target, version, skip_tests, no_cache, build_arg, filename='Dockerfile'):
+def build_cmd(target, version, skip_tests, no_cache, build_arg, filename=None):
     config = load_shub_config()
     create_scrapinghub_yml_wizard(config, target=target, image=True)
     client = utils.get_docker_client()
     project_dir = utils.get_project_dir()
     image = config.get_image(target)
+    if not filename:
+        target_conf = config.get_target_conf(target, auth_required=False)
+        filename = target_conf.dockerfile or 'Dockerfile'
     image_name = utils.format_image_name(image, version)
     build_args = dict(a.split('=', 1) for a in build_arg)
     if not os.path.exists(os.path.join(project_dir, filename)):
