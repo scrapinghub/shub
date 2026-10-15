@@ -276,6 +276,7 @@ class ShubConfig:
             requirements_file=requirements,
             version=self.get_version(),
             eggs=eggs,
+            dockerfile=proj.get('dockerfile'),
         )
 
     def _select_image_for_project(self, target, project):
@@ -347,7 +348,8 @@ class ShubConfig:
 
 _Target = namedtuple('Target', ['project_id', 'endpoint', 'apikey', 'stack',
                                 'image', 'requirements_file', 'version',
-                                'eggs'])
+                                'eggs', 'dockerfile'],
+                     defaults=(None,))
 
 
 class APIkey(str):

@@ -206,9 +206,10 @@ Increase the tool's verbosity.
 
 .. function:: -f/--file
 
-Use this option to pass a custom Dockerfile name (default is 'PATH/Dockerfile').
+Use this option to pass a custom Dockerfile name.
 
-**Default value**: ``Dockerfile``
+**Default value**: the ``dockerfile`` setting of the project in
+:file:`scrapinghub.yml`, or :file:`Dockerfile`
 
 **Example:**
 
