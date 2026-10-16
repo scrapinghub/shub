@@ -1,55 +1,41 @@
-import setuptools  # noqa: F401
 import contextlib
 import datetime
 import errno
 import json
 import os
+import re
 import subprocess
 import sys
-import re
 import time
-
 from collections import deque
 from configparser import ConfigParser
-from shutil import which
-from packaging.version import Version
-from glob import glob
 from importlib import import_module
+from pathlib import Path
+from shutil import which
 from tempfile import NamedTemporaryFile, TemporaryFile
 from urllib.parse import urljoin
 
 import click
-import pip
 import requests
 import yaml
 from click import ParamType
-
-# https://github.com/scrapinghub/shub/pull/309#pullrequestreview-113977920
-try:
-    from pip import main as pip_main
-except:  # noqa
-    try:
-        # For pip v20: https://tinyurl.com/pip20-error
-        from pip._internal.cli.main import pip_main
-    except ImportError:
-        try:
-            # For pip v9 and v10: https://tinyurl.com/y8mvl8rb
-            from pip._internal.main import main as pip_main
-        except ImportError:
-            from pip._internal import main as pip_main
-
-from scrapinghub import ScrapinghubClient, ScrapinghubAPIError, HubstorageClient
+from packaging.version import Version
+from scrapinghub import ScrapinghubAPIError, ScrapinghubClient
 
 import shub
 from shub.compat import to_native_str
 from shub.exceptions import (
-    BadParameterException, InvalidAuthException, NotFoundException,
-    RemoteErrorException, SubcommandException, DeployRequestTooLargeException,
+    BadConfigException,
+    BadParameterException,
+    DeployRequestTooLargeException,
+    InvalidAuthException,
+    NotFoundException,
+    RemoteErrorException,
+    SubcommandException,
     print_warning,
 )
 
-SCRAPY_CFG_FILE = os.path.expanduser("~/.scrapy.cfg")
-FALLBACK_ENCODING = 'utf-8'
+FALLBACK_ENCODING = "utf-8"
 STDOUT_ENCODING = sys.stdout.encoding or FALLBACK_ENCODING
 LAST_N_LOGS = 30
 
@@ -59,7 +45,7 @@ REQUEST_FILES_SIZE_LIMIT = 50 * 1024 * 1024 - 5 * 1024
 # Stack set in newly generated scrapinghub.yml files if the latest one cannot
 # be fetched, e.g. while offline. Every release sets it to the latest stack,
 # see utils/update_fallback_stack.py.
-FALLBACK_SCRAPY_STACK = 'scrapy:2.18-20260824'
+FALLBACK_SCRAPY_STACK = "scrapy:2.18-20260824"
 
 _SETUP_PY_TEMPLATE = """\
 # Automatically created by: shub deploy
@@ -77,7 +63,7 @@ setup(
 
 @contextlib.contextmanager
 def remember_cwd():
-    current_dir = os.getcwd()
+    current_dir = Path.cwd()
     try:
         yield
     finally:
@@ -85,29 +71,40 @@ def remember_cwd():
 
 
 def get_scrapinghub_client_from_config(conf):
-    return ScrapinghubClient(
-        conf.apikey, dash_endpoint=conf.endpoint
-    )
+    return ScrapinghubClient(conf.apikey, dash_endpoint=conf.endpoint)
+
+
+_SETTINGS_MODULE_NOT_FOUND_MSG = (
+    "Cannot find the Scrapy settings module of your project. Set the "
+    "SCRAPY_SETTINGS_MODULE environment variable, or add a [settings] section "
+    "to scrapy.cfg (the entry used is 'default', or the one named by the "
+    "SCRAPY_PROJECT environment variable), see "
+    "https://docs.scrapy.org/en/latest/topics/commands.html#default-structure-of-scrapy-projects"
+)
 
 
 def create_default_setup_py(**kwargs):
-    closest = closest_file('scrapy.cfg')
+    closest = closest_file("scrapy.cfg")
     with remember_cwd():
-        os.chdir(os.path.dirname(closest))
-        if not os.path.exists('setup.py'):
-            if 'settings' not in kwargs:
-                kwargs['settings'] = get_config().get('settings', 'default')
-            with open('setup.py', 'w') as f:
+        if closest:
+            os.chdir(Path(closest).parent)
+        if not Path("setup.py").exists():
+            if "settings" not in kwargs:
+                kwargs["settings"] = _get_project_settings_module()
+                if not kwargs["settings"]:
+                    raise BadConfigException(_SETTINGS_MODULE_NOT_FOUND_MSG)
+            with Path("setup.py").open("w") as f:
                 f.write(_SETUP_PY_TEMPLATE % kwargs)
-            click.echo(f"Created setup.py at {os.getcwd()}")
+            click.echo(f"Created setup.py at {Path.cwd()}")
 
 
 def make_deploy_request(url, data, files, auth, verbose, keep_log):
     _check_deploy_files_size(files)
     last_logs = deque(maxlen=LAST_N_LOGS)
     try:
-        rsp = requests.post(url=url, auth=auth, data=data, files=files,
-                            stream=True, timeout=300)
+        rsp = requests.post(
+            url=url, auth=auth, data=data, files=files, stream=True, timeout=300
+        )
         rsp.raise_for_status()
         write_and_echo_logs(keep_log, last_logs, rsp, verbose)
         return True
@@ -115,38 +112,42 @@ def make_deploy_request(url, data, files, auth, verbose, keep_log):
         rsp = exc.response
 
         if rsp.status_code == 403:
-            raise InvalidAuthException
+            raise InvalidAuthException from exc
 
         try:
             error = _get_deploy_error(rsp.json())
         except (ValueError, TypeError, KeyError, AttributeError):
-            error = rsp.text or "Status %d" % rsp.status_code
+            error = rsp.text or f"Status {rsp.status_code:d}"
         msg = f"Deploy failed ({rsp.status_code}):\n{error}"
-        raise RemoteErrorException(msg)
+        raise RemoteErrorException(msg) from exc
     except requests.RequestException as exc:
-        raise RemoteErrorException(f"Deploy failed: {exc}")
+        raise RemoteErrorException(f"Deploy failed: {exc}") from exc
 
 
 def _get_deploy_error(payload):
-    details = {k: v for k, v in payload.items()
-               if k not in ('status', 'message')}
+    details = {k: v for k, v in payload.items() if k not in ("status", "message")}
     if not details:
-        error = payload['message']
-        if 'Traceback' in error:
-            error = ('\n---------- REMOTE TRACEBACK ----------\n' + error +
-                     '\n---------- END OF REMOTE TRACEBACK ----------')
+        error = payload["message"]
+        if "Traceback" in error:
+            error = (
+                "\n---------- REMOTE TRACEBACK ----------\n"
+                + error
+                + "\n---------- END OF REMOTE TRACEBACK ----------"
+            )
         return error
-    error = '\n'.join(_iter_field_errors(details))
-    if 'project' in details:
-        error += ('\nHint: Check the project ID, and that your API key has '
-                  'access to that project.')
+    error = "\n".join(_iter_field_errors(details))
+    if "project" in details:
+        error += (
+            "\nHint: Check the project ID, and that your API key has "
+            "access to that project."
+        )
     return error
 
 
-def _iter_field_errors(errors, prefix=''):
+def _iter_field_errors(errors, prefix=""):
     if isinstance(errors, dict):
         for key, value in errors.items():
-            key_prefix = prefix if key == 'non_field_errors' else f"{prefix}{key}: "
+            key_prefix = prefix if key == "non_field_errors" else f"{prefix}{key}: "
             yield from _iter_field_errors(value, key_prefix)
     elif isinstance(errors, list):
         for error in errors:
@@ -158,11 +159,10 @@ def _iter_field_errors(errors, prefix=''):
 def _check_deploy_files_size(files):
     """Ensure that request's files total size is less than current limit."""
     ctx = click.get_current_context(silent=True)
-    if not isinstance(files, list) or ctx and ctx.params.get('ignore_size'):
+    if not isinstance(files, list) or (ctx and ctx.params.get("ignore_size")):
         return
     files_size = sum(
-        len(fp) if isinstance(fp, str)
-        else os.fstat(fp.fileno()).st_size
+        len(fp) if isinstance(fp, str) else os.fstat(fp.fileno()).st_size
         for (fname, fp) in files
     )
     if files_size > REQUEST_FILES_SIZE_LIMIT:
@@ -176,17 +176,18 @@ def write_and_echo_logs(keep_log, last_logs, rsp, verbose):
         if verbose:
             click.echo(line)
         last_logs.append(line)
-        log_contents += line + b'\n'
+        log_contents += line + b"\n"
     deployed = _is_deploy_successful(last_logs)
     if not deployed:
         keep_log = True
     echo_short_log_if_deployed(deployed, last_logs, verbose=verbose)
 
-    with NamedTemporaryFile(prefix='shub_deploy_', suffix='.log',
-                            delete=not keep_log) as log_file:
+    with NamedTemporaryFile(
+        prefix="shub_deploy_", suffix=".log", delete=not keep_log
+    ) as log_file:
         log_file.write(log_contents)
         if keep_log:
-            click.echo("Deploy log location: %s" % log_file.name)
+            click.echo(f"Deploy log location: {log_file.name}")
         if not deployed:
             try:
                 last_log = last_logs[-1]
@@ -199,54 +200,18 @@ def echo_short_log_if_deployed(deployed, last_logs, log_file=None, verbose=False
     if deployed:
         if not verbose:
             click.echo(last_logs[-1])
-    else:
-        if not verbose:
-            click.echo("Deploy log last %s lines:" % len(last_logs))
-            for line in last_logs:
-                click.echo(line)
+    elif not verbose:
+        click.echo(f"Deploy log last {len(last_logs)} lines:")
+        for line in last_logs:
+            click.echo(line)
 
 
 def _is_deploy_successful(last_logs):
-    try:
+    with contextlib.suppress(Exception):
         data = json.loads(to_native_str(last_logs[-1]))
-        if 'status' in data and data['status'] == 'ok':
+        if "status" in data and data["status"] == "ok":
             return True
-    except Exception:
-        pass
-
-
-@contextlib.contextmanager
-def patch_sys_executable():
-    """
-    Context manager that monkey-patches sys.executable to point to the Python
-    interpreter.
-
-    Some scripts, in particular pip, depend on sys.executable pointing to the
-    Python interpreter. When frozen, however, sys.executable points to the
-    stand-alone file (i.e. the frozen script).
-    """
-    if getattr(sys, 'frozen', False):
-        orig_exe = sys.executable
-        py_exe = find_exe('python')
-        # PyInstaller sets this environment variable in its bootloader. Remove
-        # it so the system-wide Python installation uses its own library path
-        # (this is particularly important if the system Python version differs
-        # from the Python version that the binary was compiled with)
-        orig_lib_path = os.environ.pop('LD_LIBRARY_PATH', None)
-        sys.executable = py_exe
-        yield
-        sys.executable = orig_exe
-        if orig_lib_path:
-            os.environ['LD_LIBRARY_PATH'] = orig_lib_path
-    else:
-        yield
-
-
-def find_exe(exe_name):
-    exe = which(exe_name)
-    if not exe:
-        raise NotFoundException(f"Please install {exe_name}")
-    return exe
+    return None
 
 
 def run_cmd(*args, **kwargs):
@@ -256,21 +221,24 @@ def run_cmd(*args, **kwargs):
 
     Raises SubcommandException on non-zero exit codes or other subprocess
     errors."""
+
     def _clean(s):
-        return s.decode(STDOUT_ENCODING).replace(os.linesep, '\n').strip('\n')
+        return s.decode(STDOUT_ENCODING).replace(os.linesep, "\n").strip("\n")
 
     with TemporaryFile() as tmpfile:
-        kwargs.setdefault('stderr', tmpfile)
+        kwargs.setdefault("stderr", tmpfile)
         try:
-            return _clean(subprocess.check_output(*args, **kwargs))
+            return _clean(subprocess.check_output(*args, **kwargs))  # noqa: S603
         except subprocess.CalledProcessError as e:
-            msg = ("Error while calling subcommand: %s\n\nCOMMAND OUTPUT\n"
-                   "--------------\n%s" % (e, _clean(e.output)))
+            msg = (
+                f"Error while calling subcommand: {e}\n\nCOMMAND OUTPUT\n"
+                f"--------------\n{_clean(e.output)}"
+            )
             tmpfile.seek(0)
             e.stderr = _clean(tmpfile.read())
             if e.stderr:
-                msg += "\n\nSTDERR\n------\n%s" % e.stderr
-            raise SubcommandException(msg)
+                msg += f"\n\nSTDERR\n------\n{e.stderr}"
+            raise SubcommandException(msg) from e
 
 
 def pwd_version():
@@ -290,54 +258,56 @@ def pwd_version():
         ver = pwd_hg_version()
     if not ver:
         ver = pwd_bzr_version()
-    if not ver and os.path.isfile('setup.py'):
-        ver = _last_line_of(run_python(['setup.py', '--version']))
+    if not ver and Path("setup.py").is_file():
+        ver = _last_line_of(run_python(["setup.py", "--version"]))
     if not ver:
-        closest_scrapycfg = closest_file('scrapy.cfg')
+        closest_scrapycfg = closest_file("scrapy.cfg")
         if closest_scrapycfg:
-            setuppy = os.path.join(os.path.dirname(closest_scrapycfg),
-                                   'setup.py')
-            if os.path.isfile(setuppy):
-                ver = _last_line_of(run_python([setuppy, '--version']))
+            setuppy = Path(closest_scrapycfg).parent / "setup.py"
+            if setuppy.is_file():
+                ver = _last_line_of(run_python([str(setuppy), "--version"]))
     if not ver:
         ver = str(int(time.time()))
-    ver = re.sub(r'[^\w.-]+', '', ver)
-    return ver
+    return _clean_version(ver)
+
+
+def _clean_version(ver):
+    return re.sub(r"[^\w.-]+", "", ver)
 
 
 def pwd_git_version():
-    git = which('git')
+    git = which("git")
     if not git:
         return None
     try:
-        commit_id = run_cmd([git, 'describe', '--always'])
+        commit_id = run_cmd([git, "describe", "--always"])
     except SubcommandException:
         try:
-            commit_id = run_cmd([git, 'rev-list', '--count', 'HEAD'])
+            commit_id = run_cmd([git, "rev-list", "--count", "HEAD"])
         except SubcommandException:
             return None
-    branch = run_cmd([git, 'rev-parse', '--abbrev-ref', 'HEAD'])
-    return f'{commit_id}-{branch}'
+    branch = run_cmd([git, "rev-parse", "--abbrev-ref", "HEAD"])
+    return _clean_version(f"{commit_id}-{branch}")
 
 
 def pwd_hg_version():
-    hg = which('hg')
+    hg = which("hg")
     if not hg:
         return None
     try:
-        commit_id = run_cmd([hg, 'tip', '--template', '{rev}'])
+        commit_id = run_cmd([hg, "tip", "--template", "{rev}"])
     except SubcommandException:
         return None
-    branch = run_cmd([hg, 'branch'])
-    return f'r{commit_id}-{branch}'
+    branch = run_cmd([hg, "branch"])
+    return _clean_version(f"r{commit_id}-{branch}")
 
 
 def pwd_bzr_version():
-    bzr = which('bzr')
+    bzr = which("bzr")
     if not bzr:
         return None
     try:
-        return '%s' % run_cmd([bzr, 'revno']).strip()
+        return "{}".format(run_cmd([bzr, "revno"]).strip())
     except SubcommandException:
         return None
 
@@ -347,85 +317,72 @@ def run_python(cmd, *args, **kwargs):
     Call Python interpreter with supplied list of arguments and return its
     output. `args` and `kwargs` are forwarded to `subprocess.check_output`.
     """
-    with patch_sys_executable():
-        return run_cmd([sys.executable] + cmd, *args, **kwargs)
+    return run_cmd([sys.executable, *cmd], *args, **kwargs)
 
 
 def decompress_egg_files(directory=None):
-    try:
-        EXTS = pip.utils.ARCHIVE_EXTENSIONS
-    except AttributeError:
-        try:
-            EXTS = pip._internal.utils.misc.ARCHIVE_EXTENSIONS
-        except AttributeError:
-            EXTS = ('.zip', '.whl', '.tar', '.tar.gz', '.tar.bz2')
-    try:
-        unpack_file = pip.utils.unpack_file
-    except AttributeError:
-        # XXX a work-around for pip >= 10.0
-        try:
-            unpack_file = pip.util.unpack_file
-        except AttributeError:
-            try:
-                unpack_file = pip._internal.utils.misc.unpack_file
-            except AttributeError:
-                from pip._internal.utils.unpacking import unpack_file
-    pathname = "*"
-    if directory is not None:
-        pathname = os.path.join(directory, pathname)
-    eggs = [f for ext in EXTS for f in glob(pathname + "%s" % ext)]
+    from pip._internal.utils.unpacking import unpack_file  # noqa: PLC0415
+
+    EXTS = (".zip", ".whl", ".tar", ".tar.gz", ".tar.bz2")
+    base = Path() if directory is None else Path(directory)
+    eggs = [str(f) for ext in EXTS for f in base.glob(f"*{ext}")]
     if not eggs:
-        files = glob(pathname)
-        err = ('No egg files with a supported file extension were found. '
-               'Files: %s' % ', '.join(files))
+        files = [str(f) for f in base.glob("*")]
+        err = (
+            "No egg files with a supported file extension were found. Files: {}".format(
+                ", ".join(files)
+            )
+        )
         raise NotFoundException(err)
     for egg in eggs:
-        click.echo("Uncompressing: %s" % egg)
-        egg_ext = EXTS[list(egg.endswith(ext) for ext in EXTS).index(True)]
-        decompress_location = egg[:-len(egg_ext)]
-        try:
-            unpack_file(egg, decompress_location, None)
-        except TypeError:
-            unpack_file(egg, decompress_location, None, None)
+        click.echo(f"Uncompressing: {egg}")
+        egg_ext = EXTS[[egg.endswith(ext) for ext in EXTS].index(True)]
+        decompress_location = egg[: -len(egg_ext)]
+        unpack_file(egg, decompress_location)
 
 
 def build_and_deploy_eggs(project, endpoint, apikey):
-    egg_dirs = (f for f in glob('*') if os.path.isdir(f))
+    egg_dirs = (f for f in Path().glob("*") if f.is_dir())
 
     for egg_dir in egg_dirs:
         os.chdir(egg_dir)
         build_and_deploy_egg(project, endpoint, apikey)
-        os.chdir('..')
+        os.chdir("..")
 
 
 def build_and_deploy_egg(project, endpoint, apikey):
     """Builds and deploys the current dir's egg"""
-    click.echo("Building egg in: %s" % os.getcwd())
+    click.echo(f"Building egg in: {Path.cwd()}")
     try:
-        run_python(['setup.py', 'bdist_egg'])
+        run_python(["setup.py", "bdist_egg"])
     except SubcommandException:
         # maybe a C extension or distutils package, forcing bdist_egg
-        click.echo("Couldn't build an egg with vanilla setup.py, trying with "
-                   "setuptools...")
+        click.echo(
+            "Couldn't build an egg with vanilla setup.py, trying with setuptools..."
+        )
         script = "import setuptools; __file__='setup.py'; execfile('setup.py')"
-        run_python(['-c', script, 'bdist_egg'])
+        run_python(["-c", script, "bdist_egg"])
 
     _deploy_dependency_egg(project, endpoint, apikey)
 
 
-def _deploy_dependency_egg(project, endpoint, apikey, name=None, version=None, egg_info=None):
+def _deploy_dependency_egg(
+    project, endpoint, apikey, name=None, version=None, egg_info=None
+):
     name = name or _get_dependency_name()
     version = version or pwd_version()
     egg_info = egg_info or _get_egg_info(name)
     egg_name, egg_path = egg_info
-    url = urljoin(endpoint, 'eggs/add.json')
-    data = {'project': project, 'name': name, 'version': version}
-    auth = (apikey, '')
+    url = urljoin(endpoint, "eggs/add.json")
+    data = {"project": project, "name": name, "version": version}
+    auth = (apikey, "")
 
-    click.echo(f'Deploying dependency {name} {version} to Scrapy Cloud project {project}')
+    click.echo(
+        f"Deploying dependency {name} {version} to Scrapy Cloud project {project}"
+    )
 
-    with open(egg_path, 'rb') as egg_fp:
-        files = {'egg': (egg_name, egg_fp)}
+    with Path(egg_path).open("rb") as egg_fp:
+        files = {"egg": (egg_name, egg_fp)}
         make_deploy_request(url, data, files, auth, False, False)
 
     success = "Deployed eggs list at: https://app.zyte.com/p/%s/deploy/"
@@ -433,19 +390,18 @@ def _deploy_dependency_egg(project, endpoint, apikey, name=None, version=None, e
 
 
 def _last_line_of(s):
-    return s.split('\n')[-1]
+    return s.split("\n")[-1]
 
 
 def _get_dependency_name():
     # In some cases, python setup.py --name returns more than one line, so we
     # use the last one to get the name
-    return _last_line_of(run_python(['setup.py', '--name']))
+    return _last_line_of(run_python(["setup.py", "--name"]))
 
 
 def _get_egg_info(name):
-    egg_filename = name.replace('-', '_')
-    egg_path_glob = os.path.join('dist', '%s*' % egg_filename)
-    egg_path = glob(egg_path_glob)[0]
+    egg_filename = name.replace("-", "_")
+    egg_path = str(next(Path("dist").glob(f"{egg_filename}*")))
     return egg_filename, egg_path
 
 
@@ -460,59 +416,85 @@ def get_job_specs(job):
 
     It also accepts job URLs from Scrapinghub.
     """
-    match = re.match(r'^((\w+)/)?(\d+/\d+)$', job)
+    match = re.match(r"^((\w+)/)?(\d+/\d+)$", job)
     if not match:
-        job_url_re = r'^https?://[^/]+/p/((\d+)/)(?:job/)?(\d+/\d+).*'
+        job_url_re = r"^https?://[^/]+/p/((\d+)/)(?:job/)?(\d+/\d+).*"
         match = re.match(job_url_re, job)
     if not match:
         raise BadParameterException(
-            "Job ID {} is invalid. Format should be spiderid/jobid (inside a "
+            f"Job ID {job} is invalid. Format should be spiderid/jobid (inside a "
             "project) or target/spiderid/jobid, where target can be either a "
-            "project ID or an identifier defined in scrapinghub.yml."
-            "".format(job),
-            param_hint='job_id',
+            "project ID or an identifier defined in scrapinghub.yml.",
+            param_hint="job_id",
         )
-    # XXX: Lazy import due to circular dependency
-    from shub.config import get_target_conf
-    targetconf = get_target_conf(match.group(2) or 'default')
-    return (f"{targetconf.project_id}/{match.group(3)}",
-            targetconf.apikey)
+    # Lazy import due to circular dependency
+    from shub.config import get_target_conf  # noqa: PLC0415
+
+    targetconf = get_target_conf(match.group(2) or "default")
+    return (f"{targetconf.project_id}/{match.group(3)}", targetconf.apikey)
 
 
 def get_job(job):
     jobid, apikey = get_job_specs(job)
-    hsc = HubstorageClient(auth=apikey)
-    job = hsc.get_job(jobid)
-    if not job.metadata:
-        raise NotFoundException(f'Job {jobid} does not exist')
+    job = ScrapinghubClient(apikey).get_job(jobid)
+    try:
+        metadata = dict(job.metadata.iter())
+    except StopIteration:
+        metadata = {}
+    if not metadata:
+        raise NotFoundException(f"Job {jobid} does not exist")
+    job._state = metadata.get("state")
+    job._metadata_updated = time.time()
     return job
 
 
-def closest_file(filename, path='.', prevpath=None):
+def closest_file(filename, path=".", prevpath=None):
     """
     Return the path to the closest file with the given filename by traversing
     the current directory and its parents
     """
     if path == prevpath:
         return None
-    path = os.path.abspath(path)
-    thisfile = os.path.join(path, filename)
-    if os.path.exists(thisfile):
-        return thisfile
-    return closest_file(filename, os.path.dirname(path), path)
+    path = Path(path).absolute()
+    thisfile = path / filename
+    if thisfile.exists():
+        return str(thisfile)
+    return closest_file(filename, str(path.parent), str(path))
 
 
 def inside_project():
-    scrapy_module = os.environ.get('SCRAPY_SETTINGS_MODULE')
+    scrapy_module = os.environ.get("SCRAPY_SETTINGS_MODULE")
     if scrapy_module is not None:
         try:
             import_module(scrapy_module)
         except ImportError as exc:
-            print_warning("Cannot import scrapy settings module %s: %s"
-                          "" % (scrapy_module, exc))
+            print_warning(
+                f"Cannot import scrapy settings module {scrapy_module}: {exc}"
+            )
         else:
             return True
-    return bool(closest_file('scrapy.cfg'))
+    return bool(closest_file("scrapy.cfg"))
+
+
+def _get_project_settings_module(project=None):
+    """Return the Scrapy settings module path of the current project, or
+    ``None`` if it cannot be determined.
+
+    An explicit ``project`` is always looked up in the ``[settings]`` section
+    of scrapy.cfg. Otherwise this mirrors Scrapy's own resolution: the
+    ``SCRAPY_SETTINGS_MODULE`` environment variable takes precedence, then
+    the ``[settings]`` entry named by the ``SCRAPY_PROJECT`` environment
+    variable, or ``default``.
+    """
+    if project is None:
+        env_module = os.environ.get("SCRAPY_SETTINGS_MODULE")
+        if env_module:
+            return env_module
+        project = os.environ.get("SCRAPY_PROJECT", "default")
+    cfg = get_config()
+    if cfg.has_option("settings", project):
+        return cfg.get("settings", project)
+    return None
 
 
 def get_config(use_closest=True):
@@ -524,42 +506,20 @@ def get_config(use_closest=True):
 
 
 def get_sources(use_closest=True):
-    xdg_config_home = os.environ.get('XDG_CONFIG_HOME') or \
-        os.path.expanduser('~/.config')
-    sources = ['/etc/scrapy.cfg', r'c:\scrapy\scrapy.cfg',
-               xdg_config_home + '/scrapy.cfg',
-               os.path.expanduser('~/.scrapy.cfg')]
+    xdg_config_home = os.environ.get("XDG_CONFIG_HOME") or str(
+        Path("~/.config").expanduser()
+    )
+    sources = [
+        "/etc/scrapy.cfg",
+        r"c:\scrapy\scrapy.cfg",
+        xdg_config_home + "/scrapy.cfg",
+        str(Path("~/.scrapy.cfg").expanduser()),
+    ]
     if use_closest:
-        closest_scrapy_cfg_path = closest_file('scrapy.cfg')
+        closest_scrapy_cfg_path = closest_file("scrapy.cfg")
         if closest_scrapy_cfg_path:
             sources.append(closest_scrapy_cfg_path)
     return sources
-
-
-def get_scrapycfg_targets(cfgfiles=None):
-    cfg = ConfigParser()
-    cfg.read(cfgfiles or [])
-    baset = dict(cfg.items('deploy')) if cfg.has_section('deploy') else {}
-    targets = {}
-    targets['default'] = baset
-    for x in cfg.sections():
-        if x.startswith('deploy:'):
-            t = baset.copy()
-            t.update(cfg.items(x))
-            targets[x[7:]] = t
-    for tname, t in list(targets.items()):
-        try:
-            int(t.get('project', 0))
-        except ValueError:
-            # Don't import non-numeric project IDs, and also throw away the
-            # URL and credentials associated with these projects (since the
-            # project ID does not belong to SH, neither do the endpoint or the
-            # auth information)
-            del targets[tname]
-        if t.get('url', "").endswith('scrapyd/'):
-            t['url'] = t['url'][:-8]
-    targets.setdefault('default', {})
-    return targets
 
 
 def job_live(job, refresh_meta_after=60):
@@ -567,20 +527,18 @@ def job_live(job, refresh_meta_after=60):
     Check whether job is in 'pending' or 'running' state. If job metadata was
     fetched longer than `refresh_meta_after` seconds ago, refresh it.
     """
-    if not hasattr(job, '_metadata_updated'):
-        # Assume just loaded
+    if (
+        not hasattr(job, "_state")
+        or time.time() - job._metadata_updated > refresh_meta_after
+    ):
+        job._state = job.metadata.get("state")
         job._metadata_updated = time.time()
-    if time.time() - job._metadata_updated > refresh_meta_after:
-        job.metadata.expire()
-        # Fetching actually happens on job.metadata['state'], but close enough
-        job._metadata_updated = time.time()
-    return job.metadata['state'] in ('pending', 'running')
+    return job._state in ("pending", "running")
 
 
-def job_resource_iter(job, resource, output_json=False, follow=True,
-                      tail=None):
+def job_resource_iter(job, resource, output_json=False, follow=True, tail=None):
     """
-    Given a python-hubstorage job and resource (e.g. job.items), return a
+    Given a python-scrapinghub job and resource (e.g. job.items), return a
     generator that periodically checks the job resource and yields its items.
     The generator will exit when the job has finished.
 
@@ -589,42 +547,32 @@ def job_resource_iter(job, resource, output_json=False, follow=True,
     """
     last_item_key = None
     if tail is not None:
-        total_nr_items = resource.stats()['totals']['input_values']
+        total_nr_items = resource.stats()["totals"]["input_values"]
         # This is the last entry to be skipped, i.e. it will NOT be displayed
         last_item = total_nr_items - tail - 1
         if last_item >= 0:
-            last_item_key = f'{job.key}/{last_item}'
-    if not job_live(job):
-        follow = False
-    resource_iter = resource.iter_json if output_json else resource.iter_values
-    if not follow:
-        for item in resource_iter(startafter=last_item_key):
-            yield item
-        return
+            last_item_key = f"{job.key}/{last_item}"
+    follow = follow and job_live(job)
     while True:
-        # XXX: Always use iter_json until Kumo team fixes iter_values to also
-        # return '_key'
-        for json_line in resource.iter_json(startafter=last_item_key):
-            item = json.loads(json_line)
-            last_item_key = item['_key']
-            yield json_line if output_json else item
-        if not job_live(job):
+        for item in resource.iter(startafter=last_item_key, meta=["_key"]):
+            last_item_key = item["_key"]
+            yield json.dumps(item, ensure_ascii=False) if output_json else item
+        if not follow or not job_live(job):
             break
         # Workers only upload data to hubstorage every 15 seconds
         time.sleep(15)
 
 
-def latest_github_release(force_update=False, timeout=1., cache=None):
+def latest_github_release(force_update=False, timeout=1.0, cache=None):
     """
     Get GitHub data for latest shub release. If it was already requested today,
     return a cached version unless ``force_update`` is set to ``True``.
     """
     REQ_URL = "https://api.github.com/repos/scrapinghub/shub/releases/latest"
-    cache = cache or os.path.join(click.get_app_dir('scrapinghub'),
-                                  'last_release.txt')
-    today = datetime.date.today().toordinal()
-    if not force_update and os.path.isfile(cache):
-        with open(cache, encoding='utf-8') as f:
+    cache = Path(cache or Path(click.get_app_dir("scrapinghub"), "last_release.txt"))
+    today = datetime.datetime.now(datetime.timezone.utc).date().toordinal()
+    if not force_update and cache.is_file():
+        with cache.open(encoding="utf-8") as f:
             try:
                 release_data = json.load(f)
             except Exception:
@@ -632,21 +580,14 @@ def latest_github_release(force_update=False, timeout=1., cache=None):
         # Check for equality (and not smaller or equal) so we don't get thrown
         # off track if the clock was ever misconfigured and a future date was
         # saved
-        if release_data.get('_shub_last_update', 0) == today:
+        if release_data.get("_shub_last_update", 0) == today:
             return release_data
     release_data = requests.get(REQ_URL, timeout=timeout).json()
-    release_data['_shub_last_update'] = today
-    try:
-        shubdir = os.path.dirname(cache)
-        try:
-            os.makedirs(shubdir)
-        except OSError:
-            if not os.path.isdir(shubdir):
-                raise
-        with open(cache, 'w', encoding='utf-8') as f:
+    release_data["_shub_last_update"] = today
+    with contextlib.suppress(Exception):
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        with cache.open("w", encoding="utf-8") as f:
             json.dump(release_data, f)
-    except Exception:
-        pass
     return release_data
 
 
@@ -658,11 +599,11 @@ def update_available(silent_fail=True):
     """
     try:
         release_data = latest_github_release()
-        latest_rls = Version(release_data['name'].lstrip('v'))
+        latest_rls = Version(release_data["name"].lstrip("v"))
         used_rls = Version(shub.__version__)
         if used_rls >= latest_rls:
             return None
-        return release_data['html_url']
+        return release_data["html_url"]
     except Exception:
         if not silent_fail:
             raise
@@ -670,16 +611,18 @@ def update_available(silent_fail=True):
         return None
 
 
-def _fetch_latest_scrapy_stack(timeout=5.):
+def _fetch_scrapy_stack_releases(timeout=5.0):
     """
-    Return the latest release of the latest Scrapy Cloud stack, frozen to its
-    release date, e.g. ``'scrapy:2.18-20260824'``, based on the release tags of
-    https://github.com/scrapinghub/scrapinghub-stack-scrapy.
+    Return the releases of Scrapy Cloud stacks, based on the release tags of
+    https://github.com/scrapinghub/scrapinghub-stack-scrapy, as
+    ``(major, minor, date)`` tuples, e.g. ``(2, 18, '20260824')``.
 
-    Raise an exception if the tags cannot be fetched or contain no release.
+    Raise an exception if the tags cannot be fetched.
     """
-    url = ("https://api.github.com/repos/scrapinghub/scrapinghub-stack-scrapy"
-           "/tags?per_page=100")
+    url = (
+        "https://api.github.com/repos/scrapinghub/scrapinghub-stack-scrapy"
+        "/tags?per_page=100"
+    )
     releases = []
     while url:
         response = requests.get(url, timeout=timeout)
@@ -687,17 +630,36 @@ def _fetch_latest_scrapy_stack(timeout=5.):
         for tag in response.json():
             # Released stacks, e.g. 2.18-20260824, as opposed to release
             # candidates and test builds, e.g. 2.18-rc1
-            match = re.fullmatch(r'(\d+)\.(\d+)-(\d{8})', tag['name'])
+            match = re.fullmatch(r"(\d+)\.(\d+)-(\d{8})", tag["name"])
             if match:
                 releases.append((int(match[1]), int(match[2]), match[3]))
-        url = response.links.get('next', {}).get('url')
+        url = response.links.get("next", {}).get("url")
+    return releases
+
+
+def _format_scrapy_stack(release):
+    major, minor, date = release
+    return f"scrapy:{major}.{minor}-{date}"
+
+
+def _fetch_latest_scrapy_stack(timeout=5.0):
+    """
+    Return the latest release of the latest Scrapy Cloud stack, frozen to its
+    release date, e.g. ``'scrapy:2.18-20260824'``, based on the release tags of
+    https://github.com/scrapinghub/scrapinghub-stack-scrapy.
+
+    Raise an exception if the tags cannot be fetched or contain no release.
+    """
+    releases = _fetch_scrapy_stack_releases(timeout)
     if not releases:
-        raise ValueError("No Scrapy stack release found in the tags of "
-                         "scrapinghub/scrapinghub-stack-scrapy")
-    return 'scrapy:%d.%d-%s' % max(releases)
+        raise ValueError(
+            "No Scrapy stack release found in the tags of "
+            "scrapinghub/scrapinghub-stack-scrapy"
+        )
+    return _format_scrapy_stack(max(releases))
 
 
-def get_latest_scrapy_stack(timeout=5.):
+def get_latest_scrapy_stack(timeout=5.0):
     """
     Return the latest release of the latest Scrapy Cloud stack, frozen to its
     release date, e.g. ``'scrapy:2.18-20260824'``, based on the release tags of
@@ -714,21 +676,23 @@ def get_latest_scrapy_stack(timeout=5.):
 
 def download_from_pypi(dest, pkg=None, reqfile=None, extra_args=None):
     if (not pkg and not reqfile) or (pkg and reqfile):
-        raise ValueError('Call with either pkg or reqfile')
+        raise ValueError("Call with either pkg or reqfile")
     extra_args = extra_args or []
-    pip_version = Version(getattr(pip, '__version__', '1.0'))
-    cmd = 'install'
-    no_wheel = []
-    target = [pkg] if pkg else ['-r', reqfile]
-    if pip_version >= Version('1.4'):
-        no_wheel = ['--no-use-wheel']
-    if pip_version >= Version('7'):
-        no_wheel = ['--no-binary=:all:']
-    if pip_version >= Version('8'):
-        cmd = 'download'
-    with patch_sys_executable():
-        pip_main([cmd, '-d', dest, '--no-deps'] + no_wheel + extra_args +
-                 target)
+    target = [pkg] if pkg else ["-r", reqfile]
+    subprocess.call(  # noqa: S603
+        [
+            sys.executable,
+            "-m",
+            "pip",
+            "download",
+            "-d",
+            dest,
+            "--no-deps",
+            "--no-binary=:all:",
+            *extra_args,
+            *target,
+        ]
+    )
 
 
 @contextlib.contextmanager
@@ -738,13 +702,16 @@ def update_yaml_dict(conf_path=None):
     preserved.
     """
     if not conf_path:
-        click.secho("Using update_yaml_dict without path is deprecated. Import"
-                    " GLOBAL_SCRAPINGHUB_YML_PATH from shub.config",
-                    fg='yellow')
-        from shub.config import GLOBAL_SCRAPINGHUB_YML_PATH
+        click.secho(
+            "Using update_yaml_dict without path is deprecated. Import"
+            " GLOBAL_SCRAPINGHUB_YML_PATH from shub.config",
+            fg="yellow",
+        )
+        from shub.config import GLOBAL_SCRAPINGHUB_YML_PATH  # noqa: PLC0415
+
         conf_path = GLOBAL_SCRAPINGHUB_YML_PATH
     try:
-        with open(conf_path) as f:
+        with Path(conf_path).open() as f:
             conf = yaml.safe_load(f) or {}
     except OSError as e:
         if e.errno != errno.ENOENT:
@@ -756,7 +723,7 @@ def update_yaml_dict(conf_path=None):
     for key in list(conf):
         if conf[key] == {}:
             del conf[key]
-    with open(conf_path, 'w') as f:
+    with Path(conf_path).open("w") as f:
         # Avoid writing "{}"
         if conf:
             yaml.safe_dump(conf, f, default_flow_style=False)
@@ -770,23 +737,23 @@ def has_project_access(project, endpoint, apikey):
     try:
         return project in client.projects.list()
     except ScrapinghubAPIError as e:
-        if 'Authentication failed' in str(e):
-            raise InvalidAuthException
-        else:
-            raise RemoteErrorException(str(e))
+        if "Authentication failed" in str(e):
+            raise InvalidAuthException from e
+        raise RemoteErrorException(str(e)) from e
 
 
 def get_project_dir():
     """Get the path to the closest directory that contains either
     ``scrapinghub.yml``. ``scrapy.cfg``, or ``Dockerfile`` (in this priority).
     """
-    for filename in ['scrapinghub.yml', 'scrapy.cfg', 'Dockerfile']:
+    for filename in ["scrapinghub.yml", "scrapy.cfg", "Dockerfile"]:
         closest = closest_file(filename)
         if closest:
-            return os.path.dirname(closest)
+            return str(Path(closest).parent)
     raise NotFoundException(
         "Cannot find project: There is no scrapinghub.yml, scrapy.cfg, or "
-        "Dockerfile in this directory or any of the parent directories.")
+        "Dockerfile in this directory or any of the parent directories."
+    )
 
 
 def _get_target_project(conf, target):
@@ -796,14 +763,14 @@ def _get_target_project(conf, target):
     endpoint, apikey = conf.get_endpoint(0), conf.get_apikey(0)
     if target.isdigit():
         project = int(target)
-        target = 'default'
+        target = "default"
     else:
         project = click.prompt("Target project ID", type=int)
     if not has_project_access(project, endpoint, apikey):
         raise InvalidAuthException(
-            "The account you logged in to has no access to project {}. "
+            f"The account you logged in to has no access to project {project}. "
             "Please double-check the project ID and make sure you logged "
-            "in to the correct acount.".format(project),
+            "in to the correct acount.",
         )
     return target, project
 
@@ -812,15 +779,15 @@ def _detect_custom_image_project():
     """Guess if the user may want to deploy a custom image based on the
     existence of ``scrapy.cfg`` and ``Dockerfile``. If there are both, ask."""
     project_dir = get_project_dir()
-    has_scrapy_cfg = os.path.exists(os.path.join(project_dir, 'scrapy.cfg'))
-    has_dockerfile = os.path.exists(os.path.join(project_dir, 'Dockerfile'))
+    has_scrapy_cfg = Path(project_dir, "scrapy.cfg").exists()
+    has_dockerfile = Path(project_dir, "Dockerfile").exists()
     if has_scrapy_cfg and has_dockerfile:
         return click.confirm(
             "You have a Dockerfile in your project directory. Would you like "
-            "to deploy it as custom image?", default=True)
-    elif has_dockerfile:
-        return True
-    return False
+            "to deploy it as custom image?",
+            default=True,
+        )
+    return bool(has_dockerfile)
 
 
 def _update_conf(conf, target, project, repository, stack=None):
@@ -830,15 +797,15 @@ def _update_conf(conf, target, project, repository, stack=None):
         # XXX: Save {'id': project} once we normalize project config on loading
         conf.projects[target] = project
     if repository:
-        if target == 'default':
+        if target == "default":
             conf.images[target] = repository
         else:
             # XXX: Remove once we normalize project config on loading
             if not isinstance(conf.projects[target], dict):
-                conf.projects[target] = {'id': conf.projects[target]}
-            conf.projects[target]['image'] = repository
+                conf.projects[target] = {"id": conf.projects[target]}
+            conf.projects[target]["image"] = repository
     if stack:
-        conf.stacks['default'] = stack
+        conf.stacks["default"] = stack
 
 
 def _update_conf_file(filename, target, project, repository, stack=None):
@@ -846,20 +813,20 @@ def _update_conf_file(filename, target, project, repository, stack=None):
     and ``repository``, set ``stack`` as the default stack, then save it. If
     the file does not exist, it will be created."""
     try:
-        # XXX: Runtime import to avoid circular dependency
-        from shub.config import ShubConfig
+        # Runtime import to avoid circular dependency
+        from shub.config import ShubConfig  # noqa: PLC0415
+
         conf = ShubConfig()
-        if os.path.exists(filename):
+        if Path(filename).exists():
             conf.load_file(filename)
         _update_conf(conf, target, project, repository, stack)
         conf.save(filename)
     except Exception as e:
         click.echo(
-            "There was an error while trying to write to %s: %s"
-            "" % (filename, e),
+            f"There was an error while trying to write to {filename}: {e}",
         )
     else:
-        click.echo("Saved to %s." % filename)
+        click.echo(f"Saved to {filename}.")
 
 
 class _AnyParamType(ParamType):
@@ -869,7 +836,7 @@ class _AnyParamType(ParamType):
         return value
 
 
-def create_scrapinghub_yml_wizard(conf, target='default', image=None):
+def create_scrapinghub_yml_wizard(conf, target="default", image=None):
     """
     Ask user for project ID, ensure they have access to that project, and save
     it in the local ``scrapinghub.yml``.
@@ -897,42 +864,50 @@ def create_scrapinghub_yml_wizard(conf, target='default', image=None):
     In all other cases, the wizard will return without asking questions and
     without altering ``conf``.
     """
-    closest_sh_yml = os.path.join(get_project_dir(), 'scrapinghub.yml')
-    new_sh_yml = not os.path.exists(closest_sh_yml)
-    run_wizard = (
-        new_sh_yml or
-        (image and target in conf.projects
-            and not conf.get_target_conf(target).image)
+    closest_sh_yml = str(Path(get_project_dir(), "scrapinghub.yml"))
+    new_sh_yml = not Path(closest_sh_yml).exists()
+    run_wizard = new_sh_yml or (
+        image and target in conf.projects and not conf.get_target_conf(target).image
     )
     if not run_wizard:
         return
     project = None
     repository = None
     stack = None
-    if target not in conf.projects and 'default' not in conf.projects:
+    if target not in conf.projects and "default" not in conf.projects:
         target, project = _get_target_project(conf, target)
-        if target == 'default':
+        if target == "default":
             click.echo(
-                "Saving project %d as default target. You can deploy to it "
-                "via 'shub deploy' from now on" % project)
+                f"Saving project {project:d} as default target. You can deploy to it "
+                "via 'shub deploy' from now on"
+            )
         else:
             click.echo(
-                "Saving project %d as target '%s'. You can deploy to it via "
-                "'shub deploy %s' from now on" % (project, target, target))
+                f"Saving project {project:d} as target '{target}'. You can deploy to "
+                f"it via 'shub deploy {target}' from now on"
+            )
     if image or (image is None and _detect_custom_image_project()):
         repository = click.prompt(
             "Image repository (leave empty to use Scrapinghub's repository)",
-            default=True, show_default=False, type=_AnyParamType())
+            default=True,
+            show_default=False,
+            type=_AnyParamType(),
+        )
     # Without a stack, Scrapy Cloud falls back to its default stack, which can
     # be very old, so point new projects to the latest one instead. Never add
     # a stack to existing configuration files, and respect any default stack
     # or custom image already configured, e.g. in ~/.scrapinghub.yml.
-    if (new_sh_yml and project and not repository
-            and not conf.stacks.get('default')
-            and not conf.images.get(target, conf.images.get('default'))):
+    if (
+        new_sh_yml
+        and project
+        and not repository
+        and not conf.stacks.get("default")
+        and not conf.images.get(target, conf.images.get("default"))
+    ):
         stack = get_latest_scrapy_stack()
         click.echo(
-            "Using Scrapy Cloud stack %s. You can change it via the 'stack' "
-            "option in scrapinghub.yml." % stack)
+            f"Using Scrapy Cloud stack {stack}. You can change it via the 'stack' "
+            "option in scrapinghub.yml."
+        )
     _update_conf(conf, target, project, repository, stack)
     _update_conf_file(closest_sh_yml, target, project, repository, stack)
