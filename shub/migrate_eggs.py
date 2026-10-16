@@ -1,17 +1,13 @@
-import os
 import zipfile
-
-import errno
-
-from shub.compat import to_unicode
-from urllib.parse import urljoin
-
 from io import BytesIO
+from pathlib import Path
+from urllib.parse import urljoin
 
 import click
 import requests
 
-from shub.config import get_target_conf, ShubConfig
+from shub.compat import to_unicode
+from shub.config import ShubConfig, get_target_conf
 
 HELP = """
 Migrate eggs stored in Dash's "Code & Deploy" section.
@@ -28,7 +24,7 @@ SHORT_HELP = "Migrate dash eggs to requirements.txt and project's directory"
 
 
 @click.command(help=HELP, short_help=SHORT_HELP)
-@click.argument("target", required=False, default='default')
+@click.argument("target", required=False, default="default")
 def cli(target):
     main(target)
 
@@ -36,28 +32,28 @@ def cli(target):
 def main(target):
     targetconf = get_target_conf(target)
 
-    url = urljoin(targetconf.endpoint, 'migrate-eggs.zip')
-    params = {'project': targetconf.project_id}
-    auth = (targetconf.apikey, '')
+    url = urljoin(targetconf.endpoint, "migrate-eggs.zip")
+    params = {"project": targetconf.project_id}
+    auth = (targetconf.apikey, "")
 
-    response = requests.get(url, auth=auth, params=params, stream=True)
+    response = requests.get(url, auth=auth, params=params, stream=True)  # noqa: S113
 
-    with zipfile.ZipFile(BytesIO(response.content), 'r') as mfile:
+    with zipfile.ZipFile(BytesIO(response.content), "r") as mfile:
         Migrator(mfile).start()
 
 
 class Migrator:
     def __init__(self, mfile):
         self.mfile = mfile
-        self.sh_yml = './scrapinghub.yml'
+        self.sh_yml = "./scrapinghub.yml"
         self.conf = ShubConfig()
         self.conf.load_file(self.sh_yml)
 
-        self.req_content = to_unicode(self.mfile.read('requirements.txt'))
+        self.req_content = to_unicode(self.mfile.read("requirements.txt"))
         self.eggs = []
 
         for filename in self.mfile.namelist():
-            if filename.endswith('.egg'):
+            if filename.endswith(".egg"):
                 self.eggs.append(filename)
 
     def start(self):
@@ -69,17 +65,13 @@ class Migrator:
         self.conf.save(self.sh_yml)
 
     def migrate_eggs(self):
-        eggsdir = './eggs'
+        eggsdir = "./eggs"
         msg = f"Eggs will be stored in {eggsdir}, are you sure ? "
         click.confirm(msg)
-        try:
-            os.mkdir(eggsdir)
-        except OSError as e:
-            if e.errno != errno.EEXIST:
-                raise
+        Path(eggsdir).mkdir(exist_ok=True)
 
         for filename in self.eggs:
-            filepath = os.path.join(eggsdir, filename)
+            filepath = f"{eggsdir}/{filename}"
             if filepath in self.conf.eggs:
                 continue
 
@@ -87,18 +79,17 @@ class Migrator:
             self.mfile.extract(filename, eggsdir)
 
     def migrate_requirements_txt(self):
-        req_file = self.conf.requirements_file or './requirements.txt'
+        req_file = self.conf.requirements_file or "./requirements.txt"
 
-        if os.path.isfile(req_file):
+        if Path(req_file).is_file():
             y = click.confirm(
-                'requirements.txt already exists, '
-                'are you sure to override it ?'
+                "requirements.txt already exists, are you sure to override it ?"
             )
             if not y:
-                click.echo('Aborting')
+                click.echo("Aborting")
                 return
 
         self.conf.requirements_file = req_file
 
-        with open(self.conf.requirements_file, 'w') as reqfile:
+        with Path(self.conf.requirements_file).open("w") as reqfile:
             reqfile.write(self.req_content)

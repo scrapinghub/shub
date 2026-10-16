@@ -1,13 +1,18 @@
-import glob
 import os
 import shutil
 import tempfile
+from pathlib import Path
 
 import click
 
 from shub.exceptions import NotFoundException, ShubException, SubcommandException
-from shub.utils import (create_default_setup_py, inside_project, remember_cwd,
-                        run_cmd, run_python)
+from shub.utils import (
+    create_default_setup_py,
+    inside_project,
+    remember_cwd,
+    run_cmd,
+    run_python,
+)
 
 HELP = """
 Build the egg of the current folder's Scrapy project and write it to FILENAME,
@@ -36,9 +41,12 @@ SHORT_HELP = "Build the project egg without deploying it"
 
 
 @click.command(help=HELP, short_help=SHORT_HELP)
-@click.argument("filename", type=click.Path(dir_okay=False, writable=True, readable=False))
-@click.option("-d", "--debug", help="Debug mode (do not remove build dir)",
-              is_flag=True)
+@click.argument(
+    "filename", type=click.Path(dir_okay=False, writable=True, readable=False)
+)
+@click.option(
+    "-d", "--debug", help="Debug mode (do not remove build dir)", is_flag=True
+)
 def cli(filename, debug):
     build_egg_cmd(filename, debug)
 
@@ -47,12 +55,13 @@ def build_egg_cmd(filename, debug=False):
     tmpdir = None
     try:
         egg, tmpdir = build_project_egg()
-        click.echo("Writing egg to %s" % filename)
+        click.echo(f"Writing egg to {filename}")
         try:
             shutil.copyfile(egg, filename)
         except OSError as e:
             raise ShubException(
-                "Could not write egg to %s: %s" % (filename, e.strerror or e))
+                f"Could not write egg to {filename}: {e.strerror or e}"
+            ) from e
     finally:
         remove_build_dir(tmpdir, debug)
 
@@ -67,7 +76,7 @@ def build_project_egg():
     """
     if not inside_project():
         raise NotFoundException("No Scrapy project found in this location.")
-    git = shutil.which('git')
+    git = shutil.which("git")
     if git:
         try:
             return _build_egg_from_git_filtered_files(git)
@@ -88,7 +97,7 @@ def remove_build_dir(tmpdir, debug=False):
     if not tmpdir:
         return
     if debug:
-        click.echo("Output dir not removed: %s" % tmpdir)
+        click.echo(f"Output dir not removed: {tmpdir}")
     else:
         shutil.rmtree(tmpdir, ignore_errors=True)
 
@@ -96,8 +105,8 @@ def remove_build_dir(tmpdir, debug=False):
 def _build_egg_in_cwd():
     create_default_setup_py()
     d = tempfile.mkdtemp(prefix="shub-deploy-")
-    run_python(['setup.py', 'clean', '-a', 'bdist_egg', '-d', d])
-    egg = glob.glob(os.path.join(d, '*.egg'))[0]
+    run_python(["setup.py", "clean", "-a", "bdist_egg", "-d", d])
+    egg = str(next(Path(d).glob("*.egg")))
     return egg, d
 
 
@@ -113,17 +122,17 @@ def _build_egg_from_git_filtered_files(git):
     virtualenvs, etc.), it doesn't require anything to be committed.
     """
     paths = run_cmd(
-        [git, 'ls-files', '--cached', '--others', '--exclude-standard'],
+        [git, "ls-files", "--cached", "--others", "--exclude-standard"],
     ).splitlines()
     filtered_dir = tempfile.mkdtemp(prefix="shub-deploy-filtered-")
     try:
         for path in paths:
-            if not os.path.isfile(path):
+            if not Path(path).is_file():
                 # e.g. a tracked file staged for deletion but not yet removed
                 # from the index
                 continue
-            dest = os.path.join(filtered_dir, path)
-            os.makedirs(os.path.dirname(dest), exist_ok=True)
+            dest = Path(filtered_dir, path)
+            dest.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(path, dest)
         with remember_cwd():
             os.chdir(filtered_dir)
