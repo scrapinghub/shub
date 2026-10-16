@@ -2,7 +2,7 @@ import os
 import shutil
 import tempfile
 from contextlib import contextmanager
-
+from pathlib import Path
 
 SH_CONFIG_FILE = """
 projects:
@@ -31,7 +31,7 @@ setup(
 @contextmanager
 def FakeProjectDirectory():
     tmpdir = os.path.realpath(tempfile.mkdtemp())
-    current = os.getcwd()
+    current = Path.cwd()
     os.chdir(tmpdir)
     try:
         yield tmpdir
@@ -42,34 +42,24 @@ def FakeProjectDirectory():
 
 def add_scrapy_fake_config(tmpdir):
     # add fake scrapy.cfg
-    config_path = os.path.join(tmpdir, 'scrapy.cfg')
-    with open(config_path, 'w') as config_file:
-        config_file.write("[settings]\ndefault=test.settings")
+    Path(tmpdir, "scrapy.cfg").write_text("[settings]\ndefault=test.settings")
 
 
 def add_sh_fake_config(tmpdir):
     # add fake SH config
-    sh_config_path = os.path.join(tmpdir, 'scrapinghub.yml')
-    with open(sh_config_path, 'w') as sh_config_file:
-        sh_config_file.write(SH_CONFIG_FILE)
+    Path(tmpdir, "scrapinghub.yml").write_text(SH_CONFIG_FILE)
 
 
 def add_fake_requirements(tmpdir):
     """Add fake requirements"""
-    reqs_path = os.path.join(tmpdir, 'fake-requirements.txt')
-    with open(reqs_path, 'w') as reqs_file:
-        reqs_file.write("mock\nrequests")
+    Path(tmpdir, "fake-requirements.txt").write_text("mock\nrequests")
 
 
 def add_fake_dockerfile(tmpdir):
     """Add fake Dockerfile"""
-    docker_path = os.path.join(tmpdir, 'Dockerfile')
-    with open(docker_path, 'w') as docker_file:
-        docker_file.write("FROM python:2.7")
+    Path(tmpdir, "Dockerfile").write_text("FROM python:2.7")
 
 
 def add_fake_setup_py(tmpdir):
     """Add fake setup.py for extract scripts tests"""
-    setup_path = os.path.join(tmpdir, 'setup.py')
-    with open(setup_path, 'w') as setup_file:
-        setup_file.write(SH_SETUP_FILE)
+    Path(tmpdir, "setup.py").write_text(SH_SETUP_FILE)

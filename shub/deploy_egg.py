@@ -1,16 +1,18 @@
 import os
 import tempfile
+from pathlib import Path
 from shutil import which
 
 import click
 
-from shub import utils, DEPLOY_DOCS_LINK
+from shub import DEPLOY_DOCS_LINK, utils
 from shub.config import get_target_conf
-from shub.exceptions import (BadParameterException, NotFoundException,
-                             SubcommandException)
-from shub.utils import (decompress_egg_files, download_from_pypi,
-                        run_cmd)
-
+from shub.exceptions import (
+    BadParameterException,
+    NotFoundException,
+    SubcommandException,
+)
+from shub.utils import decompress_egg_files, download_from_pypi, run_cmd
 
 HELP = """
 Build a Python egg from source and deploy it to Scrapy Cloud.
@@ -39,15 +41,16 @@ SHORT_HELP = "[DEPRECATED] Build and deploy egg from source"
 
 
 @click.command(help=HELP, short_help=SHORT_HELP)
-@click.argument("target", required=False, default='default')
+@click.argument("target", required=False, default="default")
 @click.option("--from-url", help="Git, bazaar or mercurial repository URL")
 @click.option("--git-branch", help="Git branch to checkout")
 @click.option("--from-pypi", help="Name of package on pypi")
 def cli(target, from_url=None, git_branch=None, from_pypi=None):
     click.secho(
         "deploy-egg was deprecated, define the eggs you would like to deploy "
-        "in your scrapinghub.yml instead. See {}".format(DEPLOY_DOCS_LINK),
-        err=True, fg='yellow',
+        f"in your scrapinghub.yml instead. See {DEPLOY_DOCS_LINK}",
+        err=True,
+        fg="yellow",
     )
     main(target, from_url, git_branch, from_pypi)
 
@@ -58,31 +61,33 @@ def main(target, from_url=None, git_branch=None, from_pypi=None):
     if from_pypi:
         _fetch_from_pypi(from_pypi)
         decompress_egg_files()
-        utils.build_and_deploy_eggs(targetconf.project_id, targetconf.endpoint,
-                                    targetconf.apikey)
+        utils.build_and_deploy_eggs(
+            targetconf.project_id, targetconf.endpoint, targetconf.apikey
+        )
         return
 
     if from_url:
         _checkout(from_url, git_branch)
 
-    if not os.path.isfile('setup.py'):
+    if not Path("setup.py").is_file():
         error = "No setup.py -- are you running from a valid Python project?"
         raise NotFoundException(error)
 
-    utils.build_and_deploy_egg(targetconf.project_id, targetconf.endpoint,
-                               targetconf.apikey)
+    utils.build_and_deploy_egg(
+        targetconf.project_id, targetconf.endpoint, targetconf.apikey
+    )
 
 
-def _checkout(repo, git_branch=None, target_dir='egg-tmp-clone'):
-    tmpdir = tempfile.mkdtemp(prefix='shub-deploy-egg-from-url')
+def _checkout(repo, git_branch=None, target_dir="egg-tmp-clone"):
+    tmpdir = tempfile.mkdtemp(prefix="shub-deploy-egg-from-url")
 
     click.echo("Cloning the repository to a tmp folder...")
     os.chdir(tmpdir)
 
     vcs_commands = [
-        ['git', 'clone', repo, target_dir],
-        ['hg', 'clone', repo, target_dir],
-        ['bzr', 'branch', repo, target_dir],
+        ["git", "clone", repo, target_dir],
+        ["hg", "clone", repo, target_dir],
+        ["bzr", "branch", repo, target_dir],
     ]
     missing_exes = []
     for cmd in vcs_commands:
@@ -91,7 +96,7 @@ def _checkout(repo, git_branch=None, target_dir='egg-tmp-clone'):
             missing_exes.append(cmd[0])
             continue
         try:
-            run_cmd([exe] + cmd[1:])
+            run_cmd([exe, *cmd[1:]])
         except SubcommandException:
             pass
         else:
@@ -100,24 +105,27 @@ def _checkout(repo, git_branch=None, target_dir='egg-tmp-clone'):
         if missing_exes:
             click.secho(
                 "shub was unable to find the following VCS executables and "
-                "could not try to check out your repository with these: %s"
-                "" % ', '.join(missing_exes), fg='yellow')
+                "could not try to check out your repository with these: {}"
+                "".format(", ".join(missing_exes)),
+                fg="yellow",
+            )
         raise BadParameterException(
-            "\nERROR: The provided repository URL is not valid: %s\n")
+            "\nERROR: The provided repository URL is not valid: %s\n"
+        )
 
     os.chdir(target_dir)
 
     if git_branch:
         try:
-            run_cmd([which('git'), 'checkout', git_branch])
-        except SubcommandException:
-            raise BadParameterException("Branch %s is not valid" % git_branch)
-        click.echo("%s branch was checked out" % git_branch)
+            run_cmd([which("git"), "checkout", git_branch])
+        except SubcommandException as e:
+            raise BadParameterException(f"Branch {git_branch} is not valid") from e
+        click.echo(f"{git_branch} branch was checked out")
 
 
 def _fetch_from_pypi(pkg):
-    tmpdir = tempfile.mkdtemp(prefix='shub-deploy-egg-from-pypi')
-    click.echo('Fetching %s from pypi' % pkg)
+    tmpdir = tempfile.mkdtemp(prefix="shub-deploy-egg-from-pypi")
+    click.echo(f"Fetching {pkg} from pypi")
     download_from_pypi(tmpdir, pkg=pkg)
-    click.echo('Package fetched successfully')
+    click.echo("Package fetched successfully")
     os.chdir(tmpdir)
