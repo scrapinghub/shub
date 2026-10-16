@@ -1,5 +1,8 @@
+import io
 import os
 import shutil
+import subprocess
+import tarfile
 import tempfile
 from pathlib import Path
 
@@ -34,7 +37,9 @@ If the project is inside a git repository, the egg is built from a copy of
 the working directory that leaves out anything git considers ignored (e.g.
 via .gitignore), so build artifacts, local secrets, and stray virtualenvs
 don't end up in the egg. Uncommitted changes to tracked files are still
-included.
+included. To build the egg only from what is committed, use:
+
+    shub build-egg --from-head myproject.egg
 """
 
 SHORT_HELP = "Build the project egg without deploying it"
@@ -47,14 +52,19 @@ SHORT_HELP = "Build the project egg without deploying it"
 @click.option(
     "-d", "--debug", help="Debug mode (do not remove build dir)", is_flag=True
 )
-def cli(filename, debug):
-    build_egg_cmd(filename, debug)
+@click.option(
+    "--from-head",
+    is_flag=True,
+    help="Build the egg from the files committed to git HEAD",
+)
+def cli(filename, debug, from_head):
+    build_egg_cmd(filename, debug, from_head)
 
 
-def build_egg_cmd(filename, debug=False):
+def build_egg_cmd(filename, debug=False, from_head=False):
     tmpdir = None
     try:
-        egg, tmpdir = build_project_egg()
+        egg, tmpdir = build_project_egg(from_head)
         click.echo(f"Writing egg to {filename}")
         try:
             shutil.copyfile(egg, filename)
@@ -66,9 +76,10 @@ def build_egg_cmd(filename, debug=False):
         remove_build_dir(tmpdir, debug)
 
 
-def build_project_egg():
+def build_project_egg(from_head=False):
     """
-    Build the egg of the Scrapy project that contains the current directory.
+    Build the egg of the Scrapy project that contains the current directory,
+    from the files committed to git HEAD if *from_head* is true.
 
     Return the path to the egg and the temporary directory it was built in.
     Callers are expected to clean up that directory afterwards, see
@@ -77,6 +88,10 @@ def build_project_egg():
     if not inside_project():
         raise NotFoundException("No Scrapy project found in this location.")
     git = shutil.which("git")
+    if from_head:
+        if not git:
+            raise NotFoundException("--from-head requires git.")
+        return _build_egg_from_git_head(git)
     if git:
         try:
             return _build_egg_from_git_filtered_files(git)
@@ -139,3 +154,29 @@ def _build_egg_from_git_filtered_files(git):
             return _build_egg_in_cwd()
     finally:
         shutil.rmtree(filtered_dir, ignore_errors=True)
+
+
+def _build_egg_from_git_head(git):
+    """Build the egg from the files under the current directory as committed
+    to git HEAD."""
+    try:
+        archive = subprocess.run(  # noqa: S603
+            [git, "archive", "HEAD"],
+            capture_output=True,
+            check=True,
+        ).stdout
+    except subprocess.CalledProcessError as e:
+        raise SubcommandException(
+            "Error while calling 'git archive HEAD':\n\n"
+            + e.stderr.decode(errors="replace")
+        ) from e
+    head_dir = tempfile.mkdtemp(prefix="shub-deploy-head-")
+    try:
+        with tarfile.open(fileobj=io.BytesIO(archive)) as tar:
+            tar.extraction_filter = getattr(tarfile, "data_filter", None)
+            tar.extractall(head_dir)  # noqa: S202
+        with remember_cwd():
+            os.chdir(head_dir)
+            return _build_egg_in_cwd()
+    finally:
+        shutil.rmtree(head_dir, ignore_errors=True)
