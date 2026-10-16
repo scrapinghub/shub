@@ -483,3 +483,13 @@ class UnknownTargetTest(unittest.TestCase):
         result = CliRunner().invoke(jobs.cli, ['nonexistent/spider'])
         self.assertNotEqual(0, result.exit_code)
         self.assertIn('nonexistent', result.output)
+
+
+def test_help_points_between_jobs_and_find_jobs():
+    from shub import find_jobs
+    runner = CliRunner()
+    jobs_help = ' '.join(runner.invoke(jobs.cli, ['--help']).output.split())
+    find_jobs_help = ' '.join(
+        runner.invoke(find_jobs.cli, ['--help']).output.split())
+    assert 'see `shub find-jobs`' in jobs_help
+    assert 'see `shub jobs`' in find_jobs_help

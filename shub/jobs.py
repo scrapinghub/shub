@@ -66,6 +66,8 @@ started, finished, items, errors, spider; a column with it is added to the
 table unless it is shown anyway. Scrapy Cloud cannot sort jobs, so only the
 jobs retrieved by --limit are sorted; to rank more jobs, use a larger
 --limit.
+
+To find jobs by their requests, items or logs, see `shub find-jobs`.
 """
 
 SHORT_HELP = "List the latest jobs of a project or spider"
