@@ -105,6 +105,10 @@ def cli(target, version, debug, egg, build_egg, verbose, keep_log, ignore_size):
     image = conf.get_target_conf(target).image
     if not image:
         deploy_cmd(target, version, debug, egg, verbose, keep_log, conf=conf)
+    elif egg:
+        raise BadParameterException(
+            "--egg cannot be used to deploy to a project that uses a custom "
+            "Docker image.")
     elif image.startswith(SH_IMAGES_REGISTRY):
         upload_cmd(target, version)
     else:
