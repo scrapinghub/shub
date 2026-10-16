@@ -1,5 +1,3 @@
-from collections import OrderedDict
-
 import click
 
 from shub import exceptions as shub_exceptions
@@ -60,14 +58,19 @@ def push_cmd(target, version, username, password, email, apikey, insecure,
     image = config.get_image(target)
     username, password = utils.get_credentials(
         username=username, password=password, insecure=insecure,
-        apikey=apikey, target_apikey=config.get_apikey(target))
+        apikey=apikey, target_apikey=config.get_apikey(target, required=not apikey))
 
+    auth_config = None
     if username:
         _execute_push_login(
             client, image, username, password, email, reauth)
+        # Passing the credentials to push() keeps the Docker credential store,
+        # where a stale entry for the registry may exist, out of the picture.
+        auth_config = {'username': username, 'password': password}
     image_name = utils.format_image_name(image, version)
     click.echo(f"Pushing {image_name} to the registry.")
-    events = client.push(image_name, stream=True, decode=True)
+    events = client.push(image_name, stream=True, decode=True,
+                         auth_config=auth_config)
     if utils.is_verbose():
         push_progress_cls = _LoggedPushProgress
     else:
@@ -122,9 +125,7 @@ class _PushProgress(_LoggedPushProgress):
         # Total bar repesents total progress in terms of amount of layers.
         self.total_bar = self._create_total_bar()
         self.layers = set()
-        # XXX: has to be OrderedDict to make tqdm.write/click.echo work as expected.
-        # Otherwise it writes at random position, usually in the middle of the progress bars.
-        self.layers_bars = OrderedDict()
+        self.layers_bars = {}
 
     def handle_status_event(self, event):
         layer_id = event.get('id')

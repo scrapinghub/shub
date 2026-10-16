@@ -5,6 +5,16 @@ Changes
 (unreleased)
 ============
 
+-   ``shub deploy --build-egg`` is deprecated in favor of the new
+    ``shub build-egg`` command: ``shub build-egg FILENAME`` builds the
+    project's egg and writes it to ``FILENAME``, without deploying it. The
+    deprecated option keeps working, and now behaves like the new command. In
+    particular, it no longer requires a configured target and API key, and,
+    if the target uses a custom Docker image, it no longer uploads that image
+    instead of building an egg. As a consequence, the target argument is
+    ignored when ``--build-egg`` is used. Also, ``deploy_cmd()`` no longer
+    has a ``build_egg`` parameter.
+
 -   ``shub deploy`` now builds the egg from a copy of the working directory
     that leaves out anything git considers ignored (e.g. via
     ``.gitignore``), when run inside a git repository. This keeps build

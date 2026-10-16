@@ -25,6 +25,19 @@ For help on a specific command, run it with a ``--help`` flag, e.g.::
     shub schedule --help
 
 
+Shell completion
+----------------
+
+To enable tab completion of commands, options and spider names, add the
+following line to :file:`~/.bashrc`::
+
+    eval "$(_SHUB_COMPLETE=bash_source shub)"
+
+For other shells, see the `Click shell completion docs`_.
+
+.. _Click shell completion docs: https://click.palletsprojects.com/en/stable/shell-completion/
+
+
 .. _basic-usage:
 
 Basic usage
