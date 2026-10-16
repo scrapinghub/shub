@@ -6,7 +6,6 @@ from shub.config import get_target_conf
 from shub.exceptions import BadParameterException
 from shub.utils import get_scrapinghub_client_from_config
 
-
 HELP = """
 Find finished jobs of a Scrapy Cloud project with at least one request, item or
 log entry matching the given filters, and output their IDs as they are found.
@@ -32,28 +31,51 @@ SHORT_HELP = "Find jobs with matching requests, items or log entries"
 
 
 @click.command(help=HELP, short_help=SHORT_HELP)
-@click.argument('target', required=False, default='default')
-@click.option('--filter', 'filters', multiple=True, required=True,
-              help='filter that a request, item or log entry must match; '
-                   'repeat to require several')
-@click.option('--in', 'resource', default='requests', show_default=True,
-              type=click.Choice(['requests', 'items', 'logs']),
-              help='job data to apply the filters to')
-@click.option('--spider', help='only check jobs of this spider')
-@click.option('--since', type=click.DateTime(),
-              help='only check jobs finished at or after this time')
-@click.option('--until', type=click.DateTime(),
-              help='only check jobs finished before this time')
-@click.option('--max-jobs', default=100, show_default=True,
-              type=click.IntRange(min=1),
-              help='maximum number of jobs to check')
-@click.option('--delay', default=1.0, show_default=True,
-              type=click.FloatRange(min=0),
-              help='seconds to wait between jobs')
+@click.argument("target", required=False, default="default")
+@click.option(
+    "--filter",
+    "filters",
+    multiple=True,
+    required=True,
+    help="filter that a request, item or log entry must match; "
+    "repeat to require several",
+)
+@click.option(
+    "--in",
+    "resource",
+    default="requests",
+    show_default=True,
+    type=click.Choice(["requests", "items", "logs"]),
+    help="job data to apply the filters to",
+)
+@click.option("--spider", help="only check jobs of this spider")
+@click.option(
+    "--since",
+    type=click.DateTime(),
+    help="only check jobs finished at or after this time",
+)
+@click.option(
+    "--until", type=click.DateTime(), help="only check jobs finished before this time"
+)
+@click.option(
+    "--max-jobs",
+    default=100,
+    show_default=True,
+    type=click.IntRange(min=1),
+    help="maximum number of jobs to check",
+)
+@click.option(
+    "--delay",
+    default=1.0,
+    show_default=True,
+    type=click.FloatRange(min=0),
+    help="seconds to wait between jobs",
+)
 def cli(target, filters, resource, spider, since, until, max_jobs, delay):
     if not (spider or since or until):
         raise BadParameterException(
-            "Use --spider, --since or --until to narrow the search.")
+            "Use --spider, --since or --until to narrow the search."
+        )
     targetconf = get_target_conf(target)
     client = get_scrapinghub_client_from_config(targetconf)
     project = client.get_project(targetconf.project_id)
@@ -65,15 +87,18 @@ def cli(target, filters, resource, spider, since, until, max_jobs, delay):
     )
     for index, summary in enumerate(jobs):
         if index == max_jobs:
-            click.echo(f"Stopped after checking {max_jobs} jobs, use "
-                       f"--max-jobs to check more.", err=True)
+            click.echo(
+                f"Stopped after checking {max_jobs} jobs, use "
+                f"--max-jobs to check more.",
+                err=True,
+            )
             break
         if index:
             time.sleep(delay)
-        job = client.get_job(summary['key'])
+        job = client.get_job(summary["key"])
         matches = getattr(job, resource).iter(count=1, filter=list(filters))
         if next(iter(matches), None) is not None:
-            click.echo(summary['key'])
+            click.echo(summary["key"])
 
 
 def _timestamp_ms(value):

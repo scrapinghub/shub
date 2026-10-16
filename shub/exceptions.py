@@ -5,7 +5,7 @@ Exit codes follow the sysexits.h convention:
 https://www.freebsd.org/cgi/man.cgi?query=sysexits&sektion=3
 """
 
-
+import contextlib
 import sys
 import warnings
 
@@ -26,14 +26,14 @@ class MissingAuthException(ShubException):
 
 class InvalidAuthException(ShubException):
     exit_code = 77  # EX_NOPERM
-    default_msg = ("Authentication failure. Please make sure that your API key"
-                   " is valid.")
+    default_msg = "Authentication failure. Please make sure that your API key is valid."
 
 
 class AlreadyLoggedInException(ShubException):
     exit_code = 0
-    default_msg = ("You are already logged in. To change credentials, use "
-                   "'shub logout' first.")
+    default_msg = (
+        "You are already logged in. To change credentials, use 'shub logout' first."
+    )
 
 
 class ConfigParseException(ShubException):
@@ -70,14 +70,18 @@ class RemoteErrorException(ShubException):
 
 class DeployRequestTooLargeException(ShubException):
     exit_code = 65  # EX_DATAERR
-    default_msg = ("Deploy request is too large. Please make sure that your "
-                   "project egg(s) size is less than 50MB in total.")
+    default_msg = (
+        "Deploy request is too large. Please make sure that your "
+        "project egg(s) size is less than 50MB in total."
+    )
 
 
 class CustomImageTooLargeException(ShubException):
     exit_code = 65  # EX_DATAERR
-    default_msg = ("Custom Docker image is too large. Please make sure that "
-                   "your image size is less than 3GB.")
+    default_msg = (
+        "Custom Docker image is too large. Please make sure that "
+        "your image size is less than 3GB."
+    )
 
 
 class ShubWarning(Warning):
@@ -95,15 +99,13 @@ def print_warning(msg, category=ShubWarning):
 
     def custom_showwarning(message, *args, **kwargs):
         # ignore everything except the message
-        try:
-            sys.stderr.write("WARNING: " + str(message) + '\n')
         # stderr is invalid - this warning just gets lost
-        except (OSError, UnicodeError):
-            pass
+        with contextlib.suppress(OSError, UnicodeError):
+            sys.stderr.write("WARNING: " + str(message) + "\n")
 
     old_showwarning = warnings.showwarning
     try:
         warnings.showwarning = custom_showwarning
-        warnings.warn(msg, category=category)
+        warnings.warn(msg, stacklevel=2, category=category)
     finally:
         warnings.showwarning = old_showwarning
