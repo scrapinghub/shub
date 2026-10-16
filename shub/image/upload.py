@@ -1,6 +1,6 @@
 import click
 
-from shub.config import list_targets_callback
+from shub.config import get_version, list_targets_callback
 from shub.image import build, deploy, push, utils
 
 SHORT_HELP = "Shortcut command for build-push-deploy chain"
@@ -113,6 +113,7 @@ def upload_cmd(
     build_arg=(),
     filename=None,
 ):
+    version = version or get_version()
     build.build_cmd(target, version, skip_tests, no_cache, build_arg, filename=filename)
     # skip tests for push command anyway because they run in build command if not skipped
     push.push_cmd(
