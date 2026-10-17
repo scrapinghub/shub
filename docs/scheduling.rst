@@ -117,10 +117,8 @@ spider is named like that, specify the project as well, e.g.
 ``shub jobs default/123``.
 
 If the project does not exist, or your account has no access to it, ``shub
-jobs`` fails with an error instead of listing no jobs, so that a mistyped
-project ID is not mistaken for a project without jobs. shub cannot tell the two
-cases apart, so the error mentions both. The check takes one extra request to
-Scrapy Cloud, which lists the projects that your account can access.
+jobs`` reports an error. shub cannot tell these cases apart, so the error
+mentions both; check that the project ID is correct and accessible.
 
 Pending, running, and finished jobs are listed, newest first, up to ``--limit``
 of them, 20 by default and 10000 at most.
