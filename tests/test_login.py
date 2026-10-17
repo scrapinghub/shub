@@ -1,5 +1,6 @@
-import unittest
 import textwrap
+import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 import yaml
@@ -11,14 +12,12 @@ from shub.exceptions import AlreadyLoggedInException
 
 from .utils import AssertInvokeRaisesMixin
 
+VALID_KEY = 32 * "1"
 
-VALID_KEY = 32 * '1'
 
-
-@patch('shub.login.GLOBAL_SCRAPINGHUB_YML_PATH', new='.scrapinghub.yml')
-@patch('shub.config.GLOBAL_SCRAPINGHUB_YML_PATH', new='.scrapinghub.yml')
+@patch("shub.login.GLOBAL_SCRAPINGHUB_YML_PATH", new=".scrapinghub.yml")
+@patch("shub.config.GLOBAL_SCRAPINGHUB_YML_PATH", new=".scrapinghub.yml")
 class LoginTest(AssertInvokeRaisesMixin, unittest.TestCase):
-
     def setUp(self):
         self.runner = CliRunner()
 
@@ -27,7 +26,7 @@ class LoginTest(AssertInvokeRaisesMixin, unittest.TestCase):
 
         def write_local_test_files():
             for path, content in (files or {}).items():
-                with open(path, 'w') as f:
+                with Path(path).open("w") as f:
                     f.write(content)
 
         def invoke():
@@ -35,21 +34,21 @@ class LoginTest(AssertInvokeRaisesMixin, unittest.TestCase):
 
         def run():
             write_local_test_files()
-            with patch.object(login, '_is_valid_apikey', return_value=True):
+            with patch.object(login, "_is_valid_apikey", return_value=True):
                 return invoke()
 
         if fs:
             return run()
 
-        with self.runner.isolated_filesystem() as fs:
+        with self.runner.isolated_filesystem():
             return run()
 
     def test_write_key_to_new_file(self):
         with self.runner.isolated_filesystem() as fs:
             self._run(fs=fs)
-            with open('.scrapinghub.yml') as f:
+            with Path(".scrapinghub.yml").open() as f:
                 conf = yaml.load(f, Loader=Loader)
-            self.assertEqual(conf['apikeys']['default'], VALID_KEY)
+            assert conf["apikeys"]["default"] == VALID_KEY
 
     def test_write_key_to_existing_file(self):
         VALID_SCRAPINGHUB_YML = textwrap.dedent("""
@@ -57,45 +56,46 @@ class LoginTest(AssertInvokeRaisesMixin, unittest.TestCase):
                 other: some_endpoint
         """)
         with self.runner.isolated_filesystem() as fs:
-            files = {'.scrapinghub.yml': VALID_SCRAPINGHUB_YML}
+            files = {".scrapinghub.yml": VALID_SCRAPINGHUB_YML}
             self._run(files=files, fs=fs)
-            with open('.scrapinghub.yml') as f:
+            with Path(".scrapinghub.yml").open() as f:
                 conf = yaml.load(f, Loader=Loader)
-            self.assertEqual(conf['apikeys']['default'], VALID_KEY)
-            self.assertEqual(conf['endpoints']['other'], "some_endpoint")
+            assert conf["apikeys"]["default"] == VALID_KEY
+            assert conf["endpoints"]["other"] == "some_endpoint"
 
     def test_suggest_project_key(self):
         PROJECT_SH_YML = textwrap.dedent("""
             apikeys:
                 default: KEY_SUGGESTION
         """)
-        files = {'scrapinghub.yml': PROJECT_SH_YML}
+        files = {"scrapinghub.yml": PROJECT_SH_YML}
         result = self._run(files=files)
-        err = 'Unexpected output: %s' % result.output
-        self.assertTrue('KEY_SUGGESTION' in result.output, err)
+        err = f"Unexpected output: {result.output}"
+        assert "KEY_SUGGESTION" in result.output, err
 
     def test_suggest_env_key(self):
-        result = self._run(env={'SHUB_APIKEY': 'SHUB_APIKEY_VALUE'})
-        err = 'Unexpected output: %s' % result.output
-        self.assertTrue('SHUB_APIKEY_VALUE' in result.output, err)
+        result = self._run(env={"SHUB_APIKEY": "SHUB_APIKEY_VALUE"})
+        err = f"Unexpected output: {result.output}"
+        assert "SHUB_APIKEY_VALUE" in result.output, err
 
     def test_use_suggestion_to_log_in(self):
-        apikey_suggestion = 'SHUB_APIKEY_VALUE'
+        apikey_suggestion = "SHUB_APIKEY_VALUE"
         with self.runner.isolated_filesystem() as fs:
             self._run(
-                env={'SHUB_APIKEY': apikey_suggestion},
-                user_input='\n',
+                env={"SHUB_APIKEY": apikey_suggestion},
+                user_input="\n",
                 fs=fs,
             )
-            with open('.scrapinghub.yml') as f:
+            with Path(".scrapinghub.yml").open() as f:
                 conf = yaml.load(f, Loader=Loader)
-            self.assertEqual(conf['apikeys']['default'], apikey_suggestion)
+            assert conf["apikeys"]["default"] == apikey_suggestion
 
     def test_login_attempt_after_login_doesnt_lead_to_an_error(self):
         with self.runner.isolated_filesystem() as fs:
             self._run(fs=fs)
-            self.assertInvokeRaises(AlreadyLoggedInException, login.cli,
-                                    input=VALID_KEY)
+            self.assertInvokeRaises(
+                AlreadyLoggedInException, login.cli, input=VALID_KEY
+            )
 
     def test_write_key_for_project_endpoint(self):
         PROJECT_SH_YML = textwrap.dedent("""
@@ -106,18 +106,22 @@ class LoginTest(AssertInvokeRaisesMixin, unittest.TestCase):
                 default: ZYTE_KEY
         """)
         with self.runner.isolated_filesystem():
-            for path, content in (('scrapinghub.yml', PROJECT_SH_YML),
-                                  ('.scrapinghub.yml', GLOBAL_SH_YML)):
-                with open(path, 'w') as f:
+            for path, content in (
+                ("scrapinghub.yml", PROJECT_SH_YML),
+                (".scrapinghub.yml", GLOBAL_SH_YML),
+            ):
+                with Path(path).open("w") as f:
                     f.write(content)
-            with patch.object(login, '_is_valid_apikey',
-                              return_value=True) as mock_valid:
+            with patch.object(
+                login, "_is_valid_apikey", return_value=True
+            ) as mock_valid:
                 self.runner.invoke(login.cli, input=VALID_KEY)
             mock_valid.assert_called_once_with(
-                VALID_KEY, endpoint='https://example.com/api/')
-            with open('.scrapinghub.yml') as f:
+                VALID_KEY, endpoint="https://example.com/api/"
+            )
+            with Path(".scrapinghub.yml").open() as f:
                 conf = yaml.load(f, Loader=Loader)
-            self.assertEqual(conf['apikeys'], {
-                'default': 'ZYTE_KEY',
-                'https://example.com/api/': VALID_KEY,
-            })
+            assert conf["apikeys"] == {
+                "default": "ZYTE_KEY",
+                "https://example.com/api/": VALID_KEY,
+            }
