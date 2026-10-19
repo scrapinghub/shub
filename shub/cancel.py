@@ -1,16 +1,12 @@
-import click
+import sys
 
+import click
 from scrapinghub import ScrapinghubAPIError
 from scrapinghub.client.utils import parse_job_key
 
-from shub.utils import get_scrapinghub_client_from_config
 from shub.config import get_target_conf
-from shub.exceptions import (
-    ShubException,
-    BadParameterException,
-    SubcommandException,
-)
-
+from shub.exceptions import BadParameterException, ShubException, SubcommandException
+from shub.utils import get_scrapinghub_client_from_config
 
 HELP = """
 Cancel multiple jobs from Scrapy Cloud.
@@ -38,12 +34,11 @@ SHORT_HELP = "Cancel multiple jobs from Scrapy Cloud"
 @click.command(help=HELP, short_help=SHORT_HELP)
 @click.argument("target_or_key")
 @click.argument("keys", nargs=-1)
-@click.option('--force', '-f', is_flag=True,
-              help='It ignores the confirmation prompt')
+@click.option("--force", "-f", is_flag=True, help="It ignores the confirmation prompt")
 def cli(target_or_key, keys, force):
     # target_or_key contains a target or just another job key
     if "/" in target_or_key:
-        keys = (target_or_key,) + keys
+        keys = (target_or_key, *keys)
         target = "default"
     else:
         target = target_or_key
@@ -56,23 +51,20 @@ def cli(target_or_key, keys, force):
     try:
         job_keys = [validate_job_key(project_id, key) for key in keys]
     except (BadParameterException, SubcommandException) as err:
-        click.echo('Error during keys validation: %s' % str(err))
-        exit(1)
+        click.echo(f"Error during keys validation: {err!s}")
+        sys.exit(1)
 
     if not force:
         jobs_str = ", ".join([str(job) for job in job_keys])
         click.confirm(
-            'Do you want to cancel these %s jobs? \n\n%s \n\nconfirm?'
-            % (len(job_keys), jobs_str),
-            abort=True
+            f"Do you want to cancel these {len(job_keys)} jobs? \n\n{jobs_str} \n\nconfirm?",
+            abort=True,
         )
 
     try:
-        output = project.jobs.cancel(
-            keys=[str(job) for job in job_keys]
-        )
+        output = project.jobs.cancel(keys=[str(job) for job in job_keys])
     except (ValueError, ScrapinghubAPIError) as err:
-        raise ShubException(str(err))
+        raise ShubException(str(err)) from err
 
     click.echo(output)
 
@@ -81,13 +73,11 @@ def validate_job_key(project_id, short_key):
     job_key = f"{project_id}/{short_key}"
 
     if len(short_key.split("/")) != 2:
-        raise BadParameterException(
-            "keys must be defined as <spider_id>/<job_id>"
-        )
+        raise BadParameterException("keys must be defined as <spider_id>/<job_id>")
 
     try:
         return parse_job_key(job_key)
     except ValueError as err:
-        raise BadParameterException(str(err))
+        raise BadParameterException(str(err)) from err
     except Exception as err:
-        raise SubcommandException(str(err))
+        raise SubcommandException(str(err)) from err
