@@ -8,7 +8,6 @@ from shub import config
 from shub.exceptions import BadParameterException, RemoteErrorException
 from shub.utils import get_scrapinghub_client_from_config, has_project_access
 
-
 HELP = """
 List the most recent jobs of a project or of a spider on Scrapy Cloud, one
 per line, newest first. The first column is the job key, which you can pass
@@ -75,50 +74,70 @@ SHORT_HELP = "List the latest jobs of a project or spider"
 DEFAULT_LIMIT = 20
 PAGE_SIZE = 1000  # the most jobs that Scrapy Cloud returns by default
 MAX_JOBS = 10 * PAGE_SIZE
-DEFAULT_STATES = ['pending', 'running', 'finished']
-STATES = DEFAULT_STATES + ['deleted']
-ARG_PREFIX = 'arg.'
+DEFAULT_STATES = ["pending", "running", "finished"]
+STATES = [*DEFAULT_STATES, "deleted"]
+ARG_PREFIX = "arg."
 
 # --orderby name -> field of the job summary
 ORDER_FIELDS = {
-    'scheduled': 'pending_time',
-    'started': 'running_time',
-    'finished': 'finished_time',
-    'items': 'items',
-    'errors': 'errors',
-    'spider': 'spider',
+    "scheduled": "pending_time",
+    "started": "running_time",
+    "finished": "finished_time",
+    "items": "items",
+    "errors": "errors",
+    "spider": "spider",
 }
 # Counters, which job summaries leave out while they are 0
-COUNTERS = ('items', 'errors')
+COUNTERS = ("items", "errors")
 
 # Extra job metadata requested from Scrapy Cloud when it is needed for
 # --filter arg.NAME=VALUE. The list must be complete, since Scrapy Cloud only
 # adds a few default fields to the ones requested.
-SUMMARY_META = ['spider', 'state', 'close_reason', 'spider_args',
-                'pending_time', 'running_time', 'finished_time',
-                'items', 'errors']
+SUMMARY_META = [
+    "spider",
+    "state",
+    "close_reason",
+    "spider_args",
+    "pending_time",
+    "running_time",
+    "finished_time",
+    "items",
+    "errors",
+]
 
-COLUMNS = ('JOB', 'SPIDER', 'STATE', 'STARTED (UTC)')
+COLUMNS = ("JOB", "SPIDER", "STATE", "STARTED (UTC)")
 # Heading of the column that --orderby adds for a field that is not shown
 ORDER_COLUMNS = {
-    'pending_time': 'SCHEDULED (UTC)',
-    'finished_time': 'FINISHED (UTC)',
-    'items': 'ITEMS',
-    'errors': 'ERRORS',
+    "pending_time": "SCHEDULED (UTC)",
+    "finished_time": "FINISHED (UTC)",
+    "items": "ITEMS",
+    "errors": "ERRORS",
 }
 
 
 @click.command(help=HELP, short_help=SHORT_HELP)
-@click.argument('project_or_spider', required=False)
-@click.option('--limit', type=click.IntRange(min=1, max=MAX_JOBS),
-              default=DEFAULT_LIMIT, show_default=True,
-              help='Maximum number of jobs to list')
-@click.option('--filter', 'filters', multiple=True, metavar='KEY=VALUE',
-              help='Only list jobs matching KEY=VALUE (state, tag, no-tag, '
-                   'arg.NAME); can be repeated')
-@click.option('--orderby', metavar='FIELD[:asc|:desc]',
-              help='Sort the listed jobs by scheduled, started, finished, '
-                   'items, errors, or spider')
+@click.argument("project_or_spider", required=False)
+@click.option(
+    "--limit",
+    type=click.IntRange(min=1, max=MAX_JOBS),
+    default=DEFAULT_LIMIT,
+    show_default=True,
+    help="Maximum number of jobs to list",
+)
+@click.option(
+    "--filter",
+    "filters",
+    multiple=True,
+    metavar="KEY=VALUE",
+    help="Only list jobs matching KEY=VALUE (state, tag, no-tag, "
+    "arg.NAME); can be repeated",
+)
+@click.option(
+    "--orderby",
+    metavar="FIELD[:asc|:desc]",
+    help="Sort the listed jobs by scheduled, started, finished, "
+    "items, errors, or spider",
+)
 def cli(project_or_spider, limit, filters, orderby):
     conf = config.load_shub_config()
     target, spider = resolve_target(project_or_spider, conf.projects)
@@ -130,24 +149,26 @@ def cli(project_or_spider, limit, filters, orderby):
         # Scrapy Cloud lists no jobs, instead of failing, for a project that
         # does not exist or that the account cannot access, which would make a
         # mistyped project ID look like a project without jobs
-        if not has_project_access(targetconf.project_id, targetconf.endpoint,
-                                  targetconf.apikey):
+        if not has_project_access(
+            targetconf.project_id, targetconf.endpoint, targetconf.apikey
+        ):
             raise RemoteErrorException(
-                "Project %s does not exist, or the account you logged in to "
-                "has no access to it. Please double-check the project ID."
-                % targetconf.project_id)
+                f"Project {targetconf.project_id} does not exist, or the account "
+                "you logged in to has no access to it. Please double-check the "
+                "project ID."
+            )
         project = client.get_project(targetconf.project_id)
         if spider:
             project.spiders.get(spider)  # fail early if there is no such spider
-        kwargs = dict(params, state=params.get('state') or DEFAULT_STATES)
+        kwargs = dict(params, state=params.get("state") or DEFAULT_STATES)
         if spider:
-            kwargs['spider'] = spider
+            kwargs["spider"] = spider
         if spider_args:
-            kwargs['meta'] = SUMMARY_META
+            kwargs["meta"] = SUMMARY_META
         jobs, truncated = get_jobs(project, limit, spider_args, **kwargs)
     # ValueError: e.g. a response that is not JSON
     except (ScrapinghubAPIError, ValueError, requests.RequestException) as e:
-        raise RemoteErrorException(str(e))
+        raise RemoteErrorException(str(e)) from e
     if order_field:
         jobs = sort_jobs(jobs, order_field, descending)
     if not jobs:
@@ -156,8 +177,7 @@ def cli(project_or_spider, limit, filters, orderby):
         for line in format_jobs(jobs, order_field):
             click.echo(line)
     if truncated:
-        click.echo("Only the latest %d jobs were searched." % MAX_JOBS,
-                   err=True)
+        click.echo(f"Only the latest {MAX_JOBS} jobs were searched.", err=True)
 
 
 def get_jobs(project, limit, spider_args, **kwargs):
@@ -175,7 +195,7 @@ def get_jobs(project, limit, spider_args, **kwargs):
             break
         for job in page:
             if matches_args(job, spider_args):
-                jobs.setdefault(job['key'], job)
+                jobs.setdefault(job["key"], job)
         start += len(page)
     return list(jobs.values())[:limit], False
 
@@ -184,13 +204,13 @@ def resolve_target(argument, targets):
     """Return (target, spider name or None) for the command's argument, given
     the targets defined in scrapinghub.yml."""
     if not argument:
-        return 'default', None
-    if '/' in argument:
-        target, spider = argument.rsplit('/', 1)
-        return target or 'default', spider or None
+        return "default", None
+    if "/" in argument:
+        target, spider = argument.rsplit("/", 1)
+        return target or "default", spider or None
     if argument.isdigit() or argument in targets:
         return argument, None
-    return 'default', argument
+    return "default", argument
 
 
 def parse_filters(filters):
@@ -198,24 +218,26 @@ def parse_filters(filters):
     spider arguments)."""
     params = {}
     spider_args = []
-    keys = {'state': 'state', 'tag': 'has_tag', 'no-tag': 'lacks_tag'}
+    keys = {"state": "state", "tag": "has_tag", "no-tag": "lacks_tag"}
     for item in filters:
-        key, sep, value = item.partition('=')
+        key, sep, value = item.partition("=")
         if not sep or not value:
             raise BadParameterException(
-                "%r is not of the form KEY=VALUE" % item, param_hint='--filter')
+                f"{item!r} is not of the form KEY=VALUE", param_hint="--filter"
+            )
         if key.startswith(ARG_PREFIX) and len(key) > len(ARG_PREFIX):
-            spider_args.append((key[len(ARG_PREFIX):], value))
+            spider_args.append((key[len(ARG_PREFIX) :], value))
         elif key in keys:
-            if key == 'state' and value not in STATES:
+            if key == "state" and value not in STATES:
                 raise BadParameterException(
-                    "state must be one of %s" % ', '.join(STATES),
-                    param_hint='--filter')
+                    f"state must be one of {', '.join(STATES)}", param_hint="--filter"
+                )
             params.setdefault(keys[key], []).append(value)
         else:
             raise BadParameterException(
-                "unknown filter %r, use state, tag, no-tag, or arg.NAME" % key,
-                param_hint='--filter')
+                f"unknown filter {key!r}, use state, tag, no-tag, or arg.NAME",
+                param_hint="--filter",
+            )
     return params, spider_args
 
 
@@ -223,24 +245,25 @@ def parse_orderby(orderby):
     """Return (job summary field or None, descending)."""
     if not orderby:
         return None, True
-    name, _, direction = orderby.partition(':')
-    if name not in ORDER_FIELDS or direction not in ('', 'asc', 'desc'):
+    name, _, direction = orderby.partition(":")
+    if name not in ORDER_FIELDS or direction not in ("", "asc", "desc"):
         raise BadParameterException(
-            "use FIELD[:asc|:desc], where FIELD is one of %s"
-            % ', '.join(ORDER_FIELDS), param_hint='--orderby')
-    return ORDER_FIELDS[name], direction != 'asc'
+            f"use FIELD[:asc|:desc], where FIELD is one of {', '.join(ORDER_FIELDS)}",
+            param_hint="--orderby",
+        )
+    return ORDER_FIELDS[name], direction != "asc"
 
 
 def matches_args(job, spider_args):
-    job_args = job.get('spider_args') or {}
-    return all(name in job_args and str(job_args[name]) == value
-               for name, value in spider_args)
+    job_args = job.get("spider_args") or {}
+    return all(
+        name in job_args and str(job_args[name]) == value for name, value in spider_args
+    )
 
 
 def sort_jobs(jobs, field, descending):
     if field in COUNTERS:
-        return sorted(jobs, key=lambda job: job.get(field) or 0,
-                      reverse=descending)
+        return sorted(jobs, key=lambda job: job.get(field) or 0, reverse=descending)
     # Jobs lacking the field (e.g. not started yet) always go last
     have = [job for job in jobs if job.get(field) is not None]
     lack = [job for job in jobs if job.get(field) is None]
@@ -249,27 +272,32 @@ def sort_jobs(jobs, field, descending):
 
 def format_time(timestamp):
     if not timestamp:
-        return '-'
+        return "-"
     dt = datetime.fromtimestamp(timestamp / 1000, tz=timezone.utc)
-    return dt.strftime('%Y-%m-%d %H:%M:%S')
+    return dt.strftime("%Y-%m-%d %H:%M:%S")
 
 
 def format_jobs(jobs, order_field=None):
     extra = ORDER_COLUMNS.get(order_field)
-    rows = [COLUMNS + (extra,) if extra else COLUMNS]
+    rows = [(*COLUMNS, extra) if extra else COLUMNS]
     for job in jobs:
-        state = job.get('state') or '-'
-        reason = job.get('close_reason')
+        state = job.get("state") or "-"
+        reason = job.get("close_reason")
         # Jobs that finished normally have "finished" as close reason
         if reason and reason != state:
-            state = "%s (%s)" % (state, reason)
-        row = (job['key'], job.get('spider') or '-', state,
-               format_time(job.get('running_time')))
+            state = f"{state} ({reason})"
+        row = (
+            job["key"],
+            job.get("spider") or "-",
+            state,
+            format_time(job.get("running_time")),
+        )
         if extra:
             value = job.get(order_field)
-            row += (str(value or 0) if order_field in COUNTERS
-                    else format_time(value),)
+            row += (str(value or 0) if order_field in COUNTERS else format_time(value),)
         rows.append(row)
     widths = [max(len(row[i]) for row in rows) for i in range(len(rows[0]))]
     for row in rows:
-        yield '  '.join(cell.ljust(w) for cell, w in zip(row, widths)).rstrip()
+        yield "  ".join(
+            cell.ljust(w) for cell, w in zip(row, widths, strict=True)
+        ).rstrip()

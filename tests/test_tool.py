@@ -21,10 +21,10 @@ def no_update_check():
 
 
 def test_jobs_command_is_listed_in_help(runner):
-    result = runner.invoke(cli, ['--help'])
+    result = runner.invoke(cli, ["--help"])
     assert result.exit_code == 0
-    assert 'jobs' in result.output
-    assert 'List the latest jobs' in result.output
+    assert "jobs" in result.output
+    assert "List the latest jobs" in result.output
 
 
 def test_load_dotenv_apikey_default_path(tmp_path, monkeypatch):
