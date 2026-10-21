@@ -22,23 +22,67 @@ class ScheduleTest(unittest.TestCase):
         # Default
         self.runner.invoke(schedule.cli, ["spider"])
         mock_schedule.assert_called_with(
-            proj, endpoint, apikey, "spider", (), (), 2, None, (), (), inherited=None
+            proj,
+            endpoint,
+            apikey,
+            "spider",
+            (),
+            (),
+            2,
+            None,
+            (),
+            (),
+            inherited=None,
+            deploy_track=None,
         )
         # Other project
         self.runner.invoke(schedule.cli, ["123/spider"])
         mock_schedule.assert_called_with(
-            123, endpoint, apikey, "spider", (), (), 2, None, (), (), inherited=None
+            123,
+            endpoint,
+            apikey,
+            "spider",
+            (),
+            (),
+            2,
+            None,
+            (),
+            (),
+            inherited=None,
+            deploy_track=None,
         )
         # Other endpoint
         proj, endpoint, apikey = self.conf.get_target("vagrant")
         self.runner.invoke(schedule.cli, ["vagrant/spider"])
         mock_schedule.assert_called_with(
-            proj, endpoint, apikey, "spider", (), (), 2, None, (), (), inherited=None
+            proj,
+            endpoint,
+            apikey,
+            "spider",
+            (),
+            (),
+            2,
+            None,
+            (),
+            (),
+            inherited=None,
+            deploy_track=None,
         )
         # Other project at other endpoint
         self.runner.invoke(schedule.cli, ["vagrant/456/spider"])
         mock_schedule.assert_called_with(
-            456, endpoint, apikey, "spider", (), (), 2, None, (), (), inherited=None
+            456,
+            endpoint,
+            apikey,
+            "spider",
+            (),
+            (),
+            2,
+            None,
+            (),
+            (),
+            inherited=None,
+            deploy_track=None,
         )
 
     @mock.patch("shub.schedule.ScrapinghubClient", autospec=True)
@@ -111,6 +155,31 @@ class ScheduleTest(unittest.TestCase):
         assert kwargs["job_settings"] == {"S": 3}
         assert kwargs["environment"] == {}
         assert kwargs["add_tag"] == ("t1", "t2")
+
+    @mock.patch("shub.schedule.get_job", autospec=True)
+    @mock.patch("shub.schedule.ScrapinghubClient", autospec=True)
+    def test_does_not_inherit_deploy_track_tags(self, mock_client, mock_get_job):
+        mock_proj = mock_client.return_value.get_project.return_value
+        mock_get_job.return_value.metadata = {
+            "tags": ["t1", "deploy_track:experiment"],
+        }
+
+        self.runner.invoke(schedule.cli, ["testspider", "-i", "2/15"])
+
+        assert mock_proj.jobs.run.call_args[1]["add_tag"] == ("t1",)
+
+    @mock.patch("shub.schedule.ScrapinghubClient", autospec=True)
+    def test_forwards_deploy_track(self, mock_client):
+        mock_proj = mock_client.return_value.get_project.return_value
+        self.runner.invoke(schedule.cli, ["testspider", "--track", "experiment"])
+        call_kwargs = mock_proj.jobs.run.call_args[1]
+        assert call_kwargs["deploy-track"] == "experiment"
+
+    @mock.patch("shub.schedule.ScrapinghubClient", autospec=True)
+    def test_sends_no_deploy_track_by_default(self, mock_client):
+        mock_proj = mock_client.return_value.get_project.return_value
+        self.runner.invoke(schedule.cli, ["testspider"])
+        assert "deploy-track" not in mock_proj.jobs.run.call_args[1]
 
     @mock.patch("shub.schedule.schedule_spider", autospec=True)
     def test_inherit_flag_requires_inherit_from(self, mock_schedule):

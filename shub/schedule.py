@@ -40,10 +40,19 @@ job, pass its ID through the -i option. Use --inherit-args, --inherit-settings,
 passed through other options take precedence:
 
     shub schedule myspider -i 2/15 --inherit-args -a ARG1=VALUE1
+
+To run the spider from one of the project's deploy tracks instead of its live
+deployment, name it with --track:
+
+    shub schedule myspider --track experiment
 """
 
 SHORT_HELP = "Schedule a spider to run on Scrapy Cloud"
 DEFAULT_PRIORITY = 2
+# Scrapy Cloud tags jobs scheduled against a deploy track with this prefix, and
+# refuses such a tag on a job that doesn't carry it.  Inherited ones are dropped:
+# the new job gets its own.
+DEPLOY_TRACK_TAG_PREFIX = "deploy_track:"
 
 
 def _complete_spider(ctx, param, incomplete):
@@ -86,6 +95,13 @@ def _complete_spider(ctx, param, incomplete):
     "--inherit-environment", is_flag=True, help="Inherit job environment variables"
 )
 @click.option("--inherit-tags", is_flag=True, help="Inherit job tags")
+@click.option(
+    "--track",
+    "deploy_track",
+    metavar="NAME",
+    help="Run the spider from this deploy track of the project instead of its "
+    "live deployment",
+)
 def cli(
     spider,
     argument,
@@ -99,6 +115,7 @@ def cli(
     inherit_settings,
     inherit_environment,
     inherit_tags,
+    deploy_track,
 ):
     try:
         target, spider = spider.rsplit("/", 1)
@@ -138,6 +155,7 @@ def cli(
         tag,
         environment,
         inherited=inherited,
+        deploy_track=deploy_track,
     )
     watch_url = urljoin(
         targetconf.endpoint,
@@ -164,8 +182,15 @@ def schedule_spider(
     tag=(),
     environment=(),
     inherited=None,
+    deploy_track=None,
 ):
     inherited = inherited or {}
+    inherited_tags = [
+        t
+        for t in inherited.get("tags", ())
+        if not t.startswith(DEPLOY_TRACK_TAG_PREFIX)
+    ]
+    params = {"deploy-track": deploy_track} if deploy_track else {}
     client = ScrapinghubClient(apikey, dash_endpoint=endpoint)
     try:
         project = client.get_project(project)
@@ -186,11 +211,12 @@ def schedule_spider(
             },
             priority=priority,
             units=units,
-            add_tag=tuple(dict.fromkeys((*inherited.get("tags", ()), *tag))),
+            add_tag=tuple(dict.fromkeys((*inherited_tags, *tag))),
             environment={
                 **inherited.get("environment", {}),
                 **dict(x.split("=", 1) for x in environment),
             },
+            **params,
         )
         return job.key
     except ScrapinghubAPIError as e:

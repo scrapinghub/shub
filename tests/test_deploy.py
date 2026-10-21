@@ -90,6 +90,18 @@ class DeployTest(AssertInvokeRaisesMixin, unittest.TestCase):
         assert data == {"project": 123, "version": "version"}
         assert auth == (self.conf.apikeys["default"], "")
 
+    def test_with_deploy_track(self):
+        _url, data, _files, _auth, _, _ = self._invoke_with_project(
+            ("--track", "experiment")
+        )
+        assert data == {"project": 1, "version": "version", "track": "experiment"}
+
+    def test_with_target_and_deploy_track(self):
+        _url, data, _files, _auth, _, _ = self._invoke_with_project(
+            ("prod", "--track", "experiment")
+        )
+        assert data == {"project": 2, "version": "version", "track": "experiment"}
+
     def test_with_external_id(self):
         url, data, _files, auth, _, _ = self._invoke_with_project(("vagrant/456",))
         assert self.conf.endpoints["vagrant"] in url
@@ -279,6 +291,17 @@ class DeployTest(AssertInvokeRaisesMixin, unittest.TestCase):
             self._make_project()
             self.runner.invoke(deploy.cli, ("5",))
         mock_upload_cmd.assert_called_once_with("5", None)
+
+    @patch("shub.deploy.upload_cmd")
+    def test_custom_deploy_refuses_a_deploy_track(self, mock_upload_cmd):
+        with self.runner.isolated_filesystem():
+            self._make_project()
+            self.assertInvokeRaises(
+                BadParameterException,
+                deploy.cli,
+                ("custom2", "--track", "experiment"),
+            )
+        mock_upload_cmd.assert_not_called()
 
     def test_custom_deploy_bad_registry(self):
         with self.runner.isolated_filesystem():

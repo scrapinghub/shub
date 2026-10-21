@@ -40,6 +40,11 @@ To see a list of all defined targets, run:
 
     shub deploy -l
 
+To deploy to a deploy track of the project, which runs alongside its live
+deployment without replacing it, name it with --track:
+
+    shub deploy production --track experiment
+
 You can also deploy an existing project egg:
 
     shub deploy --egg egg_name
@@ -96,15 +101,46 @@ def _deprecate_build_egg_parameter(ctx, param, value):
 @click.option(
     "--ignore-size", help="Ignore deploy request's egg(s) size check", is_flag=True
 )
-def cli(target, version, debug, egg, build_egg, verbose, keep_log, ignore_size):
+@click.option(
+    "--track",
+    "deploy_track",
+    metavar="NAME",
+    help="Deploy to this deploy track of the project instead of replacing its "
+    "live deployment",
+)
+def cli(
+    target,
+    version,
+    debug,
+    egg,
+    build_egg,
+    verbose,
+    keep_log,
+    ignore_size,
+    deploy_track,
+):
     if build_egg is not None:
         build_egg_cmd(build_egg, debug)
         return
     conf = load_shub_config()
     create_scrapinghub_yml_wizard(conf, target=target)
     image = conf.get_target_conf(target).image
+    if image and deploy_track:
+        raise BadParameterException(
+            "--track is not supported for projects using custom Docker images.",
+            param_hint="--track",
+        )
     if not image:
-        deploy_cmd(target, version, debug, egg, verbose, keep_log, conf=conf)
+        deploy_cmd(
+            target,
+            version,
+            debug,
+            egg,
+            verbose,
+            keep_log,
+            conf=conf,
+            deploy_track=deploy_track,
+        )
     elif image.startswith(SH_IMAGES_REGISTRY):
         upload_cmd(target, version)
     else:
@@ -114,7 +150,9 @@ def cli(target, version, debug, egg, build_egg, verbose, keep_log, ignore_size):
         )
 
 
-def deploy_cmd(target, version, debug, egg, verbose, keep_log, conf=None):
+def deploy_cmd(
+    target, version, debug, egg, verbose, keep_log, conf=None, deploy_track=None
+):
     tmpdir = None
     try:
         conf = conf or load_shub_config()
@@ -139,6 +177,7 @@ def deploy_cmd(target, version, debug, egg, verbose, keep_log, conf=None):
             targetconf.stack,
             targetconf.requirements_file,
             targetconf.eggs,
+            deploy_track=deploy_track,
         )
         click.echo(
             f"Run your spiders at: https://app.zyte.com/p/{targetconf.project_id}/"
@@ -162,6 +201,7 @@ def _upload_egg(
     stack=None,
     requirements_file=None,
     eggs=None,
+    deploy_track=None,
 ):
     expanded_eggs = []
     for e in eggs or []:
@@ -183,6 +223,8 @@ def _upload_egg(
     data = {"project": project, "version": version}
     if stack:
         data["stack"] = stack
+    if deploy_track:
+        data["track"] = deploy_track
 
     try:
         files = [("eggs", open(path, "rb")) for path in expanded_eggs]  # noqa: PTH123
@@ -198,7 +240,12 @@ def _upload_egg(
         raise ShubException(f"{e.strerror} {e.filename}") from e
     files.append(("egg", Path(eggpath).open("rb")))
     url = _url(endpoint, "scrapyd/addversion.json")
-    click.echo(f'Deploying to Scrapy Cloud project "{project}"')
+    if deploy_track:
+        click.echo(
+            f'Deploying to track "{deploy_track}" of Scrapy Cloud project "{project}"'
+        )
+    else:
+        click.echo(f'Deploying to Scrapy Cloud project "{project}"')
     return make_deploy_request(url, data, files, auth, verbose, keep_log)
 
 

@@ -5,6 +5,12 @@ Changes
 (unreleased)
 ============
 
+-   ``shub deploy`` and ``shub schedule`` accept ``--track NAME``, to deploy
+    to a deploy track of the project instead of replacing its live
+    deployment, and to run a spider from one.
+    ``shub schedule -i`` no longer inherits a job's ``deploy_track:*`` tag,
+    which Scrapy Cloud sets itself.
+
 -   ``shub deploy --build-egg`` is deprecated in favor of the new
     ``shub build-egg`` command: ``shub build-egg FILENAME`` builds the
     project's egg and writes it to ``FILENAME``, without deploying it. The

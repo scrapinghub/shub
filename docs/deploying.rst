@@ -22,6 +22,16 @@ your ``scrapinghub.yml``, you can leave out the parameter completely::
     {"status": "ok", "project": 12345, "version": "3af023e-master", "spiders": 1}
     Run your spiders at: https://app.zyte.com/p/12345/
 
+To deploy to one of the project's deploy tracks instead, pass its name
+through ``--track``. The deploy runs alongside the project's live deployment
+without replacing it, and the track is created on its first deploy::
+
+    $ shub deploy --track experiment
+    Packing version 3af023e-master
+    Deploying to track "experiment" of Scrapy Cloud project "12345"
+
+``--track`` is not supported for projects that use a custom Docker image.
+
 You can also build your project's Python egg without deploying it, and
 deploy your project from an existing egg::
 

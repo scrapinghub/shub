@@ -56,6 +56,11 @@ options take precedence over inherited ones::
 
     $ shub schedule myspider -i 2/15 --inherit-args -a ARG1=OTHER
 
+To run a spider from one of the project's deploy tracks instead of its live
+deployment, pass the track's name through ``--track``::
+
+    $ shub schedule myspider --track experiment
+
 shub provides commands to retrieve log entries, scraped items, or requests from
 jobs. If the job is still running, you can provide the ``-f`` (follow) option
 to receive live updates::
