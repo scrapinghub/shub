@@ -25,6 +25,9 @@ the "production" target of your scrapinghub.yml:
 Jobs are checked one at a time, newest first, with a delay between them to
 keep the load on Scrapy Cloud low, and up to --max-jobs jobs are checked.
 Narrow the search with --spider, --since and --until to check fewer jobs.
+
+To list the latest jobs, optionally filtered by state, tag or spider argument,
+see `shub jobs`.
 """
 
 SHORT_HELP = "Find jobs with matching requests, items or log entries"
