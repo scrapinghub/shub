@@ -280,6 +280,15 @@ class DeployTest(AssertInvokeRaisesMixin, unittest.TestCase):
             self.runner.invoke(deploy.cli, ("5",))
         mock_upload_cmd.assert_called_once_with("5", None)
 
+    @patch('shub.deploy.upload_cmd')
+    def test_custom_deploy_egg(self, mock_upload_cmd):
+        with self.runner.isolated_filesystem():
+            self._make_project()
+            self.assertInvokeRaises(
+                BadParameterException, deploy.cli,
+                ('custom2', '--egg', 'some.egg'))
+        mock_upload_cmd.assert_not_called()
+
     def test_custom_deploy_bad_registry(self):
         with self.runner.isolated_filesystem():
             self._make_project()
