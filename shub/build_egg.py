@@ -7,6 +7,7 @@ import click
 
 from shub.exceptions import NotFoundException, ShubException, SubcommandException
 from shub.utils import (
+    _project_cwd,
     create_default_setup_py,
     inside_project,
     remember_cwd,
@@ -54,7 +55,8 @@ def cli(filename, debug):
 def build_egg_cmd(filename, debug=False):
     tmpdir = None
     try:
-        egg, tmpdir = build_project_egg()
+        with _project_cwd():
+            egg, tmpdir = build_project_egg()
         click.echo(f"Writing egg to {filename}")
         try:
             shutil.copyfile(egg, filename)

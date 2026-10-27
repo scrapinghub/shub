@@ -17,7 +17,12 @@ from shub.exceptions import (
     print_warning,
 )
 from shub.image.upload import upload_cmd
-from shub.utils import create_scrapinghub_yml_wizard, make_deploy_request, run_cmd
+from shub.utils import (
+    _project_cwd,
+    create_scrapinghub_yml_wizard,
+    make_deploy_request,
+    run_cmd,
+)
 
 # The previous name of build_project_egg(), which deploy wrappers built on top
 # of shub still import from here.
@@ -115,6 +120,12 @@ def cli(target, version, debug, egg, build_egg, verbose, keep_log, ignore_size):
 
 
 def deploy_cmd(target, version, debug, egg, verbose, keep_log, conf=None):
+    egg = egg and str(Path(egg).absolute())
+    with _project_cwd():
+        _deploy_cmd(target, version, debug, egg, verbose, keep_log, conf)
+
+
+def _deploy_cmd(target, version, debug, egg, verbose, keep_log, conf):
     tmpdir = None
     try:
         conf = conf or load_shub_config()
