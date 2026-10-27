@@ -1,7 +1,7 @@
 import click
 
 from shub.config import list_targets_callback
-from shub.image import build, deploy, push, utils
+from shub.image import build, deploy, push
 
 SHORT_HELP = "Shortcut command for build-push-deploy chain"
 HELP = """
@@ -23,13 +23,6 @@ Obviously it accepts all the options for the commands above.
     callback=list_targets_callback,
     help="List available project names defined in your config",
 )
-@click.option(
-    "-d",
-    "--debug",
-    help="debug mode",
-    is_flag=True,
-    callback=utils.deprecate_debug_parameter,
-)
 @click.option("-v", "--verbose", is_flag=True, help="stream upload logs to console")
 @click.option("-V", "--version", help="release version")
 @click.option("--username", help="docker registry name")
@@ -37,13 +30,6 @@ Obviously it accepts all the options for the commands above.
 @click.option("--email", help="docker registry email")
 @click.option("--apikey", help="SH apikey to use built-in registry")
 @click.option("--insecure", is_flag=True, help="use insecure registry")
-@click.option(
-    "--async",
-    "async_",
-    is_flag=True,
-    help="[DEPRECATED] enable asynchronous mode",
-    callback=utils.deprecate_async_parameter,
-)
 @click.option("-S", "--skip-tests", help="skip testing image", is_flag=True)
 @click.option(
     "-R", "--reauth", is_flag=True, help="re-authenticate to registry before pushing"
@@ -66,7 +52,6 @@ Obviously it accepts all the options for the commands above.
 )
 def cli(
     target,
-    debug,
     verbose,
     version,
     username,
@@ -74,7 +59,6 @@ def cli(
     email,
     apikey,
     insecure,
-    async_,
     skip_tests,
     reauth,
     no_cache,
@@ -89,7 +73,6 @@ def cli(
         email,
         apikey,
         insecure,
-        async_,
         skip_tests,
         reauth,
         no_cache,
@@ -106,7 +89,6 @@ def upload_cmd(
     email=None,
     apikey=None,
     insecure=False,
-    async_=False,
     skip_tests=False,
     reauth=False,
     no_cache=False,
@@ -126,6 +108,4 @@ def upload_cmd(
         skip_tests=True,
         reauth=reauth,
     )
-    deploy.deploy_cmd(
-        target, version, username, password, email, apikey, insecure, async_
-    )
+    deploy.deploy_cmd(target, version, username, password, email, apikey, insecure)

@@ -7,6 +7,7 @@ from shub import exceptions as shub_exceptions
 from shub.image.test import (
     IMAGE_SIZE_LIMIT,
     _check_image_size,
+    _check_shub_image_info_entry,
     _check_start_crawl_entry,
     _run_docker_command,
     cli,
@@ -72,6 +73,16 @@ def test_start_crawl(docker_client):
     docker_client.logs.return_value = ""
     with pytest.raises(shub_exceptions.NotFoundException):
         _check_start_crawl_entry("image", docker_client)
+
+
+def test_shub_image_info(docker_client):
+    assert _check_shub_image_info_entry("image", docker_client) is None
+    docker_client.create_container.assert_called_with(
+        image="image", command=["which", "shub-image-info"]
+    )
+    docker_client.wait.return_value = {"Error": None, "StatusCode": 1}
+    with pytest.raises(shub_exceptions.NotFoundException):
+        _check_shub_image_info_entry("image", docker_client)
 
 
 def test_run_docker_command(docker_client):

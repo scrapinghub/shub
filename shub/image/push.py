@@ -34,13 +34,6 @@ LOGIN_ERROR_MSG = "Please authorize with docker login"
     callback=list_targets_callback,
     help="List available project names defined in your config",
 )
-@click.option(
-    "-d",
-    "--debug",
-    help="debug mode",
-    is_flag=True,
-    callback=utils.deprecate_debug_parameter,
-)
 @click.option("-v", "--verbose", is_flag=True, help="stream push logs to console")
 @click.option("-V", "--version", help="release version")
 @click.option("--username", help="docker registry name")
@@ -52,7 +45,6 @@ LOGIN_ERROR_MSG = "Please authorize with docker login"
 @click.option("-R", "--reauth", is_flag=True, help="re-authenticate to registry")
 def cli(
     target,
-    debug,
     verbose,
     version,
     username,

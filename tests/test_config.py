@@ -16,7 +16,6 @@ from shub.config import (
     SH_IMAGES_REPOSITORY,
     ShubConfig,
     Target,
-    get_target,
     get_target_conf,
     get_version,
     load_shub_config,
@@ -27,6 +26,7 @@ from shub.exceptions import (
     ConfigParseException,
     MissingAuthException,
     NotFoundException,
+    ShubDeprecationWarning,
 )
 
 VALID_YAML_CFG = """
@@ -56,9 +56,6 @@ VALID_YAML_CFG = """
         otheruser: otherkey
     stacks:
         dev: scrapy:v1.1
-    images:
-        dev: registry/user/project
-        prod: user/project
     requirements:
         eggs:
           - ./egg1.egg
@@ -144,8 +141,6 @@ class ShubConfigTest(unittest.TestCase):
         assert apikeys == self.conf.apikeys
         stacks = {"dev": "scrapy:v1.1"}
         assert stacks == self.conf.stacks
-        images = {"dev": "registry/user/project", "prod": "user/project"}
-        assert images == self.conf.images
         assert "requirements.txt" == self.conf.requirements_file
 
     def test_load_partial(self):
@@ -278,6 +273,14 @@ class ShubConfigTest(unittest.TestCase):
                 "images",
             ]:
                 assert getattr(self.conf, option) == getattr(loaded_conf, option)
+
+    @mock.patch("shub.config.print_warning")
+    @mock.patch("shub.config.GLOBAL_SCRAPINGHUB_YML_PATH", "global.yml")
+    def test_save_without_path(self, mock_print_warning):
+        with CliRunner().isolated_filesystem():
+            self.conf.save()
+            assert Path("global.yml").is_file()
+        assert mock_print_warning.call_args[0][1] is ShubDeprecationWarning
 
     def test_save_partial(self):
         runner = CliRunner()
@@ -428,10 +431,7 @@ class ShubConfigTest(unittest.TestCase):
                 custom:
                     id: 789
                     image: user/repo
-                deprecated: 987
             image: true
-            images:
-                deprecated: old/style
         """)
         assert self.conf.get_image("default") == SH_IMAGES_REPOSITORY.format(
             project=123
@@ -445,8 +445,6 @@ class ShubConfigTest(unittest.TestCase):
         )
         # check if custom image is respected
         assert self.conf.get_image("custom") == "user/repo"
-        # check for backward compatibility
-        assert self.conf.get_image("deprecated") == "old/style"
 
     def test_get_image_not_found(self):
         self.conf.load("""
@@ -459,13 +457,15 @@ class ShubConfigTest(unittest.TestCase):
     def test_get_image_mismatch_project(self):
         self.conf.load("""
             projects:
-                prod: 123
-                develop: 321
-                success: 456
-            images:
-                prod: images.scrapinghub.com/wrong-prefix/123
-                develop: images.scrapinghub.com/project/123
-                success: images.scrapinghub.com/project/456
+                prod:
+                    id: 123
+                    image: images.scrapinghub.com/wrong-prefix/123
+                develop:
+                    id: 321
+                    image: images.scrapinghub.com/project/123
+                success:
+                    id: 456
+                    image: images.scrapinghub.com/project/456
         """)
         with pytest.raises(BadConfigException):
             self.conf.get_image("prod")
@@ -475,28 +475,13 @@ class ShubConfigTest(unittest.TestCase):
             project=456
         )
 
-    def test_get_image_ambigious_deprecated_images_section(self):
-        with pytest.raises(BadConfigException):
-            self.conf.load("""
-                projects:
-                    default:
-                        id: 123
-                    stacks:
-                        id: 322
-                        stack: scrapy:1.2
-                images:
-                    default: custom/image
-            """)
-        self.conf.load("""
-            projects:
-                default:
-                    id: 123
-                stacks:
-                    id: 322
-                    image: false
-                    stack: scrapy:1.2
-            image: custom/image
+    def test_load_images_section(self):
+        conf = self._get_conf_with_yml("""
+            project: 123
+            images:
+                default: custom/image
         """)
+        assert conf.images == {}
 
     def test_get_image_ambiguous_global_image_and_global_stack(self):
         self.conf.load("""
@@ -725,12 +710,8 @@ class LoadShubConfigTest(unittest.TestCase):
 class ConfigHelpersTest(unittest.TestCase):
     @mock.patch("shub.config.load_shub_config")
     def test_get_target_version(self, mock_lsh):
-        get_target("mytarget", auth_required=False)
         get_target_conf("mytargetconf", auth_required=False)
         get_version()
-        mock_lsh.return_value.get_target.assert_called_once_with(
-            "mytarget", auth_required=False
-        )
         mock_lsh.return_value.get_target_conf.assert_called_once_with(
             "mytargetconf", auth_required=False
         )
