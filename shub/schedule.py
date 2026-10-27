@@ -34,6 +34,10 @@ Similarly, job-specific settings can be supplied through the -s option:
 
     shub schedule myspider -s SETTING=VALUE -s LOG_LEVEL=DEBUG
 
+To run the spider from a deploy track, use the --track option:
+
+    shub schedule myspider --track my-track
+
 To reuse the arguments, settings, environment variables and tags of a previous
 job, pass its ID through the -i option. Use --inherit-args, --inherit-settings,
 --inherit-environment or --inherit-tags to inherit only some of them. Values
@@ -86,6 +90,7 @@ def _complete_spider(ctx, param, incomplete):
     "--inherit-environment", is_flag=True, help="Inherit job environment variables"
 )
 @click.option("--inherit-tags", is_flag=True, help="Inherit job tags")
+@click.option("--track", help="The deploy track to run the spider from")
 def cli(
     spider,
     argument,
@@ -99,6 +104,8 @@ def cli(
     inherit_settings,
     inherit_environment,
     inherit_tags,
+    *,
+    track,
 ):
     try:
         target, spider = spider.rsplit("/", 1)
@@ -138,6 +145,7 @@ def cli(
         tag,
         environment,
         inherited=inherited,
+        track=track,
     )
     watch_url = urljoin(
         targetconf.endpoint,
@@ -164,6 +172,8 @@ def schedule_spider(
     tag=(),
     environment=(),
     inherited=None,
+    *,
+    track=None,
 ):
     inherited = inherited or {}
     client = ScrapinghubClient(apikey, dash_endpoint=endpoint)
@@ -191,6 +201,7 @@ def schedule_spider(
                 **inherited.get("environment", {}),
                 **dict(x.split("=", 1) for x in environment),
             },
+            **({"deploy-track": track} if track else {}),
         )
         return job.key
     except ScrapinghubAPIError as e:
