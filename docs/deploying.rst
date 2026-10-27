@@ -56,6 +56,13 @@ To deploy to a :ref:`deploy track <zyte:sc-deploy-tracks>`, use ``--track``::
 Deploy tracks are not supported for :ref:`custom Docker images
 <deploy-custom-image>`.
 
+To list, archive or restore the deploy tracks of a project, use ``shub
+tracks``::
+
+    shub tracks list
+    shub tracks archive my-track
+    shub tracks restore my-track
+
 
 .. _deploying-dependencies:
 

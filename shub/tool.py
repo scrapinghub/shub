@@ -66,6 +66,7 @@ commands = [
     "find_jobs",
     "jobs",
     "list_stacks",
+    "tracks",
 ]
 
 for command in commands:

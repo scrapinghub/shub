@@ -53,11 +53,15 @@ Use --filter KEY=VALUE (repeatable) to narrow down the jobs:
     no-tag=TAG                              only jobs not having that tag
     arg.NAME=VALUE                          only jobs run with that spider
                                             argument
+    track=TRACK                             only jobs run from that deploy
+                                            track, or from the current deploy
+                                            for track=default
 
-Repeated state or tag filters match jobs that fulfil any of them, while
-repeated no-tag and arg.* filters must all be fulfilled. The arg.* filters
-are applied by shub, not by Scrapy Cloud: shub retrieves the latest jobs, page
-by page, until --limit of them match, and searches the latest 10000 at most.
+Repeated state, tag or track filters match jobs that fulfil any of them,
+while repeated no-tag and arg.* filters must all be fulfilled. The arg.* and
+track filters are applied by shub, not by Scrapy Cloud: shub retrieves the
+latest jobs, page by page, until --limit of them match, and searches the
+latest 10000 at most.
 
 Use --orderby FIELD[:asc|:desc] to sort the listed jobs (descending, i.e.
 largest or newest first, unless :asc is given). FIELD is one of scheduled,
@@ -90,14 +94,15 @@ ORDER_FIELDS = {
 # Counters, which job summaries leave out while they are 0
 COUNTERS = ("items", "errors")
 
-# Extra job metadata requested from Scrapy Cloud when it is needed for
-# --filter arg.NAME=VALUE. The list must be complete, since Scrapy Cloud only
+# Extra job metadata requested from Scrapy Cloud when it is needed for the
+# filters that shub applies. The list must be complete, since Scrapy Cloud only
 # adds a few default fields to the ones requested.
 SUMMARY_META = [
     "spider",
     "state",
     "close_reason",
     "spider_args",
+    "deploy_track",
     "pending_time",
     "running_time",
     "finished_time",
@@ -130,7 +135,7 @@ ORDER_COLUMNS = {
     multiple=True,
     metavar="KEY=VALUE",
     help="Only list jobs matching KEY=VALUE (state, tag, no-tag, "
-    "arg.NAME); can be repeated",
+    "arg.NAME, track); can be repeated",
 )
 @click.option(
     "--orderby",
@@ -141,7 +146,7 @@ ORDER_COLUMNS = {
 def cli(project_or_spider, limit, filters, orderby):
     conf = config.load_shub_config()
     target, spider = resolve_target(project_or_spider, conf.projects)
-    params, spider_args = parse_filters(filters)
+    params, matches = parse_filters(filters)
     order_field, descending = parse_orderby(orderby)
     targetconf = conf.get_target_conf(target)
     client = get_scrapinghub_client_from_config(targetconf)
@@ -163,9 +168,9 @@ def cli(project_or_spider, limit, filters, orderby):
         kwargs = dict(params, state=params.get("state") or DEFAULT_STATES)
         if spider:
             kwargs["spider"] = spider
-        if spider_args:
+        if matches:
             kwargs["meta"] = SUMMARY_META
-        jobs, truncated = get_jobs(project, limit, spider_args, **kwargs)
+        jobs, truncated = get_jobs(project, limit, matches, **kwargs)
     # ValueError: e.g. a response that is not JSON
     except (ScrapinghubAPIError, ValueError, requests.RequestException) as e:
         raise RemoteErrorException(str(e)) from e
@@ -180,21 +185,21 @@ def cli(project_or_spider, limit, filters, orderby):
         click.echo(f"Only the latest {MAX_JOBS} jobs were searched.", err=True)
 
 
-def get_jobs(project, limit, spider_args, **kwargs):
-    """Return the latest ``limit`` jobs that were run with the spider
-    arguments, if any, and whether the search stopped at MAX_JOBS jobs."""
+def get_jobs(project, limit, matches, **kwargs):
+    """Return the latest ``limit`` jobs for which ``matches``, if any, returns
+    ``True``, and whether the search stopped at MAX_JOBS jobs."""
     jobs = {}  # by key, as jobs added or changed meanwhile shift the others
     start = 0
     while len(jobs) < limit:
         if start >= MAX_JOBS:
             return list(jobs.values()), True
         # Matching jobs may be rare, so retrieve as many as possible
-        count = PAGE_SIZE if spider_args else min(limit - len(jobs), PAGE_SIZE)
+        count = PAGE_SIZE if matches else min(limit - len(jobs), PAGE_SIZE)
         page = list(project.jobs.iter(start=start, count=count, **kwargs))
         if not page:
             break
         for job in page:
-            if matches_args(job, spider_args):
+            if not matches or matches(job):
                 jobs.setdefault(job["key"], job)
         start += len(page)
     return list(jobs.values())[:limit], False
@@ -214,10 +219,11 @@ def resolve_target(argument, targets):
 
 
 def parse_filters(filters):
-    """Return (parameters for ``project.jobs.iter``, (name, value) pairs of
-    spider arguments)."""
+    """Return (parameters for ``project.jobs.iter``, function that tells
+    whether a job matches the filters that shub applies, or ``None``)."""
     params = {}
     spider_args = []
+    tracks = []
     keys = {"state": "state", "tag": "has_tag", "no-tag": "lacks_tag"}
     for item in filters:
         key, sep, value = item.partition("=")
@@ -227,6 +233,8 @@ def parse_filters(filters):
             )
         if key.startswith(ARG_PREFIX) and len(key) > len(ARG_PREFIX):
             spider_args.append((key[len(ARG_PREFIX) :], value))
+        elif key == "track":
+            tracks.append(value)
         elif key in keys:
             if key == "state" and value not in STATES:
                 raise BadParameterException(
@@ -235,10 +243,18 @@ def parse_filters(filters):
             params.setdefault(keys[key], []).append(value)
         else:
             raise BadParameterException(
-                f"unknown filter {key!r}, use state, tag, no-tag, or arg.NAME",
+                f"unknown filter {key!r}, use state, tag, no-tag, arg.NAME, or track",
                 param_hint="--filter",
             )
-    return params, spider_args
+    if not spider_args and not tracks:
+        return params, None
+
+    def matches(job):
+        # Jobs run from the current deploy have no track
+        track = job.get("deploy_track") or "default"
+        return matches_args(job, spider_args) and (not tracks or track in tracks)
+
+    return params, matches
 
 
 def parse_orderby(orderby):
