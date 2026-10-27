@@ -253,6 +253,24 @@ class DeployTest(AssertInvokeRaisesMixin, unittest.TestCase):
         assert data == {"project": 1, "version": "version"}
         mock_latest_stack.assert_not_called()
 
+    @patch("shub.deploy.make_deploy_request")
+    def test_track(self, mock_deploy_req):
+        with self.runner.isolated_filesystem():
+            self._make_project()
+            result = self.runner.invoke(deploy.cli, ("--track", "my-track"))
+        assert result.exit_code == 0
+        _, data, _, _, _, _ = mock_deploy_req.call_args[0]
+        assert data == {"project": 1, "version": "version", "track": "my-track"}
+
+    @patch("shub.deploy.upload_cmd")
+    def test_track_image(self, mock_upload_cmd):
+        with self.runner.isolated_filesystem():
+            self._make_project()
+            self.assertInvokeRaises(
+                BadParameterException, deploy.cli, ("custom2", "--track", "my-track")
+            )
+        mock_upload_cmd.assert_not_called()
+
     def test_deploy_list_targets(self):
         with self.runner.isolated_filesystem():
             self._make_project()

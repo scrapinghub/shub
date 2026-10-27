@@ -44,6 +44,10 @@ You can also deploy an existing project egg:
 
     shub deploy --egg egg_name
 
+To deploy to a deploy track, leaving the project's current deploy as it is:
+
+    shub deploy --track my-track
+
 To build an egg without deploying it, use `shub build-egg`:
 
     shub build-egg egg_name
@@ -96,7 +100,10 @@ def _deprecate_build_egg_parameter(ctx, param, value):
 @click.option(
     "--ignore-size", help="Ignore deploy request's egg(s) size check", is_flag=True
 )
-def cli(target, version, debug, egg, build_egg, verbose, keep_log, ignore_size):
+@click.option("--track", help="The deploy track to deploy to")
+def cli(
+    target, version, debug, egg, build_egg, verbose, keep_log, ignore_size, *, track
+):
     if build_egg is not None:
         build_egg_cmd(build_egg, debug)
         return
@@ -104,7 +111,13 @@ def cli(target, version, debug, egg, build_egg, verbose, keep_log, ignore_size):
     create_scrapinghub_yml_wizard(conf, target=target)
     image = conf.get_target_conf(target).image
     if not image:
-        deploy_cmd(target, version, debug, egg, verbose, keep_log, conf=conf)
+        deploy_cmd(
+            target, version, debug, egg, verbose, keep_log, conf=conf, track=track
+        )
+    elif track is not None:
+        raise BadParameterException(
+            "--track is not supported for custom Docker images."
+        )
     elif image.startswith(SH_IMAGES_REGISTRY):
         upload_cmd(target, version)
     else:
@@ -114,7 +127,9 @@ def cli(target, version, debug, egg, build_egg, verbose, keep_log, ignore_size):
         )
 
 
-def deploy_cmd(target, version, debug, egg, verbose, keep_log, conf=None):
+def deploy_cmd(
+    target, version, debug, egg, verbose, keep_log, conf=None, *, track=None
+):
     tmpdir = None
     try:
         conf = conf or load_shub_config()
@@ -139,6 +154,7 @@ def deploy_cmd(target, version, debug, egg, verbose, keep_log, conf=None):
             targetconf.stack,
             targetconf.requirements_file,
             targetconf.eggs,
+            track=track,
         )
         click.echo(
             f"Run your spiders at: https://app.zyte.com/p/{targetconf.project_id}/"
@@ -162,6 +178,8 @@ def _upload_egg(
     stack=None,
     requirements_file=None,
     eggs=None,
+    *,
+    track=None,
 ):
     expanded_eggs = []
     for e in eggs or []:
@@ -183,6 +201,8 @@ def _upload_egg(
     data = {"project": project, "version": version}
     if stack:
         data["stack"] = stack
+    if track:
+        data["track"] = track
 
     try:
         files = [("eggs", open(path, "rb")) for path in expanded_eggs]  # noqa: PTH123
