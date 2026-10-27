@@ -1,3 +1,4 @@
+import runpy
 import tempfile
 from pathlib import Path
 from unittest import mock
@@ -10,7 +11,7 @@ except ImportError:
 import pytest
 from click.testing import CliRunner
 
-from shub.image.run import WRAPPER_IMAGE_PATH, _json_dumps, cli
+from shub.image.run import WRAPPER_IMAGE_PATH, _json_dumps, cli, wrapper
 from shub.image.run.wrapper import _consume_from_fifo, _millis_to_str
 from shub.image.utils import make_temp_directory
 
@@ -150,3 +151,41 @@ def test_consume_from_fifo(mock_stdout):
     assert mock_stdout.getvalue() == (
         f"{local_datetime_string} INFO Some message\n{local_datetime_string} WARNING Other message\n"
     )
+
+
+@mock.patch("shub.image.run.wrapper.os.execv")
+@mock.patch("shub.image.run.wrapper.which", return_value="/usr/bin/start-crawl")
+@mock.patch("shub.image.run.wrapper.Process")
+@mock.patch("shub.image.run.wrapper.os.mkfifo", create=True)
+def test_wrapper_main(mock_mkfifo, mock_process, mock_which, mock_execv, monkeypatch):
+    monkeypatch.setenv("SHUB_FIFO_PATH", "/tmp/fifo")
+    monkeypatch.setattr("sys.argv", ["start-crawl", "spider"])
+
+    wrapper.main()
+
+    mock_mkfifo.assert_called_once_with("/tmp/fifo")
+    mock_process.assert_called_once_with(target=_consume_from_fifo, args=["/tmp/fifo"])
+    mock_process.return_value.start.assert_called_once_with()
+    mock_which.assert_called_once_with("start-crawl")
+    mock_execv.assert_called_once_with(
+        "/usr/bin/start-crawl", ["start-crawl", "spider"]
+    )
+
+
+@mock.patch("os.execv")
+@mock.patch("shutil.which", return_value="/usr/bin/start-crawl")
+@mock.patch("multiprocessing.Process")
+@mock.patch("os.mkfifo", create=True)
+def test_wrapper_as_script(
+    mock_mkfifo, mock_process, mock_which, mock_execv, monkeypatch
+):
+    monkeypatch.setenv("SHUB_FIFO_PATH", "/tmp/fifo")
+
+    # os.execv never returns in practice, so main() returning None here makes
+    # the module exit with status 0.
+    with pytest.raises(SystemExit) as exc_info:
+        runpy.run_path(wrapper.__file__, run_name="__main__")
+
+    assert exc_info.value.code is None
+    mock_mkfifo.assert_called_once_with("/tmp/fifo")
+    mock_execv.assert_called_once()
