@@ -337,6 +337,15 @@ class GitFilteredBuildTest(unittest.TestCase):
             result = self.runner.invoke(deploy.cli)
             assert 0 == result.exit_code, result.output
 
+    @patch("shub.deploy.build_project_egg", wraps=build_project_egg)
+    @patch("shub.deploy.make_deploy_request")
+    def test_deploy_from_head_flag(self, mock_deploy_req, mock_build):
+        with self.runner.isolated_filesystem():
+            make_git_project()
+            result = self.runner.invoke(deploy.cli, ["--from-head"])
+            assert 0 == result.exit_code, result.output
+        mock_build.assert_called_once_with(True)
+
 
 class DeployFilesTest(unittest.TestCase):
     def setUp(self):
