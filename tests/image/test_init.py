@@ -3,8 +3,9 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from shub.exceptions import BadConfigException
+from shub.exceptions import BadConfigException, BadParameterException
 from shub.image.init import (
+    _format_eggs,
     _format_requirements,
     _format_system_deps,
     _format_system_env,
@@ -128,3 +129,46 @@ def test_no_scrapy_cfg(project_dir):
     assert result.exit_code == BadConfigException.exit_code
     assert "Error: Cannot find a Scrapy project in this location" in result.output
     assert not Path(project_dir, "Dockerfile").exists()
+
+
+@pytest.mark.parametrize(
+    "sh_config",
+    [
+        # no default target
+        "requirements:\n  file: fake-requirements.txt\n  eggs:\n    - foo.egg\n",
+        # default target with its own requirements
+        (
+            "requirements:\n  file: requirements.txt\n"
+            "projects:\n"
+            "  default:\n"
+            "    id: 12345\n"
+            "    requirements:\n      file: fake-requirements.txt\n      eggs:\n"
+            "        - foo.egg\n"
+        ),
+    ],
+)
+def test_cli_shub_requirements(project_dir, sh_config):
+    add_fake_requirements(project_dir)
+    Path(project_dir, "scrapinghub.yml").write_text(sh_config)
+    result = CliRunner().invoke(cli, [])
+    assert result.exit_code == 0
+    assert "Python eggs are a deprecated packaging format" in result.output
+    dockerfile = Path(project_dir, "Dockerfile").read_text()
+    assert "COPY ./fake-requirements.txt /app/requirements.txt" in dockerfile
+    assert "ENV PYTHONPATH /eggs/foo.egg\n" in dockerfile
+    assert not Path(project_dir, "requirements.txt").exists()
+
+
+def test_format_eggs(project_dir):
+    assert _format_eggs(project_dir, []) is None
+    Path("vendor").mkdir()
+    for name in ("b.egg", "a.egg"):
+        Path("vendor", name).touch()
+    assert _format_eggs(project_dir, ["foo.egg", "vendor/*.egg"]) == (
+        "RUN python -m zipfile -e /app/foo.egg /eggs/foo.egg && \\\n"
+        "    python -m zipfile -e /app/vendor/a.egg /eggs/a.egg && \\\n"
+        "    python -m zipfile -e /app/vendor/b.egg /eggs/b.egg\n"
+        "ENV PYTHONPATH /eggs/foo.egg:/eggs/a.egg:/eggs/b.egg"
+    )
+    with pytest.raises(BadParameterException):
+        _format_eggs(project_dir, ["../foo.egg"])
