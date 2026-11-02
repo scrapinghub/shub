@@ -89,3 +89,17 @@ class TracksTest(unittest.TestCase):
         result = self.invoke("archive", "missing")
         assert result.exit_code == RemoteErrorException.exit_code
         assert "404 Not Found: Not found." in result.output
+
+    def test_error_not_json(self):
+        response = make_response(502, reason="Bad Gateway")
+        response._content = b"upstream down"
+        self.request.return_value = response
+        result = self.invoke("archive", "my-track")
+        assert result.exit_code == RemoteErrorException.exit_code
+        assert "502 Bad Gateway: upstream down" in result.output
+
+    def test_connection_error(self):
+        self.request.side_effect = requests.ConnectionError("unreachable")
+        result = self.invoke("list")
+        assert result.exit_code == RemoteErrorException.exit_code
+        assert "unreachable" in result.output
