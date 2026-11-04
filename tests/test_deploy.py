@@ -261,6 +261,9 @@ class DeployTest(AssertInvokeRaisesMixin, unittest.TestCase):
         assert result.exit_code == 0
         _, data, _, _, _, _ = mock_deploy_req.call_args[0]
         assert data == {"project": 1, "version": "version", "track": "my-track"}
+        assert 'Deploying to track "my-track" of Scrapy Cloud project "1"' in (
+            result.output
+        )
 
     @patch("shub.deploy.upload_cmd")
     def test_track_image(self, mock_upload_cmd):

@@ -100,7 +100,7 @@ def _deprecate_build_egg_parameter(ctx, param, value):
 @click.option(
     "--ignore-size", help="Ignore deploy request's egg(s) size check", is_flag=True
 )
-@click.option("--track", help="The deploy track to deploy to")
+@click.option("--track", metavar="NAME", help="The deploy track to deploy to")
 def cli(
     target, version, debug, egg, build_egg, verbose, keep_log, ignore_size, *, track
 ):
@@ -116,7 +116,8 @@ def cli(
         )
     elif track is not None:
         raise BadParameterException(
-            "--track is not supported for custom Docker images."
+            "--track is not supported for custom Docker images.",
+            param_hint="--track",
         )
     elif image.startswith(SH_IMAGES_REGISTRY):
         upload_cmd(target, version)
@@ -218,7 +219,10 @@ def _upload_egg(
         raise ShubException(f"{e.strerror} {e.filename}") from e
     files.append(("egg", Path(eggpath).open("rb")))
     url = _url(endpoint, "scrapyd/addversion.json")
-    click.echo(f'Deploying to Scrapy Cloud project "{project}"')
+    if track:
+        click.echo(f'Deploying to track "{track}" of Scrapy Cloud project "{project}"')
+    else:
+        click.echo(f'Deploying to Scrapy Cloud project "{project}"')
     return make_deploy_request(url, data, files, auth, verbose, keep_log)
 
 

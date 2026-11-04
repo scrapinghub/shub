@@ -132,7 +132,7 @@ class ScheduleTest(unittest.TestCase):
             "spider_args": {"A": "1", "B": "2"},
             "job_settings": {"S": 3},
             "environment": {"E": "4"},
-            "tags": ["t1", "t2"],
+            "tags": ["t1", "deploy_track:my-track", "t2"],
         }
 
         self.runner.invoke(

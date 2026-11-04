@@ -90,7 +90,7 @@ def _complete_spider(ctx, param, incomplete):
     "--inherit-environment", is_flag=True, help="Inherit job environment variables"
 )
 @click.option("--inherit-tags", is_flag=True, help="Inherit job tags")
-@click.option("--track", help="The deploy track to run the spider from")
+@click.option("--track", metavar="NAME", help="The deploy track to run the spider from")
 def cli(
     spider,
     argument,
@@ -176,6 +176,11 @@ def schedule_spider(
     track=None,
 ):
     inherited = inherited or {}
+    # Scrapy Cloud sets deploy_track:* tags itself, and rejects them on jobs
+    # that do not run from that track.
+    inherited_tags = [
+        t for t in inherited.get("tags", ()) if not t.startswith("deploy_track:")
+    ]
     client = ScrapinghubClient(apikey, dash_endpoint=endpoint)
     try:
         project = client.get_project(project)
@@ -196,7 +201,7 @@ def schedule_spider(
             },
             priority=priority,
             units=units,
-            add_tag=tuple(dict.fromkeys((*inherited.get("tags", ()), *tag))),
+            add_tag=tuple(dict.fromkeys((*inherited_tags, *tag))),
             environment={
                 **inherited.get("environment", {}),
                 **dict(x.split("=", 1) for x in environment),
