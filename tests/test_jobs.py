@@ -41,6 +41,7 @@ JOBS = [
         "state": "pending",
         "pending_time": 1451752500000,
         "spider_args": {"a": "2"},
+        "deploy_track": "my-track",
     },
 ]
 
@@ -375,8 +376,27 @@ class JobsTest(AssertInvokeRaisesMixin, unittest.TestCase):
         )
         assert ["1/1/14"] == self.keys(result)
 
+    def test_track_filter_is_applied_client_side(self):
+        result = self.invoke("--filter", "track=my-track")
+        assert ["1/1/13"] == self.keys(result)
+        kwargs = self.iter_kwargs()
+        assert 1000 == kwargs["count"]
+        assert "deploy_track" in kwargs["meta"]
+
+    def test_default_track_filter_matches_jobs_without_track(self):
+        result = self.invoke("--filter", "track=default")
+        assert ["1/2/15", "1/1/14"] == self.keys(result)
+
+    def test_repeated_track_filters_match_any(self):
+        result = self.invoke("--filter", "track=my-track", "--filter", "track=default")
+        assert ["1/2/15", "1/1/14", "1/1/13"] == self.keys(result)
+
+    def test_track_and_spider_args_filters_must_all_match(self):
+        result = self.invoke("--filter", "track=default", "--filter", "arg.a=2")
+        assert ["1/1/14"] == self.keys(result)
+
     def test_invalid_filters(self):
-        for bad in ("state", "state=", "state=bogus", "color=red", "arg.=1"):
+        for bad in ("state", "state=", "state=bogus", "color=red", "arg.=1", "track="):
             result = self.invoke("--filter", bad)
             assert 64 == result.exit_code, bad
             assert "--filter" in result.output

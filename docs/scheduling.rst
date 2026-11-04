@@ -48,6 +48,11 @@ You can also specify the amount of Scrapy Cloud units (``-u``) and the priority 
     or watch it running in Zyte's web interface:
         https://app.zyte.com/p/12345/job/2/16
 
+To run the spider from a :ref:`deploy track <zyte:sc-deploy-tracks>`, use
+``--track``::
+
+    shub schedule myspider --track my-track
+
 To reuse the spider arguments, job-specific settings, environment variables and
 tags of a previous job, pass its ID through the ``-i`` option. To inherit only
 some of them, add ``--inherit-args``, ``--inherit-settings``,
@@ -136,11 +141,15 @@ of them, 20 by default and 10000 at most.
   have none of the given tags
 * ``arg.NAME=VALUE``: only jobs that were run with that spider argument; if
   repeated, all of them must match
+* ``track=TRACK``: only jobs run from that :ref:`deploy track
+  <zyte:sc-deploy-tracks>`, or from the current deploy of the project for
+  ``track=default``; if repeated, jobs run from any of the given tracks
 
-Scrapy Cloud does not support filtering by spider argument, so ``arg.*``
-filters are applied by shub: it retrieves the latest jobs, 1000 at a time,
-until ``--limit`` of them match, and searches the latest 10000 jobs at most (it
-tells you when it stops there). The other filters are applied by Scrapy Cloud.
+Scrapy Cloud does not support filtering by spider argument or deploy track, so
+``arg.*`` and ``track`` filters are applied by shub: it retrieves the latest
+jobs, 1000 at a time, until ``--limit`` of them match, and searches the latest
+10000 jobs at most (it tells you when it stops there). The other filters are
+applied by Scrapy Cloud.
 
 ``--orderby FIELD`` sorts the listed jobs by ``scheduled``, ``started``, or
 ``finished`` time, by number of scraped ``items`` or logged ``errors``, or by
