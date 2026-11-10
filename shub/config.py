@@ -118,8 +118,9 @@ class ShubConfig:
                 "file", self.requirements_file
             )
             self.eggs = yaml_cfg.get("requirements", {}).get("eggs", self.eggs)
-        except (yaml.YAMLError, AttributeError) as e:
+        except (yaml.YAMLError, AttributeError, TypeError, ValueError) as e:
             # AttributeError: stream is valid YAML but not dictionary-like
+            # TypeError/ValueError: a section value is valid YAML but not a mapping
             raise ConfigParseException from e
         # fail if `projects` section has keys not found in `images`
         if check_default_image_scope and not set(self.projects).issubset(
