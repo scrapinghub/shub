@@ -232,6 +232,13 @@ class ShubConfigTest(unittest.TestCase):
         with pytest.raises(ConfigParseException):
             self._get_conf_with_yml(yml)
 
+    def test_load_non_mapping_section(self):
+        # Valid YAML, but a section value is not a mapping
+        with pytest.raises(ConfigParseException):
+            self._get_conf_with_yml("projects: justastring")
+        with pytest.raises(ConfigParseException):
+            self._get_conf_with_yml("endpoints: 123")
+
     def test_load_file(self):
         tmpdir = tempfile.mkdtemp()
         tmpfilepath = Path(tmpdir, "scrapinghub.yml")
