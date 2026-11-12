@@ -1,13 +1,15 @@
 import textwrap
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
+import pytest
 import yaml
 from click.testing import CliRunner
 from yaml import CLoader as Loader
 
 from shub import login
+from shub.config import ShubConfig
 from shub.exceptions import AlreadyLoggedInException
 
 from .utils import AssertInvokeRaisesMixin
@@ -125,3 +127,39 @@ class LoginTest(AssertInvokeRaisesMixin, unittest.TestCase):
                 "default": "ZYTE_KEY",
                 "https://example.com/api/": VALID_KEY,
             }
+
+
+@pytest.mark.parametrize(
+    ("status_code", "expected"),
+    [
+        (200, True),
+        (401, False),
+    ],
+)
+@pytest.mark.parametrize(
+    ("endpoint", "expected_url"),
+    [
+        (None, ShubConfig.DEFAULT_ENDPOINT + "v2/users/me"),
+        ("https://example.com/api/", "https://example.com/api/v2/users/me"),
+    ],
+)
+def test_is_valid_apikey(status_code, expected, endpoint, expected_url):
+    with patch("shub.login.requests.get") as mock_get:
+        mock_get.return_value = Mock(status_code=status_code)
+        assert login._is_valid_apikey("KEY", endpoint=endpoint) is expected
+    mock_get.assert_called_once_with(expected_url, params={"apikey": "KEY"})
+
+
+@patch("shub.login.GLOBAL_SCRAPINGHUB_YML_PATH", new=".scrapinghub.yml")
+@patch("shub.config.GLOBAL_SCRAPINGHUB_YML_PATH", new=".scrapinghub.yml")
+def test_retry_after_invalid_key(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    with patch.object(
+        login, "_is_valid_apikey", side_effect=[False, True]
+    ) as mock_valid:
+        result = CliRunner().invoke(login.cli, input=f"INVALID_KEY\n{VALID_KEY}\n")
+    assert "API key failed, try again." in result.output
+    assert mock_valid.call_count == 2
+    with (tmp_path / ".scrapinghub.yml").open() as f:
+        conf = yaml.load(f, Loader=Loader)
+    assert conf["apikeys"]["default"] == VALID_KEY
