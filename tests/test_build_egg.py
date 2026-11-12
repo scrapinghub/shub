@@ -226,6 +226,27 @@ class BuildEggCommandTest(AssertInvokeRaisesMixin, unittest.TestCase):
             result = self.runner.invoke(build_egg.cli, ["wo.egg"])
             assert 0 == result.exit_code, result.output
 
+    def _build_egg_from_subdir(self):
+        os.chdir("project")
+        result = self.runner.invoke(build_egg.cli, ["built.egg"])
+        assert 0 == result.exit_code, result.output
+        with zipfile.ZipFile("built.egg") as z:
+            return z.namelist()
+
+    def test_builds_egg_from_subdir(self):
+        if shutil.which("git") is None:
+            self.skipTest("git executable not found")
+        with self.runner.isolated_filesystem():
+            make_git_project()
+            names = self._build_egg_from_subdir()
+        assert "project/__init__.py" in names
+
+    def test_builds_egg_from_subdir_without_git_repo(self):
+        with self.runner.isolated_filesystem():
+            self._make_project()
+            names = self._build_egg_from_subdir()
+        assert "project/__init__.py" in names
+
     def test_requires_a_scrapy_project(self):
         with self.runner.isolated_filesystem():
             self.assertInvokeRaises(NotFoundException, build_egg.cli, ["built.egg"])

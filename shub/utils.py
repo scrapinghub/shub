@@ -70,6 +70,17 @@ def remember_cwd():
         os.chdir(current_dir)
 
 
+@contextlib.contextmanager
+def _project_cwd():
+    """Change the current directory to that of the closest scrapy.cfg, if any,
+    and restore it afterwards."""
+    scrapy_cfg = closest_file("scrapy.cfg")
+    with remember_cwd():
+        if scrapy_cfg:
+            os.chdir(Path(scrapy_cfg).parent)
+        yield
+
+
 def get_scrapinghub_client_from_config(conf):
     return ScrapinghubClient(conf.apikey, dash_endpoint=conf.endpoint)
 

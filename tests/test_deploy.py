@@ -103,12 +103,13 @@ class DeployTest(AssertInvokeRaisesMixin, unittest.TestCase):
             self._make_project()
             with Path("given.egg").open("w") as f:
                 f.write("egg content")
+            given_egg = str(Path("given.egg").absolute())
             result = self.runner.invoke(deploy.cli, ("--egg", "given.egg"))
             assert 0 == result.exit_code, result.output
             name, egg = mock_deploy_req.call_args[0][2][-1]
             egg.close()
-        assert "Using egg: given.egg" in result.output
-        assert ("egg", "given.egg") == (name, egg.name)
+        assert f"Using egg: {given_egg}" in result.output
+        assert ("egg", given_egg) == (name, egg.name)
         mock_build.assert_not_called()
 
     @patch("shub.deploy.make_deploy_request")
@@ -336,6 +337,15 @@ class GitFilteredBuildTest(unittest.TestCase):
             make_git_project()
             result = self.runner.invoke(deploy.cli)
             assert 0 == result.exit_code, result.output
+
+    @patch("shub.deploy.make_deploy_request")
+    def test_deploy_from_subdir(self, mock_deploy_req):
+        with self.runner.isolated_filesystem():
+            make_git_project()
+            os.chdir("project")
+            result = self.runner.invoke(deploy.cli)
+            assert 0 == result.exit_code, result.output
+        mock_deploy_req.assert_called_once()
 
 
 class DeployFilesTest(unittest.TestCase):
