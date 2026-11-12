@@ -1,5 +1,7 @@
 import glob
 import shutil
+import zipfile
+from importlib.metadata import PathDistribution
 from pathlib import Path
 from urllib.parse import urljoin
 
@@ -190,6 +192,8 @@ def _upload_egg(
             requirements_file = _get_pipfile_requirements()
         elif _is_poetry(requirements_file):
             requirements_file = _get_poetry_requirements()
+        elif requirements_file in ("setup.py", "pyproject.toml"):
+            requirements_file = _get_egg_requirements(eggpath)
         elif requirements_file:
             requirements_file = open(requirements_file, "rb")  # noqa: PTH123
         if requirements_file:
@@ -266,3 +270,8 @@ def _get_poetry_requirements():
             return _get_poetry_requirements_fallback()
         except Exception as fallback_exception:
             raise original_exception from fallback_exception
+
+
+def _get_egg_requirements(eggpath):
+    dist = PathDistribution(zipfile.Path(eggpath, "EGG-INFO/"))
+    return "\n".join(req for req in dist.requires or [] if "extra ==" not in req)
