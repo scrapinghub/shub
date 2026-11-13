@@ -6,10 +6,11 @@ import zipfile
 from pathlib import Path
 from unittest import mock
 
+import pytest
 from click.testing import CliRunner
 
 from shub import build_egg
-from shub.exceptions import NotFoundException, ShubException
+from shub.exceptions import NotFoundException, ShubException, SubcommandException
 
 from .utils import VALID_SCRAPY_CFG, AssertInvokeRaisesMixin, make_git_project
 
@@ -79,6 +80,39 @@ class BuildProjectEggTest(unittest.TestCase):
             egg, tmpdir = build_egg.build_project_egg()
             shutil.rmtree(tmpdir, ignore_errors=True)
         assert egg.endswith(".egg")
+
+    def test_build_egg_from_head(self):
+        with self.runner.isolated_filesystem():
+            make_git_project()
+            with Path("project", "__init__.py").open("w") as f:
+                f.write("MARKER = 1\n")
+            with Path("project", "extra.py").open("w") as f:
+                f.write("EXTRA = 1\n")
+            egg, tmpdir = build_egg.build_project_egg(from_head=True)
+            try:
+                with zipfile.ZipFile(egg) as z:
+                    names = z.namelist()
+                    member = next(n for n in names if n.endswith("__init__.py"))
+                    content = z.read(member)
+            finally:
+                shutil.rmtree(tmpdir, ignore_errors=True)
+        assert b"MARKER" not in content
+        assert not any("extra" in n for n in names)
+
+    def test_build_egg_from_head_without_git_repo(self):
+        with self.runner.isolated_filesystem():
+            with Path("scrapy.cfg").open("w") as f:
+                f.write(VALID_SCRAPY_CFG)
+            with pytest.raises(SubcommandException):
+                build_egg.build_project_egg(from_head=True)
+
+    @mock.patch("shub.build_egg.shutil.which", return_value=None)
+    def test_build_egg_from_head_without_git(self, mock_which):
+        with self.runner.isolated_filesystem():
+            with Path("scrapy.cfg").open("w") as f:
+                f.write(VALID_SCRAPY_CFG)
+            with pytest.raises(NotFoundException):
+                build_egg.build_project_egg(from_head=True)
 
 
 class RemoveBuildDirTest(unittest.TestCase):
@@ -173,6 +207,20 @@ class BuildEggCommandTest(AssertInvokeRaisesMixin, unittest.TestCase):
         # ... and no target, API key or scrapinghub.yml is needed
         mock_deploy_conf.assert_not_called()
         mock_conf.assert_not_called()
+
+    def test_from_head(self):
+        if shutil.which("git") is None:
+            self.skipTest("git executable not found")
+        with self.runner.isolated_filesystem():
+            make_git_project()
+            with Path("project", "extra.py").open("w") as f:
+                f.write("EXTRA = 1\n")
+            result = self.runner.invoke(build_egg.cli, ["--from-head", "built.egg"])
+            assert 0 == result.exit_code, result.output
+            with zipfile.ZipFile("built.egg") as z:
+                names = z.namelist()
+        assert "project/__init__.py" in names
+        assert not any("extra" in n for n in names)
 
     def test_removes_build_dir(self):
         patcher, tmpdir = self._fake_egg_build()
