@@ -1,5 +1,7 @@
 import glob
 import shutil
+import zipfile
+from importlib.metadata import PathDistribution
 from pathlib import Path
 from urllib.parse import urljoin
 
@@ -17,7 +19,12 @@ from shub.exceptions import (
     print_warning,
 )
 from shub.image.upload import upload_cmd
-from shub.utils import create_scrapinghub_yml_wizard, make_deploy_request, run_cmd
+from shub.utils import (
+    _project_cwd,
+    create_scrapinghub_yml_wizard,
+    make_deploy_request,
+    run_cmd,
+)
 
 # The previous name of build_project_egg(), which deploy wrappers built on top
 # of shub still import from here.
@@ -135,6 +142,12 @@ def cli(
 def deploy_cmd(
     target, version, debug, egg, verbose, keep_log, conf=None, from_head=False
 ):
+    egg = egg and str(Path(egg).absolute())
+    with _project_cwd():
+        _deploy_cmd(target, version, debug, egg, verbose, keep_log, conf, from_head)
+
+
+def _deploy_cmd(target, version, debug, egg, verbose, keep_log, conf, from_head):
     tmpdir = None
     try:
         conf = conf or load_shub_config()
@@ -210,6 +223,8 @@ def _upload_egg(
             requirements_file = _get_pipfile_requirements()
         elif _is_poetry(requirements_file):
             requirements_file = _get_poetry_requirements()
+        elif requirements_file in ("setup.py", "pyproject.toml"):
+            requirements_file = _get_egg_requirements(eggpath)
         elif requirements_file:
             requirements_file = open(requirements_file, "rb")  # noqa: PTH123
         if requirements_file:
@@ -286,3 +301,8 @@ def _get_poetry_requirements():
             return _get_poetry_requirements_fallback()
         except Exception as fallback_exception:
             raise original_exception from fallback_exception
+
+
+def _get_egg_requirements(eggpath):
+    dist = PathDistribution(zipfile.Path(eggpath, "EGG-INFO/"))
+    return "\n".join(req for req in dist.requires or [] if "extra ==" not in req)

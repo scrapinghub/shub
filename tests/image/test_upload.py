@@ -24,7 +24,6 @@ class TestUploadCli(TestCase):
                 "pass",
                 "--email",
                 "mail",
-                "--async",
                 "--apikey",
                 "apikey",
                 "--skip-tests",
@@ -48,5 +47,5 @@ class TestUploadCli(TestCase):
             skip_tests=True,
         )
         deploy.assert_called_with(
-            "dev", "test", "user", "pass", "mail", "apikey", False, True
+            "dev", "test", "user", "pass", "mail", "apikey", False
         )

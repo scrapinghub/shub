@@ -70,6 +70,17 @@ def remember_cwd():
         os.chdir(current_dir)
 
 
+@contextlib.contextmanager
+def _project_cwd():
+    """Change the current directory to that of the closest scrapy.cfg, if any,
+    and restore it afterwards."""
+    scrapy_cfg = closest_file("scrapy.cfg")
+    with remember_cwd():
+        if scrapy_cfg:
+            os.chdir(Path(scrapy_cfg).parent)
+        yield
+
+
 def get_scrapinghub_client_from_config(conf):
     return ScrapinghubClient(conf.apikey, dash_endpoint=conf.endpoint)
 
@@ -670,20 +681,11 @@ def download_from_pypi(dest, pkg=None, reqfile=None, extra_args=None):
 
 
 @contextlib.contextmanager
-def update_yaml_dict(conf_path=None):
+def update_yaml_dict(conf_path):
     """
     Context manager for updating a YAML file. Key ordering and comments are not
     preserved.
     """
-    if not conf_path:
-        click.secho(
-            "Using update_yaml_dict without path is deprecated. Import"
-            " GLOBAL_SCRAPINGHUB_YML_PATH from shub.config",
-            fg="yellow",
-        )
-        from shub.config import GLOBAL_SCRAPINGHUB_YML_PATH  # noqa: PLC0415
-
-        conf_path = GLOBAL_SCRAPINGHUB_YML_PATH
     try:
         with Path(conf_path).open() as f:
             conf = yaml.safe_load(f) or {}

@@ -86,3 +86,73 @@ To find which of the latest jobs requested, scraped or logged something, use
     12345/1/37
 
 Run ``shub find-jobs --help`` for all options.
+
+Listing jobs
+============
+
+To find a job key, e.g. to pass it to ``shub log``, list the latest jobs of a
+project, or of a spider, with ``shub jobs``::
+
+    $ shub jobs
+    JOB         SPIDER    STATE                 STARTED (UTC)
+    12345/2/16  myspider  running               2016-01-02 16:38:35
+    12345/1/15  other     finished              2016-01-02 16:36:55
+    12345/1/14  other     finished (cancelled)  2016-01-02 16:30:12
+
+``shub jobs`` takes an optional argument that is resolved like the one of
+``shub schedule``:
+
+===================================  ===================================
+``shub jobs``                        all spiders of the default project
+``shub jobs 12345``                  all spiders of project 12345
+``shub jobs production``             all spiders of the ``production`` target
+``shub jobs myspider``               ``myspider`` in the default project
+``shub jobs 12345/myspider``         ``myspider`` in project 12345
+``shub jobs production/myspider``    ``myspider`` in the ``production`` target
+===================================  ===================================
+
+An argument made only of digits is taken as a project ID, and an argument
+that is a target defined in ``scrapinghub.yml`` is taken as that target. If a
+spider is named like that, specify the project as well, e.g.
+``shub jobs default/123``.
+
+If the project does not exist, or your account has no access to it, ``shub
+jobs`` fails with an error instead of listing no jobs, so that a mistyped
+project ID is not mistaken for a project without jobs. shub cannot tell the two
+cases apart, so the error mentions both. The check takes one extra request to
+Scrapy Cloud, which lists the projects that your account can access.
+
+Pending, running, and finished jobs are listed, newest first, up to ``--limit``
+of them, 20 by default and 10000 at most.
+
+``--filter KEY=VALUE`` can be repeated to narrow the list down:
+
+* ``state=pending``, ``state=running``, ``state=finished`` or
+  ``state=deleted``: only jobs in that state (the default is to list pending,
+  running and finished jobs)
+* ``tag=TAG``: only jobs that have that tag; if repeated, jobs that have any
+  of the given tags
+* ``no-tag=TAG``: only jobs that do not have that tag; if repeated, jobs that
+  have none of the given tags
+* ``arg.NAME=VALUE``: only jobs that were run with that spider argument; if
+  repeated, all of them must match
+
+Scrapy Cloud does not support filtering by spider argument, so ``arg.*``
+filters are applied by shub: it retrieves the latest jobs, 1000 at a time,
+until ``--limit`` of them match, and searches the latest 10000 jobs at most (it
+tells you when it stops there). The other filters are applied by Scrapy Cloud.
+
+``--orderby FIELD`` sorts the listed jobs by ``scheduled``, ``started``, or
+``finished`` time, by number of scraped ``items`` or logged ``errors``, or by
+``spider`` name; append ``:asc`` to sort in ascending order (the default is
+descending, i.e. newest or largest first). Scrapy Cloud cannot sort jobs, so
+shub sorts only the jobs it retrieved, i.e. the latest ``--limit`` jobs. Jobs
+that lack the time (e.g. a job that has not finished has no ``finished``
+time) are listed last. Unless the table shows the field already, a column
+with it is added::
+
+    $ shub jobs --orderby items
+    JOB         SPIDER    STATE                 STARTED (UTC)        ITEMS
+    12345/1/15  other     finished              2016-01-02 16:36:55  9000
+    12345/2/16  myspider  running               2016-01-02 16:38:35  500
+    12345/1/14  other     finished (cancelled)  2016-01-02 16:30:12  0

@@ -5,7 +5,7 @@ import pytest
 from click.testing import CliRunner
 
 from shub import cancel
-from shub.exceptions import BadParameterException, ShubException
+from shub.exceptions import BadParameterException, ShubException, SubcommandException
 
 from .utils import AssertInvokeRaisesMixin, mock_conf
 
@@ -113,6 +113,18 @@ class CancelTest(AssertInvokeRaisesMixin, unittest.TestCase):
         )
         assert "Aborted!" in result.output
 
+    @mock.patch("shub.cancel.get_scrapinghub_client_from_config")
+    def test_cancel_force(self, mock_client):
+        mock_proj = mock_client.return_value.get_project.return_value
+        mock_proj.jobs.cancel.return_value = {"count": 1}
+
+        result = self.runner.invoke(cancel.cli, ("--force", "123456", "1/1"))
+
+        assert "Do you want to cancel" not in result.output
+        assert "{'count': 1}" in result.output
+        assert 0 == result.exit_code
+        mock_proj.jobs.cancel.assert_called_once_with(keys=["123456/1/1"])
+
     def test_validate_job_key(self):
         with pytest.raises(BadParameterException):
             cancel.validate_job_key("123456", "1")
@@ -122,3 +134,8 @@ class CancelTest(AssertInvokeRaisesMixin, unittest.TestCase):
 
         with pytest.raises(BadParameterException):
             cancel.validate_job_key("123456", "")
+
+    @mock.patch("shub.cancel.parse_job_key", side_effect=RuntimeError("boom"))
+    def test_validate_job_key_unexpected_error(self, mock_parse):
+        with pytest.raises(SubcommandException, match="boom"):
+            cancel.validate_job_key("123456", "1/1")

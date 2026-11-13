@@ -13,6 +13,7 @@ rst_epilog = f"""
 """
 
 extensions = ["sphinx_scrapy"]
+scrapy_intersphinx_enable = ["scrapy-lint"]
 exclude_patterns = ["_build"]
 
 html_theme = "sphinx_rtd_theme"
