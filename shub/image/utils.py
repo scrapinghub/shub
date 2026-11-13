@@ -18,9 +18,7 @@ from shub.exceptions import (
     BadParameterException,
     NotFoundException,
     RemoteErrorException,
-    ShubDeprecationWarning,
     ShubException,
-    print_warning,
 )
 
 STATUS_FILE_LOCATION = ".releases"
@@ -47,28 +45,12 @@ You can learn about Docker at https://www.docker.com/.
 
 def is_verbose():
     ctx = click.get_current_context(True)
-    return ctx and (ctx.params.get("verbose") or ctx.params.get("debug"))
+    return ctx and ctx.params.get("verbose")
 
 
 def debug_log(msg):
     if is_verbose():
         click.echo(msg)
-
-
-def deprecate_debug_parameter(ctx, param, value):
-    if value:
-        print_warning(
-            "-d/--debug parameter is deprecated. "
-            "Please use -v/--verbose parameter instead.",
-            ShubDeprecationWarning,
-        )
-    return value
-
-
-def deprecate_async_parameter(ctx, param, value):
-    if value:
-        print_warning("--async parameter is deprecated.", ShubDeprecationWarning)
-    return value
 
 
 def get_project_dir():

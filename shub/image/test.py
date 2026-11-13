@@ -27,12 +27,6 @@ CONTRACT_CMD_NOT_FOUND_WARNING = (
     "added scrapinghub-entrypoint-scrapy>=0.8.0 to your requirements file "
     "if you use Scrapy."
 )
-LIST_SPIDERS_DEPRECATED_WARNING = (
-    "list-spiders command is deprecated in favour of shub-image-info command: "
-    "its format is described well in Scrapy Cloud contract "
-    "(https://shub.readthedocs.io/en/stable/custom-images-contract.html), "
-    "please review and update your code."
-)
 IMAGE_TOO_LARGE_WARNING = (
     "Custom image for the project is too large (more than 3GB), it can lead "
     "to various performance issues when running it in Scrapy Cloud. "
@@ -53,16 +47,9 @@ IMAGE_TOO_LARGE_WARNING = (
     callback=list_targets_callback,
     help="List available project names defined in your config",
 )
-@click.option(
-    "-d",
-    "--debug",
-    help="debug mode",
-    is_flag=True,
-    callback=utils.deprecate_debug_parameter,
-)
 @click.option("-v", "--verbose", is_flag=True, help="stream test logs to console")
 @click.option("-V", "--version", help="release version")
-def cli(target, debug, verbose, version):
+def cli(target, verbose, version):
     test_cmd(target, version)
 
 
@@ -103,18 +90,9 @@ def _check_shub_image_info_entry(image_name, docker_client):
         docker_client, image_name, ["which", "shub-image-info"]
     )
     if status != 0 or not logs:
-        _check_fallback_to_list_spiders(image_name, docker_client)
-
-
-def _check_fallback_to_list_spiders(image_name, docker_client):
-    status, logs = _run_docker_command(
-        docker_client, image_name, ["which", "list-spiders"]
-    )
-    if status != 0 or not logs:
         raise shub_exceptions.NotFoundException(
-            CONTRACT_CMD_NOT_FOUND_WARNING % "shub-image-info (& list-spiders)"
+            CONTRACT_CMD_NOT_FOUND_WARNING % "shub-image-info"
         )
-    click.echo(LIST_SPIDERS_DEPRECATED_WARNING)
 
 
 def _check_start_crawl_entry(image_name, docker_client):

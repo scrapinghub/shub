@@ -1,5 +1,7 @@
 import glob
 import shutil
+import zipfile
+from importlib.metadata import PathDistribution
 from pathlib import Path
 from urllib.parse import urljoin
 
@@ -17,7 +19,12 @@ from shub.exceptions import (
     print_warning,
 )
 from shub.image.upload import upload_cmd
-from shub.utils import create_scrapinghub_yml_wizard, make_deploy_request, run_cmd
+from shub.utils import (
+    _project_cwd,
+    create_scrapinghub_yml_wizard,
+    make_deploy_request,
+    run_cmd,
+)
 
 # The previous name of build_project_egg(), which deploy wrappers built on top
 # of shub still import from here.
@@ -52,7 +59,9 @@ If the project is inside a git repository, the egg is built from a copy of
 the working directory that leaves out anything git considers ignored (e.g.
 via .gitignore), so build artifacts, local secrets, and stray virtualenvs
 don't end up in the deploy. Uncommitted changes to tracked files are still
-included.
+included. To deploy only what is committed, use:
+
+    shub deploy --from-head
 """
 
 SHORT_HELP = "Deploy Scrapy project to Scrapy Cloud"
@@ -96,15 +105,31 @@ def _deprecate_build_egg_parameter(ctx, param, value):
 @click.option(
     "--ignore-size", help="Ignore deploy request's egg(s) size check", is_flag=True
 )
-def cli(target, version, debug, egg, build_egg, verbose, keep_log, ignore_size):
+@click.option(
+    "--from-head",
+    is_flag=True,
+    help="Build the egg from the files committed to git HEAD",
+)
+def cli(
+    target, version, debug, egg, build_egg, verbose, keep_log, ignore_size, from_head
+):
     if build_egg is not None:
-        build_egg_cmd(build_egg, debug)
+        build_egg_cmd(build_egg, debug, from_head)
         return
     conf = load_shub_config()
     create_scrapinghub_yml_wizard(conf, target=target)
     image = conf.get_target_conf(target).image
     if not image:
-        deploy_cmd(target, version, debug, egg, verbose, keep_log, conf=conf)
+        deploy_cmd(
+            target,
+            version,
+            debug,
+            egg,
+            verbose,
+            keep_log,
+            conf=conf,
+            from_head=from_head,
+        )
     elif image.startswith(SH_IMAGES_REGISTRY):
         upload_cmd(target, version)
     else:
@@ -114,7 +139,15 @@ def cli(target, version, debug, egg, build_egg, verbose, keep_log, ignore_size):
         )
 
 
-def deploy_cmd(target, version, debug, egg, verbose, keep_log, conf=None):
+def deploy_cmd(
+    target, version, debug, egg, verbose, keep_log, conf=None, from_head=False
+):
+    egg = egg and str(Path(egg).absolute())
+    with _project_cwd():
+        _deploy_cmd(target, version, debug, egg, verbose, keep_log, conf, from_head)
+
+
+def _deploy_cmd(target, version, debug, egg, verbose, keep_log, conf, from_head):
     tmpdir = None
     try:
         conf = conf or load_shub_config()
@@ -126,7 +159,7 @@ def deploy_cmd(target, version, debug, egg, verbose, keep_log, conf=None):
             click.echo(f"Using egg: {egg}")
         else:
             click.echo(f"Packing version {version}")
-            egg, tmpdir = build_project_egg()
+            egg, tmpdir = build_project_egg(from_head)
 
         _upload_egg(
             targetconf.endpoint,
@@ -190,6 +223,8 @@ def _upload_egg(
             requirements_file = _get_pipfile_requirements()
         elif _is_poetry(requirements_file):
             requirements_file = _get_poetry_requirements()
+        elif requirements_file in ("setup.py", "pyproject.toml"):
+            requirements_file = _get_egg_requirements(eggpath)
         elif requirements_file:
             requirements_file = open(requirements_file, "rb")  # noqa: PTH123
         if requirements_file:
@@ -266,3 +301,8 @@ def _get_poetry_requirements():
             return _get_poetry_requirements_fallback()
         except Exception as fallback_exception:
             raise original_exception from fallback_exception
+
+
+def _get_egg_requirements(eggpath):
+    dist = PathDistribution(zipfile.Path(eggpath, "EGG-INFO/"))
+    return "\n".join(req for req in dist.requires or [] if "extra ==" not in req)

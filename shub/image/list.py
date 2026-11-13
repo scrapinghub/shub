@@ -22,7 +22,7 @@ Before creating the container, there's a Dash call to get your project
 settings to get your spiders list properly (respecting SPIDERS_MODULE
 setting, etc).
 
-Image should be set via scrapinghub.yml, section "images". If version is not
+Image should be set via the image setting in scrapinghub.yml. If version is not
 provided, the tool uses VCS-based stamp over project directory (the same as
 shub utils itself).
 """
@@ -39,13 +39,6 @@ shub utils itself).
     callback=list_targets_callback,
     help="List available project names defined in your config",
 )
-@click.option(
-    "-d",
-    "--debug",
-    help="debug mode",
-    is_flag=True,
-    callback=utils.deprecate_debug_parameter,
-)
 @click.option("-v", "--verbose", is_flag=True, help="stream logs to console")
 @click.option(
     "-s",
@@ -54,7 +47,7 @@ shub utils itself).
     help="don't warn if Dash project is not defined in config",
 )
 @click.option("-V", "--version", help="release version")
-def cli(target, debug, verbose, silent, version):
+def cli(target, verbose, silent, version):
     list_cmd_full(target, silent, version)
 
 
@@ -80,21 +73,6 @@ def list_cmd(image_name, project, endpoint, apikey):
     )
     if exit_code == 0:
         return _extract_metadata_from_image_info_output(logs)
-    # shub-image-info command not found, fallback to list-spiders
-    if exit_code == 127:
-        # FIXME we should pass some value for SCRAPY_PROJECT_ID anyway
-        # to handle `scrapy list` cmd properly via sh_scrapy entrypoint
-        # environment['SCRAPY_PROJECT_ID'] = str(project) if project else ''
-        exit_code, logs = _run_cmd_in_docker_container(
-            image_name, "list-spiders", environment
-        )
-        if exit_code != 0:
-            click.echo(logs)
-            raise ShubException(f"Container with list cmd exited with code {exit_code}")
-        return {
-            "project_type": "scrapy",
-            "spiders": utils.valid_spiders(logs.splitlines()),
-        }
     click.echo(logs)
     raise ShubException(
         f"Container with shub-image-info cmd exited with code {exit_code}"

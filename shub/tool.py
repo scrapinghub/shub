@@ -50,9 +50,7 @@ commands = [
     "deploy",
     "build_egg",
     "login",
-    "deploy_egg",
     "fetch_eggs",
-    "deploy_reqs",
     "logout",
     "version",
     "items",
@@ -64,6 +62,7 @@ commands = [
     "image",
     "cancel",
     "find_jobs",
+    "jobs",
     "list_stacks",
 ]
 

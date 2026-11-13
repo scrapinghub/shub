@@ -103,12 +103,13 @@ class DeployTest(AssertInvokeRaisesMixin, unittest.TestCase):
             self._make_project()
             with Path("given.egg").open("w") as f:
                 f.write("egg content")
+            given_egg = str(Path("given.egg").absolute())
             result = self.runner.invoke(deploy.cli, ("--egg", "given.egg"))
             assert 0 == result.exit_code, result.output
             name, egg = mock_deploy_req.call_args[0][2][-1]
             egg.close()
-        assert "Using egg: given.egg" in result.output
-        assert ("egg", "given.egg") == (name, egg.name)
+        assert f"Using egg: {given_egg}" in result.output
+        assert ("egg", given_egg) == (name, egg.name)
         mock_build.assert_not_called()
 
     @patch("shub.deploy.make_deploy_request")
@@ -337,6 +338,24 @@ class GitFilteredBuildTest(unittest.TestCase):
             result = self.runner.invoke(deploy.cli)
             assert 0 == result.exit_code, result.output
 
+    @patch("shub.deploy.build_project_egg", wraps=build_project_egg)
+    @patch("shub.deploy.make_deploy_request")
+    def test_deploy_from_head_flag(self, mock_deploy_req, mock_build):
+        with self.runner.isolated_filesystem():
+            make_git_project()
+            result = self.runner.invoke(deploy.cli, ["--from-head"])
+            assert 0 == result.exit_code, result.output
+        mock_build.assert_called_once_with(True)
+
+    @patch("shub.deploy.make_deploy_request")
+    def test_deploy_from_subdir(self, mock_deploy_req):
+        with self.runner.isolated_filesystem():
+            make_git_project()
+            os.chdir("project")
+            result = self.runner.invoke(deploy.cli)
+            assert 0 == result.exit_code, result.output
+        mock_deploy_req.assert_called_once()
+
 
 class DeployFilesTest(unittest.TestCase):
     def setUp(self):
@@ -362,7 +381,9 @@ class DeployFilesTest(unittest.TestCase):
         files = {}
         for name, file in self.request.call_args[0][2]:
             files.setdefault(name, []).append(
-                file if isinstance(file, str) else file.read().decode("utf-8")
+                file
+                if isinstance(file, str)
+                else file.read().decode("utf-8", "replace")
             )
 
         return files
@@ -725,3 +746,30 @@ class DeployFilesTest(unittest.TestCase):
                 assert "poetry executable not found" in cm.value.message
             else:
                 assert "The Poetry configuration is invalid" in cm.value.message
+
+    def egg_requirements_test(self, req_name):
+        with self.runner.isolated_filesystem():
+            Path("./pyproject.toml").write_text('[project]\nname = "foo"\n')
+            with zipfile.ZipFile("./main.egg", "w") as egg:
+                egg.writestr("EGG-INFO/PKG-INFO", "Name: foo\n")
+                egg.writestr(
+                    "EGG-INFO/requires.txt",
+                    'bar>=1\n\n[:python_version < "3.11"]\nbaz\n\n[extra]\nqux\n',
+                )
+            files = self._deploy(req=req_name, eggs=[])
+
+        assert files["requirements"][0] == 'bar>=1\nbaz; python_version < "3.11"'
+
+    def test_setup_py(self):
+        self.egg_requirements_test("setup.py")
+
+    def test_pyproject_toml(self):
+        self.egg_requirements_test("pyproject.toml")
+
+    def test_egg_without_requirements(self):
+        with self.runner.isolated_filesystem():
+            with zipfile.ZipFile("./main.egg", "w") as egg:
+                egg.writestr("EGG-INFO/PKG-INFO", "Name: foo\n")
+            files = self._deploy(req="setup.py", eggs=[])
+
+        assert "requirements" not in files

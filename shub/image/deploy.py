@@ -50,13 +50,6 @@ Does a simple POST request to Dash API with given parameters
     callback=list_targets_callback,
     help="List available project names defined in your config",
 )
-@click.option(
-    "-d",
-    "--debug",
-    help="debug mode",
-    is_flag=True,
-    callback=utils.deprecate_debug_parameter,
-)
 @click.option("-v", "--verbose", is_flag=True, help="stream deploy logs to console")
 @click.option("-V", "--version", help="release version")
 @click.option("--username", help="docker registry name")
@@ -64,20 +57,11 @@ Does a simple POST request to Dash API with given parameters
 @click.option("--email", help="docker registry email")
 @click.option("--apikey", help="SH apikey to use built-in registry")
 @click.option("--insecure", is_flag=True, help="use insecure registry")
-@click.option(
-    "--async",
-    "async_",
-    is_flag=True,
-    help="[DEPRECATED] enable asynchronous mode",
-    callback=utils.deprecate_async_parameter,
-)
-def cli(
-    target, debug, verbose, version, username, password, email, apikey, insecure, async_
-):
-    deploy_cmd(target, version, username, password, email, apikey, insecure, async_)
+def cli(target, verbose, version, username, password, email, apikey, insecure):
+    deploy_cmd(target, version, username, password, email, apikey, insecure)
 
 
-def deploy_cmd(target, version, username, password, email, apikey, insecure, async_):
+def deploy_cmd(target, version, username, password, email, apikey, insecure):
     config = load_shub_config()
     target_conf = config.get_target_conf(target, auth_required=not apikey)
     endpoint, target_apikey = target_conf.endpoint, target_conf.apikey
@@ -122,8 +106,6 @@ def deploy_cmd(target, version, username, password, email, apikey, insecure, asy
     click.echo(
         f"You can check deploy results later with 'shub image check --id {status_id}'."
     )
-    if async_:
-        return
     if utils.is_verbose():
         deploy_progress_cls = _LoggedDeployProgress
     else:

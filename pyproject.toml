@@ -51,6 +51,9 @@ Tracker = "https://github.com/scrapinghub/shub/issues"
 [project.scripts]
 shub = "shub.tool:cli"
 
+[dependency-groups]
+docs = ["sphinx-rtd-theme"]
+
 [tool.hatch.build.targets.wheel]
 packages = ["shub"]
 
