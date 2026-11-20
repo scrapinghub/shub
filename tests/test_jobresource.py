@@ -82,3 +82,15 @@ class JobResourceTest(unittest.TestCase):
             result = self.runner.invoke(log.cli, (jobid,))
             mock_gj.assert_called_once_with(jobid)
             assert "1970-01-01 00:00:00 INFO jarzębina" in result.output
+
+    def test_log_escapes_control_characters(self):
+        message = "a\x1b]0;title\x07b\rc\x7fd\x9be\tf\ng"
+        objects = [{"_key": "1/2/3/0", "time": 0, "level": 20, "message": message}]
+        with mock.patch.object(log, "get_job", autospec=True) as mock_gj:
+            mock_gj.return_value._metadata_updated = time.time()
+            mock_gj.return_value.logs.iter.return_value = objects
+            result = self.runner.invoke(log.cli, ("1/2/3",))
+        # Newlines and tabs are kept, any other control character is made visible
+        assert result.output == (
+            "1970-01-01 00:00:00 INFO a\\x1b]0;title\\x07b\\x0dc\\x7fd\\x9be\tf\ng\n"
+        )

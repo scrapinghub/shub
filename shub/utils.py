@@ -35,6 +35,8 @@ from shub.exceptions import (
     print_warning,
 )
 
+_CONTROL_CHARS_RE = re.compile(r"[\x00-\x1f\x7f-\x9f]")
+
 FALLBACK_ENCODING = "utf-8"
 STDOUT_ENCODING = sys.stdout.encoding or FALLBACK_ENCODING
 LAST_N_LOGS = 30
@@ -59,6 +61,16 @@ setup(
     entry_points = {'scrapy': ['settings = %(settings)s']},
 )
 """
+
+
+def escape_control_chars(text, keep=""):
+    """Return ``text`` with its control characters, except those in ``keep``,
+    replaced by visible hexadecimal escapes, so that it cannot drive the
+    terminal it is printed to."""
+    return _CONTROL_CHARS_RE.sub(
+        lambda m: m.group() if m.group() in keep else f"\\x{ord(m.group()):02x}",
+        text,
+    )
 
 
 @contextlib.contextmanager

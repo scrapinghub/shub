@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 
 import click
 
-from shub.utils import get_job, job_resource_iter
+from shub.utils import escape_control_chars, get_job, job_resource_iter
 
 HELP = """
 Given a job ID, fetch the log of that job from Scrapy Cloud and print it.
@@ -58,6 +58,6 @@ def cli(job_id, follow, tail, json_):
                         tzinfo=None
                     ),
                     logging.getLevelName(int(item["level"])),
-                    item["message"],
+                    escape_control_chars(str(item["message"]), keep="\t\n"),
                 )
             )
