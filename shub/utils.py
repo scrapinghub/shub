@@ -105,7 +105,7 @@ def create_default_setup_py(**kwargs):
                 kwargs["settings"] = _get_project_settings_module()
                 if not kwargs["settings"]:
                     raise BadConfigException(_SETTINGS_MODULE_NOT_FOUND_MSG)
-            with Path("setup.py").open("w") as f:
+            with Path("setup.py").open("x") as f:
                 f.write(_SETUP_PY_TEMPLATE % kwargs)
             click.echo(f"Created setup.py at {Path.cwd()}")
 
