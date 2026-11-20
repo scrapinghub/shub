@@ -120,7 +120,8 @@ def get_repo_zip(repo):
 
 def unzip_project(repo_zip, project, target_dir):
     project_path = Path(project["path"])
-    if project_path.is_absolute() or ".." in project_path.parts:
+    # anchor also rejects Windows paths such as "/x" (root, no drive) and "C:x".
+    if project_path.anchor or ".." in project_path.parts:
         raise RemoteErrorException(
             f"Invalid path {project['path']!r} in the list of available projects."
         )
