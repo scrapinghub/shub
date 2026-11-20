@@ -142,6 +142,19 @@ class StatusUrlsTest(TestCase):
         assert load_status_url(1) == "http://link1"
         assert load_status_url(2) == "https://link2"
 
+    def test_load_status_url_rejects_unexpected_content(self):
+        for content in (
+            '"\\e]0;title\\a"\n',
+            '"\\e]0;title\\a": http://link\n',
+            '0: "\\e]0;title\\a"\n1: 5\n',
+            "- http://link\n",
+        ):
+            with self.subTest(content=content):
+                self.status_file.write_text(content)
+                with pytest.raises(BadConfigException) as exc_info:
+                    load_status_url(0)
+                assert exc_info.value.message == "Releases file has wrong format."
+
     def test_store_status_url(self):
         assert not self.status_file.exists()
         # create and add first entry
