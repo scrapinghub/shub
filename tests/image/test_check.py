@@ -35,3 +35,13 @@ class TestCheckCli(TestCase):
             # get non-existing deploy
             result = runner.invoke(cli, ["--id", deploy_id1])
             assert result.exit_code == shub_exceptions.NotFoundException.exit_code
+
+    @mock.patch("requests.get")
+    def test_cli_escapes_a_string_status_body(self, mocked):
+        mocked.return_value.json.return_value = "ok\x1b]0;title\x07\rfake"
+        with FakeProjectDirectory():
+            utils.store_status_url("http://linkA", 2)
+            result = CliRunner().invoke(cli, [])
+        assert result.exit_code == 0
+        assert not any(c in result.output for c in "\x1b\x07\r")
+        assert "Deploy results: 'ok\\x1b]0;title\\x07\\rfake'" in result.output
