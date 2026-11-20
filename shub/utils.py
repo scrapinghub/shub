@@ -840,6 +840,9 @@ def _update_conf_file(filename, target, project, repository, stack=None):
         conf = ShubConfig()
         if Path(filename).exists():
             conf.load_file(filename)
+        else:
+            # A dangling link would be followed, creating the file it points to
+            check_not_symlink(filename)
         _update_conf(conf, target, project, repository, stack)
         conf.save(filename)
     except Exception as e:
