@@ -765,3 +765,21 @@ def test_shub_apikey_env_overrides_apikey_by_endpoint_url(monkeypatch):
     monkeypatch.setenv("SHUB_APIKEY", "ENVKEY")
     conf = load_shub_config()
     assert conf.get_target_conf("default").apikey == "ENVKEY"
+
+
+@pytest.mark.parametrize(
+    "yml",
+    [
+        'projects:\n  "a\\e]0;title\\a": 123\n',
+        'projects:\n  default:\n    id: 123\n    image: "a\\e[2Jb"\n',
+        'endpoint: "https://example.com/\\e[2J"\n',
+        'endpoints:\n  "a\\rb": https://example.com/\n',
+        'version: "1.0\\e]0;title\\a"\n',
+        'requirements:\n  eggs:\n    - "a\\x9bb.egg"\n',
+    ],
+)
+def test_load_rejects_control_characters(yml):
+    # The strings of the configuration are shown to the user, in messages
+    with pytest.raises(BadConfigException) as exc_info:
+        ShubConfig().load(StringIO(yml))
+    assert not any(c in exc_info.value.message for c in "\x1b\x07\r\x9b")
