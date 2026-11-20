@@ -141,6 +141,7 @@ def make_deploy_request(url, data, files, auth, verbose, keep_log):
             error = _get_deploy_error(rsp.json())
         except (ValueError, TypeError, KeyError, AttributeError):
             error = rsp.text or f"Status {rsp.status_code:d}"
+        error = escape_control_chars(str(error), keep="\t\n")
         msg = f"Deploy failed ({rsp.status_code}):\n{error}"
         raise RemoteErrorException(msg) from exc
     except requests.RequestException as exc:
@@ -192,12 +193,19 @@ def _check_deploy_files_size(files):
         raise DeployRequestTooLargeException
 
 
+def _echo_remote_line(line):
+    """Echo one line of remote output with its control characters escaped."""
+    if isinstance(line, bytes):
+        line = line.decode("utf-8", errors="replace")
+    click.echo(escape_control_chars(line, keep="\t"))
+
+
 def write_and_echo_logs(keep_log, last_logs, rsp, verbose):
     """It will write logs to temporal file and echo if verbose is True."""
     log_contents = b""
     for line in rsp.iter_lines():
         if verbose:
-            click.echo(line)
+            _echo_remote_line(line)
         last_logs.append(line)
         log_contents += line + b"\n"
     deployed = _is_deploy_successful(last_logs)
@@ -222,11 +230,11 @@ def write_and_echo_logs(keep_log, last_logs, rsp, verbose):
 def echo_short_log_if_deployed(deployed, last_logs, log_file=None, verbose=False):
     if deployed:
         if not verbose:
-            click.echo(last_logs[-1])
+            _echo_remote_line(last_logs[-1])
     elif not verbose:
         click.echo(f"Deploy log last {len(last_logs)} lines:")
         for line in last_logs:
-            click.echo(line)
+            _echo_remote_line(line)
 
 
 def _is_deploy_successful(last_logs):
