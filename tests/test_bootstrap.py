@@ -64,6 +64,21 @@ def test_unzip_project(tempdir):
     assert (target_dir / "a_dir" / "a_dir_file").is_file()
 
 
+@pytest.mark.parametrize(
+    "relative_path", [None, "../victim", "projects_dir/../../victim"]
+)
+def test_unzip_project_rejects_paths_outside_the_archive(tempdir, relative_path):
+    victim = Path(tempdir, "victim")
+    victim.mkdir()
+    (victim / "data").touch()
+    path = str(victim) if relative_path is None else relative_path
+    target_dir = Path(tempdir, "target")
+    with pytest.raises(RemoteErrorException):
+        unzip_project(zipfile.ZipFile(REPO_ZIP_PATH), {"path": path}, target_dir)
+    assert (victim / "data").is_file()
+    assert not target_dir.exists()
+
+
 @pytest.mark.usefixtures("github_responses")
 def test_cli_lists_projects():
     result = CliRunner().invoke(cli, ["-l"])
