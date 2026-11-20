@@ -100,7 +100,7 @@ def create_default_setup_py(**kwargs):
     with remember_cwd():
         if closest:
             os.chdir(Path(closest).parent)
-        if not Path("setup.py").exists():
+        if not os.path.lexists("setup.py"):
             if "settings" not in kwargs:
                 kwargs["settings"] = _get_project_settings_module()
                 if not kwargs["settings"]:

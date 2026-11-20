@@ -102,7 +102,7 @@ def cli(project, base_image, add_deps, requirements):
         Path(closest_scrapy_cfg).parent if closest_scrapy_cfg else Path.cwd()
     )
     dockefile_path = Path(project_dir, "Dockerfile")
-    if dockefile_path.exists():
+    if os.path.lexists(dockefile_path):
         raise shub_exceptions.ShubException(
             "Found a Dockerfile in the project directory, aborting"
         )
@@ -160,8 +160,13 @@ def _format_requirements(project_dir, requirements):
             )
     else:
         # let's create requirements.txt with base dependencies
-        with Path(rel_reqs_path).open("w") as reqs_file:
-            reqs_file.writelines(f"{line}\n" for line in RECOMMENDED_PYTHON_DEPS)
+        try:
+            with Path(rel_reqs_path).open("x") as reqs_file:
+                reqs_file.writelines(f"{line}\n" for line in RECOMMENDED_PYTHON_DEPS)
+        except FileExistsError as e:
+            raise shub_exceptions.BadParameterException(
+                f"Cannot create {rel_reqs_path}: it exists and is not a regular file."
+            ) from e
         click.echo("Created base requirements.txt in project dir.")
     rows = [
         f"COPY ./{rel_reqs_path} {DOCKER_APP_DIR}/requirements.txt",
