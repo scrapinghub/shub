@@ -1,5 +1,7 @@
+import io
 import os
 import unittest
+import zipfile
 from pathlib import Path
 from unittest import mock
 
@@ -165,8 +167,7 @@ class MigrateEggsTest(unittest.TestCase):
         Path("project").mkdir()
         os.chdir("project")
         Path("scrapinghub.yml").write_text(scrapinghub_yml)
-        victim = Path("..", "victim")
-        return victim
+        return Path("..", "victim")
 
     @unittest.skipIf(os.name == "nt", "creating symbolic links needs privileges")
     def test_does_not_write_eggs_through_a_symlinked_eggs_dir(self):
@@ -209,3 +210,18 @@ class MigrateEggsTest(unittest.TestCase):
         with pytest.raises(ShubException):
             main("default")
         assert victim.read_text() == ""
+
+    @unittest.skipIf(os.name == "nt", "creating symbolic links needs privileges")
+    def test_does_not_write_an_egg_through_a_directory_in_its_name(self):
+        victim = self._migrate_in_project_dir()
+        victim.mkdir()
+        Path("eggs", "x").mkdir(parents=True)
+        Path("eggs", "x", "a").symlink_to(victim.absolute())
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "w") as zf:
+            zf.writestr("requirements.txt", "")
+            zf.writestr("x/../a/e.egg", "egg")
+        self.requestsm.get().content = zip_buffer.getvalue()
+        with pytest.raises(ShubException):
+            main("default")
+        assert not list(victim.iterdir())

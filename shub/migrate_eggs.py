@@ -85,6 +85,10 @@ class Migrator:
         Path(eggsdir).mkdir(exist_ok=True)
 
         for filename in self.eggs:
+            if Path(filename).name != filename:
+                raise ShubException(
+                    f"Refusing to extract {filename!r}: it is not a plain file name."
+                )
             filepath = f"{eggsdir}/{filename}"
             if filepath in self.conf.eggs:
                 continue
