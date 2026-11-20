@@ -2,11 +2,16 @@ import os
 import sys
 import tempfile
 from pathlib import Path
-from unittest import TestCase, mock
+from unittest import TestCase, mock, skipIf
 
 import pytest
 
-from shub.exceptions import BadConfigException, BadParameterException, NotFoundException
+from shub.exceptions import (
+    BadConfigException,
+    BadParameterException,
+    NotFoundException,
+    ShubException,
+)
 from shub.image.utils import (
     STATUS_FILE_LOCATION,
     format_image_name,
@@ -141,6 +146,15 @@ class StatusUrlsTest(TestCase):
             load_status_url(0)
         assert load_status_url(1) == "http://link1"
         assert load_status_url(2) == "https://link2"
+
+    @skipIf(os.name == "nt", "creating symbolic links needs privileges")
+    def test_store_status_url_does_not_follow_a_symlink(self):
+        target = Path(self.tmp_dir, "status-file-target")
+        target.unlink(missing_ok=True)
+        self.status_file.symlink_to(target)
+        with pytest.raises(ShubException):
+            store_status_url("http://test0", 2)
+        assert not target.exists()
 
     def test_store_status_url(self):
         assert not self.status_file.exists()

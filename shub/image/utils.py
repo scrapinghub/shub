@@ -216,6 +216,7 @@ def _load_status_file(path):
 
 def _update_status_file(data, path):
     """Save status file with updated data"""
+    shub_utils.check_not_symlink(path)
     with Path(path).open("w") as status_file:
         yaml.dump(data, status_file, default_flow_style=False)
 

@@ -31,6 +31,7 @@ from shub.exceptions import (
     InvalidAuthException,
     NotFoundException,
     RemoteErrorException,
+    ShubException,
     SubcommandException,
     print_warning,
 )
@@ -729,6 +730,14 @@ def update_yaml_dict(conf_path):
         # Avoid writing "{}"
         if conf:
             yaml.safe_dump(conf, f, default_flow_style=False)
+
+
+def check_not_symlink(path):
+    """Raise an exception if ``path`` is a symbolic link, because writing to it
+    would write to the file it points to, which may be anywhere, even if it
+    does not exist yet."""
+    if Path(path).is_symlink():
+        raise ShubException(f"Refusing to write to {path}: it is a symbolic link.")
 
 
 def has_project_access(project, endpoint, apikey):
