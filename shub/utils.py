@@ -501,12 +501,22 @@ def _get_project_settings_module(project=None):
     if project is None:
         env_module = os.environ.get("SCRAPY_SETTINGS_MODULE")
         if env_module:
-            return env_module
+            return _check_settings_module(env_module)
         project = os.environ.get("SCRAPY_PROJECT", "default")
     cfg = get_config()
     if cfg.has_option("settings", project):
-        return cfg.get("settings", project)
+        return _check_settings_module(cfg.get("settings", project))
     return None
+
+
+def _check_settings_module(module):
+    """Return ``module`` if it is a dotted Python module path, which makes it
+    safe to write to setup.py and to a Dockerfile, and raise otherwise."""
+    if module and not all(part.isidentifier() for part in module.split(".")):
+        raise BadConfigException(
+            f"The Scrapy settings module {module!r} is not a valid module path."
+        )
+    return module
 
 
 def get_config(use_closest=True):

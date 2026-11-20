@@ -127,6 +127,24 @@ def test_create_default_setup_py_no_settings_module():
     assert not Path("setup.py").exists()
 
 
+@pytest.mark.parametrize(
+    "module",
+    [
+        "proj.settings\n    RUN echo injected",
+        "proj.settings']}, x = {'",
+        "proj..settings",
+    ],
+)
+def test_settings_module_must_be_a_dotted_module_path(module):
+    _write_scrapy_cfg(f"[settings]\ndefault = {module}\n")
+    with pytest.raises(BadConfigException):
+        utils._get_project_settings_module()
+    result = CliRunner().invoke(image_init_cli, [])
+    assert result.exit_code == BadConfigException.exit_code
+    assert not Path("setup.py").exists()
+    assert not Path("Dockerfile").exists()
+
+
 def _read_dockerfile():
     with Path("Dockerfile").open() as f:
         return f.read()
