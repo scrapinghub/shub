@@ -187,11 +187,35 @@ class MigrateEggsTest(unittest.TestCase):
             main("default")
         assert not victim.exists()
 
+    @unittest.skipIf(os.name == "nt", "creating symbolic links needs privileges")
+    def test_extracts_no_egg_if_a_later_egg_is_refused(self):
+        victim = self._migrate_in_project_dir()
+        Path("eggs").mkdir()
+        Path("eggs", "2.egg").symlink_to(victim.absolute())
+        with pytest.raises(ShubException):
+            main("default")
+        assert not victim.exists()
+        assert not Path("eggs", "1.egg").exists()
+
     def test_does_not_write_requirements_outside_the_project(self):
         victim = self._migrate_in_project_dir("requirements_file: ../victim\n")
         with pytest.raises(ShubException):
             main("default")
         assert not victim.exists()
+        # The refusal comes before any egg is extracted
+        assert not Path("eggs").exists()
+
+    def test_extracts_no_egg_if_an_egg_name_is_refused(self):
+        self._migrate_in_project_dir()
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "w") as zf:
+            zf.writestr("requirements.txt", "")
+            zf.writestr("a.egg", "egg")
+            zf.writestr("x/b.egg", "egg")
+        self.requestsm.get().content = zip_buffer.getvalue()
+        with pytest.raises(ShubException):
+            main("default")
+        assert not Path("eggs").exists()
 
     @unittest.skipIf(os.name == "nt", "creating symbolic links needs privileges")
     def test_does_not_write_requirements_through_a_symlink(self):

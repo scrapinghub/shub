@@ -70,6 +70,9 @@ class Migrator:
 
     def start(self):
         _check_inside_project(self.sh_yml)
+        # The requirements file is written after the eggs, so check it first:
+        # a refusal must not leave eggs that scrapinghub.yml does not list
+        _check_inside_project(self.conf.requirements_file or "./requirements.txt")
         if self.eggs:
             self.migrate_eggs()
 
@@ -80,26 +83,29 @@ class Migrator:
     def migrate_eggs(self):
         eggsdir = "./eggs"
         _check_inside_project(eggsdir)
-        msg = f"Eggs will be stored in {eggsdir}, are you sure ? "
-        click.confirm(msg, abort=True)
-        Path(eggsdir).mkdir(exist_ok=True)
-
+        # Check every egg before extracting any, for the same reason
         for filename in self.eggs:
             if Path(filename).name != filename:
                 raise ShubException(
                     f"Refusing to extract {filename!r}: it is not a plain file name."
                 )
             filepath = f"{eggsdir}/{filename}"
+            if filepath not in self.conf.eggs:
+                _check_inside_project(filepath)
+        msg = f"Eggs will be stored in {eggsdir}, are you sure ? "
+        click.confirm(msg, abort=True)
+        Path(eggsdir).mkdir(exist_ok=True)
+
+        for filename in self.eggs:
+            filepath = f"{eggsdir}/{filename}"
             if filepath in self.conf.eggs:
                 continue
 
-            _check_inside_project(filepath)
             self.conf.eggs.append(filepath)
             self.mfile.extract(filename, eggsdir)
 
     def migrate_requirements_txt(self):
         req_file = self.conf.requirements_file or "./requirements.txt"
-        _check_inside_project(req_file)
 
         if Path(req_file).is_file():
             y = click.confirm(
