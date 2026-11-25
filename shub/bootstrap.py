@@ -109,7 +109,7 @@ def list_projects(projects):
                 [
                     (
                         escape_control_chars(name),
-                        escape_control_chars(info["description"]),
+                        escape_control_chars(info["description"] or ""),
                     )
                     for name, info in projects.items()
                 ],
