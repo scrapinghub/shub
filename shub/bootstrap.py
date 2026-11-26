@@ -15,6 +15,7 @@ from shub.exceptions import (
     NotFoundException,
     RemoteErrorException,
 )
+from shub.utils import escape_control_chars
 
 EXAMPLE_REPO = "scrapinghub/custom-images-examples"
 AVAILABLE_PROJECTS_URL = (
@@ -105,7 +106,13 @@ def list_projects(projects):
     with formatter.section("Available projects"):
         formatter.write_dl(
             sorted(
-                [(name, info["description"]) for name, info in projects.items()],
+                [
+                    (
+                        escape_control_chars(name),
+                        escape_control_chars(info["description"] or ""),
+                    )
+                    for name, info in projects.items()
+                ],
                 key=lambda x: x[0],
             )
         )

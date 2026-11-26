@@ -180,6 +180,16 @@ def test_progress_verbose_logic():
     assert _load_deploy_event_result(lines[-3]) == DEPLOY_EVENTS_BASE_SAMPLE[-2]
 
 
+def test_progress_verbose_logic_escapes_a_string_event():
+    progress_cmd = _get_logged_progress_cmd(
+        _LoggedDeployProgress, ["ok\x1b]0;title\x07\rfake"]
+    )
+    result = CliRunner().invoke(progress_cmd)
+    assert result.exit_code == 0
+    assert not any(c in result.output for c in "\x1b\x07\r")
+    assert "'ok\\x1b]0;title\\x07\\rfake'" in result.output
+
+
 @pytest.mark.usefixtures("monkeypatch_bar_rate")
 def test_progress_bar_logic():
     events = _yield_events_with_timeout(DEPLOY_EVENTS_BASE_SAMPLE, timeout=0.1)

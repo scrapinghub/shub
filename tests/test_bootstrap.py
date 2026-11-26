@@ -52,6 +52,25 @@ def test_list_projects(capsys):
     assert "projects_dir" not in out
 
 
+def test_list_projects_escapes_control_characters(capsys):
+    projects = {
+        "proj\x1b]0;title\x07A": {
+            "description": "desc\rwith\x1b]52;c;ZGF0YQ==\x07\nmore"
+        }
+    }
+    list_projects(projects)
+    out, _ = capsys.readouterr()
+    assert "proj\\x1b]0;title\\x07A" in out
+    assert "desc\\x0dwith\\x1b]52;c;ZGF0YQ==\\x07\\x0amore" in out
+    assert not any(c in out for c in "\x1b\x07\r")
+
+
+def test_list_projects_without_description(capsys):
+    list_projects({"projA": {"description": None, "path": "projects_dir/projA"}})
+    out, _ = capsys.readouterr()
+    assert "projA" in out
+
+
 def test_unzip_project(tempdir):
     target_dir = Path(tempdir, "projA")
     project = {"path": "projects_dir/projA"}

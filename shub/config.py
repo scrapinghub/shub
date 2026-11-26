@@ -19,6 +19,7 @@ from shub.exceptions import (
 )
 from shub.utils import (
     closest_file,
+    escape_control_chars,
     pwd_git_version,
     pwd_hg_version,
     pwd_version,
@@ -31,6 +32,23 @@ SH_IMAGES_REPOSITORY = SH_IMAGES_REGISTRY + "/project/{project}"
 GLOBAL_SCRAPINGHUB_YML_PATH = str(
     Path(os.environ.get("SHUB_GLOBAL_CONFIG", "~/.scrapinghub.yml")).expanduser()
 )
+
+
+def _check_control_chars(value):
+    """Raise an exception if a string in ``value``, a loaded YAML document, has
+    control characters, because the strings of the configuration, such as the
+    names of the targets, are shown in the output of the commands."""
+    if isinstance(value, dict):
+        for key, item in value.items():
+            _check_control_chars(key)
+            _check_control_chars(item)
+    elif isinstance(value, list):
+        for item in value:
+            _check_control_chars(item)
+    elif isinstance(value, str) and escape_control_chars(value) != value:
+        raise BadConfigException(
+            f"The configuration has a string with control characters: {value!r}"
+        )
 
 
 class ShubConfig:
@@ -83,6 +101,7 @@ class ShubConfig:
             yaml_cfg = yaml.safe_load(stream)
             if not yaml_cfg:
                 return
+            _check_control_chars(yaml_cfg)
             for option, shortcut in self.SHORTCUTS.items():
                 option_conf = getattr(self, option)
                 # self.images only holds the image shortcut, as 'default'

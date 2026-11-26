@@ -7,7 +7,7 @@ import textwrap
 import unittest
 import zipfile
 from collections import deque
-from io import StringIO
+from io import BytesIO, StringIO, TextIOWrapper
 from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
 
@@ -474,6 +474,45 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
         )
         assert last_logs == [b"line1", b'{"status":"ok","fieldK":"fieldV"}']
 
+    def test_write_and_echo_logs_escapes_control_characters(self):
+        rsp = Mock()
+        rsp.iter_lines = Mock(
+            return_value=iter(
+                [b"Collecting \x1b]0;title\x07 \x1b[2Kx", b'{"status":"ok"}']
+            )
+        )
+        out = BytesIO()
+        stdout = TextIOWrapper(out, encoding="utf-8", newline="\n", write_through=True)
+        with patch("sys.stdout", stdout):
+            utils.write_and_echo_logs(
+                keep_log=False, last_logs=[], rsp=rsp, verbose=True
+            )
+        stdout.detach()
+        assert (
+            out.getvalue()
+            == b'Collecting \\x1b]0;title\\x07 \\x1b[2Kx\n{"status":"ok"}\n'
+        )
+
+    def test_echo_short_log_if_deployed_escapes_control_characters(self):
+        out = BytesIO()
+        stdout = TextIOWrapper(out, encoding="utf-8", newline="\n", write_through=True)
+        with patch("sys.stdout", stdout):
+            utils.echo_short_log_if_deployed(
+                False,
+                [b"first \x1b]52;c;ZWNobw==\x07", b"last \xc2\x9b\x1b[1A"],
+                verbose=False,
+            )
+            utils.echo_short_log_if_deployed(
+                True, [b'{"status":"ok"}\xc2\x9b'], verbose=False
+            )
+        stdout.detach()
+        assert out.getvalue() == (
+            b"Deploy log last 2 lines:\n"
+            b"first \\x1b]52;c;ZWNobw==\\x07\n"
+            b"last \\x9b\\x1b[1A\n"
+            b'{"status":"ok"}\\x9b\n'
+        )
+
     def test_update_yaml_dict(self):
         YAML_BEFORE = textwrap.dedent("""\
             a:
@@ -837,6 +876,10 @@ class OnboardingWizardTestCase(unittest.TestCase):
                 "\n---------- END OF REMOTE TRACEBACK ----------"
             ),
         ),
+        (
+            {"status": "error", "message": "bad \x1b]0;title\x07\rforged"},
+            "bad \\x1b]0;title\\x07\\x0dforged",
+        ),
         (["unexpected"], "Status 400"),
     ],
 )
@@ -850,3 +893,17 @@ def test_make_deploy_request_error(payload, expected):
     ):
         utils.make_deploy_request("url", {}, None, None, False, False)
     assert exc_info.value.message == f"Deploy failed (400):\n{expected}"
+
+
+def test_make_deploy_request_error_text_escapes_control_characters():
+    rsp = Mock(status_code=502, text="<p>oops \x1b]52;c;ZWNobw==\x07\rforged</p>")
+    rsp.json.side_effect = ValueError
+    rsp.raise_for_status.side_effect = requests.HTTPError(response=rsp)
+    with (
+        patch("shub.utils.requests.post", return_value=rsp),
+        pytest.raises(RemoteErrorException) as exc_info,
+    ):
+        utils.make_deploy_request("url", {}, None, None, False, False)
+    assert exc_info.value.message == (
+        "Deploy failed (502):\n<p>oops \\x1b]52;c;ZWNobw==\\x07\\x0dforged</p>"
+    )

@@ -209,8 +209,10 @@ def _load_status_file(path):
             data = yaml.safe_load(f)
         except yaml.YAMLError as exc:
             raise BadConfigException(f"Error reading releases file:\n{exc}") from exc
-    if not isinstance(data, dict):
-        raise BadConfigException(f"Releases file has wrong format ({data}).")
+    if not isinstance(data, dict) or not all(
+        isinstance(key, int) and isinstance(value, str) for key, value in data.items()
+    ):
+        raise BadConfigException("Releases file has wrong format.")
     return data
 
 
