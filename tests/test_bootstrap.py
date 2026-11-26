@@ -1,5 +1,5 @@
 import zipfile
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from unittest import mock
 
 import pytest
@@ -62,6 +62,34 @@ def test_unzip_project(tempdir):
     assert (target_dir / "a_file").is_file()
     assert (target_dir / "a_dir").is_dir()
     assert (target_dir / "a_dir" / "a_dir_file").is_file()
+
+
+@pytest.mark.parametrize(
+    "relative_path", [None, "../victim", "projects_dir/../../victim"]
+)
+def test_unzip_project_rejects_paths_outside_the_archive(tempdir, relative_path):
+    victim = Path(tempdir, "victim")
+    victim.mkdir()
+    (victim / "data").touch()
+    path = str(victim) if relative_path is None else relative_path
+    target_dir = Path(tempdir, "target")
+    with pytest.raises(RemoteErrorException):
+        unzip_project(zipfile.ZipFile(REPO_ZIP_PATH), {"path": path}, target_dir)
+    assert (victim / "data").is_file()
+    assert not target_dir.exists()
+
+
+@mock.patch("shub.bootstrap.Path", PureWindowsPath)
+def test_unzip_project_rejects_windows_rooted_paths(tempdir):
+    victim = Path(tempdir, "victim")
+    victim.mkdir()
+    (victim / "data").touch()
+    target_dir = Path(tempdir, "target")
+    # Windows rules: "/x" has a root but no drive, so is_absolute() is False.
+    with pytest.raises(RemoteErrorException):
+        unzip_project(zipfile.ZipFile(REPO_ZIP_PATH), {"path": str(victim)}, target_dir)
+    assert (victim / "data").is_file()
+    assert not target_dir.exists()
 
 
 @pytest.mark.usefixtures("github_responses")
