@@ -6,6 +6,7 @@ import requests
 
 from shub.config import get_target_conf
 from shub.exceptions import InvalidAuthException, RemoteErrorException
+from shub.utils import check_not_symlink
 
 HELP = """
 Download all eggs deployed to a Scrapy CLoud project into a zip file.
@@ -27,6 +28,7 @@ def cli(target):
 
 
 def fetch_eggs(project, endpoint, apikey, destfile):
+    check_not_symlink(destfile)
     auth = (apikey, "")
     url = urljoin(endpoint, "eggs/bundle.zip")
     rsp = requests.get(

@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import pytest
@@ -58,6 +59,19 @@ def test_cli_create_setup_py(project_dir):
     result = runner.invoke(cli, [], input="yes\n")
     assert result.exit_code == 0
     assert setup_py_path.is_file()
+
+
+@pytest.mark.skipif(os.name == "nt", reason="creating symbolic links needs privileges")
+@pytest.mark.parametrize("name", ["Dockerfile", "setup.py", "requirements.txt"])
+def test_cli_does_not_create_files_through_a_dangling_symlink(
+    project_dir, tmp_path, name
+):
+    link = Path(project_dir, name)
+    link.unlink(missing_ok=True)
+    victim = tmp_path / "victim"
+    link.symlink_to(victim)
+    CliRunner().invoke(cli, [])
+    assert not victim.exists()
 
 
 def test_wrap():

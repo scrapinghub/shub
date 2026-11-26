@@ -31,6 +31,7 @@ from shub.exceptions import (
     InvalidAuthException,
     NotFoundException,
     RemoteErrorException,
+    ShubException,
     SubcommandException,
     print_warning,
 )
@@ -99,12 +100,12 @@ def create_default_setup_py(**kwargs):
     with remember_cwd():
         if closest:
             os.chdir(Path(closest).parent)
-        if not Path("setup.py").exists():
+        if not os.path.lexists("setup.py"):
             if "settings" not in kwargs:
                 kwargs["settings"] = _get_project_settings_module()
                 if not kwargs["settings"]:
                     raise BadConfigException(_SETTINGS_MODULE_NOT_FOUND_MSG)
-            with Path("setup.py").open("w") as f:
+            with Path("setup.py").open("x") as f:
                 f.write(_SETUP_PY_TEMPLATE % kwargs)
             click.echo(f"Created setup.py at {Path.cwd()}")
 
@@ -500,12 +501,22 @@ def _get_project_settings_module(project=None):
     if project is None:
         env_module = os.environ.get("SCRAPY_SETTINGS_MODULE")
         if env_module:
-            return env_module
+            return _check_settings_module(env_module)
         project = os.environ.get("SCRAPY_PROJECT", "default")
     cfg = get_config()
     if cfg.has_option("settings", project):
-        return cfg.get("settings", project)
+        return _check_settings_module(cfg.get("settings", project))
     return None
+
+
+def _check_settings_module(module):
+    """Return ``module`` if it is a dotted Python module path, which makes it
+    safe to write to setup.py and to a Dockerfile, and raise otherwise."""
+    if module and not all(part.isidentifier() for part in module.split(".")):
+        raise BadConfigException(
+            f"The Scrapy settings module {module!r} is not a valid module path."
+        )
+    return module
 
 
 def get_config(use_closest=True):
@@ -731,6 +742,14 @@ def update_yaml_dict(conf_path):
             yaml.safe_dump(conf, f, default_flow_style=False)
 
 
+def check_not_symlink(path):
+    """Raise an exception if ``path`` is a symbolic link, because writing to it
+    would write to the file it points to, which may be anywhere, even if it
+    does not exist yet."""
+    if Path(path).is_symlink():
+        raise ShubException(f"Refusing to write to {path}: it is a symbolic link.")
+
+
 def has_project_access(project, endpoint, apikey):
     """Check whether an API key has access to a given project. May raise
     InvalidAuthException if the API key is invalid (but not if it is valid but
@@ -821,6 +840,9 @@ def _update_conf_file(filename, target, project, repository, stack=None):
         conf = ShubConfig()
         if Path(filename).exists():
             conf.load_file(filename)
+        else:
+            # A dangling link would be followed, creating the file it points to
+            check_not_symlink(filename)
         _update_conf(conf, target, project, repository, stack)
         conf.save(filename)
     except Exception as e:

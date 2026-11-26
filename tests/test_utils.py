@@ -850,3 +850,15 @@ def test_make_deploy_request_error(payload, expected):
     ):
         utils.make_deploy_request("url", {}, None, None, False, False)
     assert exc_info.value.message == f"Deploy failed (400):\n{expected}"
+
+
+@pytest.mark.skipif(os.name == "nt", reason="creating symbolic links needs privileges")
+def test_update_conf_file_does_not_create_a_file_through_a_dangling_symlink(
+    tmp_path, capsys
+):
+    victim = tmp_path / "victim"
+    link = tmp_path / "scrapinghub.yml"
+    link.symlink_to(victim)
+    utils._update_conf_file(str(link), "default", 12345, None)
+    assert not victim.exists()
+    assert "There was an error while trying to write to" in capsys.readouterr().out

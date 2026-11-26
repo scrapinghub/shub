@@ -8,6 +8,8 @@ import requests
 
 from shub.compat import to_unicode
 from shub.config import ShubConfig, get_target_conf
+from shub.exceptions import ShubException
+from shub.utils import check_not_symlink
 
 HELP = """
 Migrate eggs stored in Dash's "Code & Deploy" section.
@@ -42,6 +44,16 @@ def main(target):
         Migrator(mfile).start()
 
 
+def _check_inside_project(path):
+    """Refuse to write to a symbolic link or to a path outside of the project
+    directory, which is the current directory."""
+    check_not_symlink(path)
+    if not Path(path).resolve().is_relative_to(Path.cwd().resolve()):
+        raise ShubException(
+            f"Refusing to write to {path}: it is outside of the project directory."
+        )
+
+
 class Migrator:
     def __init__(self, mfile):
         self.mfile = mfile
@@ -57,6 +69,10 @@ class Migrator:
                 self.eggs.append(filename)
 
     def start(self):
+        _check_inside_project(self.sh_yml)
+        # The requirements file is written after the eggs, so check it first:
+        # a refusal must not leave eggs that scrapinghub.yml does not list
+        _check_inside_project(self.conf.requirements_file or "./requirements.txt")
         if self.eggs:
             self.migrate_eggs()
 
@@ -66,8 +82,18 @@ class Migrator:
 
     def migrate_eggs(self):
         eggsdir = "./eggs"
+        _check_inside_project(eggsdir)
+        # Check every egg before extracting any, for the same reason
+        for filename in self.eggs:
+            if Path(filename).name != filename:
+                raise ShubException(
+                    f"Refusing to extract {filename!r}: it is not a plain file name."
+                )
+            filepath = f"{eggsdir}/{filename}"
+            if filepath not in self.conf.eggs:
+                _check_inside_project(filepath)
         msg = f"Eggs will be stored in {eggsdir}, are you sure ? "
-        click.confirm(msg)
+        click.confirm(msg, abort=True)
         Path(eggsdir).mkdir(exist_ok=True)
 
         for filename in self.eggs:
