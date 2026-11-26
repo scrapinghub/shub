@@ -482,7 +482,7 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
             )
         )
         out = BytesIO()
-        stdout = TextIOWrapper(out, encoding="utf-8", write_through=True)
+        stdout = TextIOWrapper(out, encoding="utf-8", newline="\n", write_through=True)
         with patch("sys.stdout", stdout):
             utils.write_and_echo_logs(
                 keep_log=False, last_logs=[], rsp=rsp, verbose=True
@@ -495,7 +495,7 @@ class UtilsTest(AssertInvokeRaisesMixin, unittest.TestCase):
 
     def test_echo_short_log_if_deployed_escapes_control_characters(self):
         out = BytesIO()
-        stdout = TextIOWrapper(out, encoding="utf-8", write_through=True)
+        stdout = TextIOWrapper(out, encoding="utf-8", newline="\n", write_through=True)
         with patch("sys.stdout", stdout):
             utils.echo_short_log_if_deployed(
                 False,
