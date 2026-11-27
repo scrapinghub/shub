@@ -57,6 +57,8 @@ commands = [
     "schedule",
     "log",
     "requests",
+    "jobmeta",
+    "stats",
     "copy_eggs",
     "migrate_eggs",
     "image",
